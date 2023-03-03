@@ -1,28 +1,43 @@
-import { isFalse, strictDeepEqual } from './utils';
-import { Runtime } from './Runtime';
 import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
+import { ScopeChain } from './Scope';
+import { isFalse, strictDeepEqual } from './utils';
+import { Runtime } from './Runtime';
 
 export class TreeInterpreter {
   runtime: Runtime;
   private _rootValue: JSONValue | null = null;
+  private _scope: ScopeChain | undefined = undefined;
 
   constructor() {
     this.runtime = new Runtime(this);
   }
 
+  withScope(scope: JSONObject): TreeInterpreter {
+    const interpreter = new TreeInterpreter();
+    interpreter._rootValue = this._rootValue;
+    interpreter._scope = this._scope?.withScope(scope);
+    return interpreter;
+  }
+
   search(node: ExpressionNode, value: JSONValue): JSONValue {
     this._rootValue = value;
+    this._scope = new ScopeChain();
     return this.visit(node, value) as JSONValue;
   }
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
     switch (node.type) {
       case 'Field':
-        if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-          return null;
+        const identifier = node.name;
+        let result: JSONValue = null;
+        if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+          result = value[identifier] ?? null;
         }
-        return value[node.name] ?? null;
+        if (result == null) {
+          result = this._scope?.getValue(identifier) ?? null;
+        }
+        return result;
       case 'IndexExpression':
       case 'Subexpression':
         return this.visit(node.right, this.visit(node.left, value));
@@ -178,6 +193,7 @@ export class TreeInterpreter {
       case 'ExpressionReference':
         return {
           expref: true,
+          context: <JSONValue>value,
           ...node.child,
         };
       case 'Current':

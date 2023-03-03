@@ -99,4 +99,4 @@ export type ExpressionNode =
   | MultiSelectListNode
   | FunctionNode;
 
-export type ExpressionReference = { expref: true } & ExpressionNode;
+export type ExpressionReference = { expref: true; context: JSONValue } & ExpressionNode;
