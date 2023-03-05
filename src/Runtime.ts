@@ -1,5 +1,5 @@
-import type { ExpressionNode } from './AST.type';
-import type { JSONArray, JSONObject, JSONValue, ObjectDict } from './JSON.type';
+import { ExpressionNode } from './AST.type';
+import { JSONArray, JSONArrayObject, JSONObject, JSONValue, ObjectDict } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
 
 export enum InputArgument {
@@ -13,6 +13,7 @@ export enum InputArgument {
   TYPE_NULL = 7,
   TYPE_ARRAY_NUMBER = 8,
   TYPE_ARRAY_STRING = 9,
+  TYPE_ARRAY_OBJECT = 10,
 }
 
 export interface InputSignature {
@@ -35,7 +36,7 @@ export interface FunctionTable {
 }
 
 export class Runtime {
-  _interpreter?: TreeInterpreter;
+  _interpreter: TreeInterpreter;
   TYPE_NAME_TABLE: { [InputArgument: number]: string } = {
     [InputArgument.TYPE_NUMBER]: 'number',
     [InputArgument.TYPE_ANY]: 'any',
@@ -46,6 +47,7 @@ export class Runtime {
     [InputArgument.TYPE_EXPREF]: 'expression',
     [InputArgument.TYPE_NULL]: 'null',
     [InputArgument.TYPE_ARRAY_NUMBER]: 'Array<number>',
+    [InputArgument.TYPE_ARRAY_OBJECT]: 'Array<object>',
     [InputArgument.TYPE_ARRAY_STRING]: 'Array<string>',
   };
 
@@ -140,6 +142,7 @@ export class Runtime {
     if (
       expected === InputArgument.TYPE_ARRAY_STRING ||
       expected === InputArgument.TYPE_ARRAY_NUMBER ||
+      expected === InputArgument.TYPE_ARRAY_OBJECT ||
       expected === InputArgument.TYPE_ARRAY
     ) {
       if (expected === InputArgument.TYPE_ARRAY) {
@@ -149,6 +152,8 @@ export class Runtime {
         let subtype;
         if (expected === InputArgument.TYPE_ARRAY_NUMBER) {
           subtype = InputArgument.TYPE_NUMBER;
+        } else if (expected === InputArgument.TYPE_ARRAY_OBJECT) {
+          subtype = InputArgument.TYPE_OBJECT;
         } else if (expected === InputArgument.TYPE_ARRAY_STRING) {
           subtype = InputArgument.TYPE_STRING;
         }
@@ -189,13 +194,7 @@ export class Runtime {
     }
   }
 
-  createKeyFunction(
-    exprefNode: ExpressionNode,
-    allowedTypes: InputArgument[],
-  ): ((x: JSONValue) => JSONValue) | undefined {
-    if (!this._interpreter) {
-      return;
-    }
+  createKeyFunction(exprefNode: ExpressionNode, allowedTypes: InputArgument[]): (x: JSONValue) => JSONValue {
     const interpreter = this._interpreter;
     const keyFunc = (x: JSONValue): JSONValue => {
       const current = interpreter.visit(exprefNode, x) as JSONValue;
@@ -252,6 +251,19 @@ export class Runtime {
 
   private functionFloor: RuntimeFunction<[number], number> = ([inputValue]) => {
     return Math.floor(inputValue);
+  };
+
+  private functionGroupBy: RuntimeFunction<[JSONArrayObject, ExpressionNode], JSONValue> = ([array, exprefNode]) => {
+    const keyFunction = this.createKeyFunction(exprefNode, [InputArgument.TYPE_STRING]);
+    return array.reduce((acc, cur) => {
+      const k = keyFunction(cur ?? {});
+      if (typeof k !== 'string') {
+        throw new Error('should be a string');
+      }
+      const target = <JSONArray>(acc[<string>k] = acc[<string>k] || []);
+      target.push(cur);
+      return acc;
+    }, {});
   };
 
   private functionJoin: RuntimeFunction<[string, string[]], string> = resolvedArgs => {
@@ -552,6 +564,10 @@ export class Runtime {
           types: [InputArgument.TYPE_NUMBER],
         },
       ],
+    },
+    group_by: {
+      _func: this.functionGroupBy,
+      _signature: [{ types: [InputArgument.TYPE_ARRAY] }, { types: [InputArgument.TYPE_EXPREF] }],
     },
     join: {
       _func: this.functionJoin,
