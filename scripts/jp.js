@@ -1,5 +1,5 @@
 #! /usr/bin/env node
-const jmespath = require('../dist/lib');
+const jmespath = require('../dist/jmespath.umd.min');
 
 process.stdin.setEncoding('utf-8');
 

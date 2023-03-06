@@ -33,10 +33,10 @@
   },
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "test"
   ],
   "include": [
     "src",
-    "test"
   ]
 }
