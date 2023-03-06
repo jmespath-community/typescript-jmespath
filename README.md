@@ -1,9 +1,9 @@
 ![Node.js CI](https://github.com/nanoporetech/jmespath-ts/workflows/Node.js%20CI/badge.svg?branch=master)
 
-# @metrichor/jmespath
+# @jmespath-community/jmespath
 
 
-@metrichor/jmespath is a **typescript** implementation of the [JMESPath](https://jmespath.org) spec.
+@jmespath-community/jmespath is a **TypeScript** implementation of the [JMESPath](https://jmespath.site/) spec.
 
 JMESPath is a query language for JSON. It will take a JSON document
 as input and transform it into another JSON document
@@ -12,7 +12,7 @@ given a JMESPath expression.
 ## INSTALLATION
 
 ```
-npm install @metrichor/jmespath
+npm install @jmespath-community/jmespath
 ```
 
 ## USAGE
@@ -21,11 +21,11 @@ npm install @metrichor/jmespath
 
 ```javascript
 /* using ES modules */
-import { search } from '@metrichor/jmespath';
+import { search } from '@jmespath-community/jmespath';
 
 
 /* using CommonJS modules */
-const search = require('@metrichor/jmespath').search;
+const search = require('@jmespath-community/jmespath').search;
 
 
 search({foo: {bar: {baz: [0, 1, 2, 3, 4]}}}, "foo.bar.baz[2]")
@@ -43,7 +43,7 @@ The JMESPath language can do *a lot* more than select an element
 from a list.  Here are a few more examples:
 
 ```javascript
-import { search } from '@metrichor/jmespath';
+import { search } from '@jmespath-community/jmespath';
 
 /* --- EXAMPLE 1 --- */
 
@@ -95,7 +95,7 @@ function takes a JMESPath expression and returns an abstract syntax tree that
 can be used by the TreeInterpreter function
 
 ```javascript
-import { compile, TreeInterpreter } from '@metrichor/jmespath';
+import { compile, TreeInterpreter } from '@jmespath-community/jmespath';
 
 const ast = compile('foo.bar');
 
@@ -114,7 +114,7 @@ TreeInterpreter.search(ast, {foo: {bar: 'BAZ'}})
     Extend the list of built in JMESpath expressions with your own functions.
 
     ```javascript
-      import {search, registerFunction, TYPE_NUMBER} from '@metrichor/jmespath'
+      import {search, registerFunction, TYPE_NUMBER} from '@jmespath-community/jmespath'
 
 
       search({ foo: 60, bar: 10 }, 'divide(foo, bar)')
@@ -169,12 +169,12 @@ search({foo: {bar: 999}, baz: [1, 2, 3]}, '$.baz[*].[@, $.foo.bar]')
 The example above only show a small amount of what
 a JMESPath expression can do. If you want to take a
 tour of the language, the *best* place to go is the
-[JMESPath Tutorial](http://jmespath.org/tutorial.html).
+[JMESPath Tutorial](http://jmespath.site/main#tutorial).
 
 One of the best things about JMESPath is that it is
 implemented in many different programming languages including
 python, ruby, php, lua, etc.  To see a complete list of libraries,
-check out the [JMESPath libraries page](http://jmespath.org/libraries.html).
+check out the [JMESPath libraries page](http://jmespath.site/main#libraries).
 
 And finally, the full JMESPath specification can be found
-on the [JMESPath site](http://jmespath.org/specification.html).
+on the [JMESPath site](https://jmespath.site/main/#specification).

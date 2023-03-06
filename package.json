@@ -1,18 +1,18 @@
 {
-  "name": "@metrichor/jmespath",
-  "description": "Typescript implementation of the JMESPath spec (100% compliant)",
-  "version": "0.3.1",
+  "name": "@jmespath-community/jmespath",
+  "description": "Typescript implementation of the JMESPath Community specification",
+  "version": "0.4.0",
   "author": {
-    "name": "Oxford Nanopore Technologies",
-    "email": "support@nanoporetech.com",
-    "url": "https://nanoporetech.com"
+    "name": "JMESPath Community",
+    "email": "springcomp@users.noreply.github.com",
+    "url": "https://jmespath.site"
   },
   "main": "dist/jmespath.umd.js",
   "module": "dist/jmespath.esm.js",
   "typings": "dist/types/index.d.ts",
   "types": "dist/types/index.d.ts",
   "files": [
-    "dist"
+    "dist/"
   ],
   "homepage": "https://github.com/nanoporetech/jmespath-ts#readme",
   "bugs": {
@@ -30,25 +30,26 @@
   "contributors": [],
   "repository": {
     "type": "git",
-    "url": "git://github.com/nanoporetech/jmespath-ts"
+    "url": "git://github.com/jmespath-community/typescript-jmespath"
   },
   "license": "MPL-2.0",
   "engines": {
     "node": ">=10.0.0"
   },
   "scripts": {
-    "lint": "eslint --ignore-path .eslintignore './{src,test}/**/*.{js,ts}'",
+    "lint": "npx eslint --ignore-path .eslintignore './{src,test}/**/*.{js,ts}'",
     "lint:fix": "npm run lint -- --fix",
-    "prebuild": "rimraf dist",
+    "prebuild": "npx rimraf dist",
+    "build": "npx tsc --outDir dist/lib -d --module commonjs && npx rollup -c rollup.config.ts",
     "perf": "node scripts/perf.js",
-    "build": "tsc --outDir dist/lib -d --module commonjs && rollup -c rollup.config.ts",
-    "start": "rollup -c rollup.config.ts -w",
-    "test": "jest --coverage",
-    "test:watch": "jest --coverage --watch",
+    "start": "npx rollup -c rollup.config.ts -w",
+    "test": "npx jest --coverage",
+    "test:watch": "npx jest --coverage --watch",
     "test:prod": "npm run lint && npm run test -- --no-cache",
     "deploy-docs": "ts-node scripts/gh-pages-publish",
     "report-coverage": "cat ./coverage/lcov.info | coveralls",
-    "precommit": "lint-staged"
+    "precommit": "lint-staged",
+    "prepack": "npx clear-package-json package.json --output ./package.json"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^19.0.0",
@@ -59,6 +60,7 @@
     "@typescript-eslint/eslint-plugin": "^4.26.0",
     "@typescript-eslint/parser": "^4.26.0",
     "benchmark": "^2.1.4",
+    "clean-publish": "^3.4.5",
     "coveralls": "^3.1.0",
     "eslint": "^7.27.0",
     "eslint-config-prettier": "^8.6.0",
@@ -73,6 +75,7 @@
     "rimraf": "^3.0.2",
     "rollup": "^2.50.5",
     "rollup-plugin-sourcemaps": "^0.6.3",
+    "rollup-plugin-typescript2": "^0.34.1",
     "shelljs": "^0.8.4",
     "ts-jest": "^26.5.6",
     "ts-node": "^9.1.1",

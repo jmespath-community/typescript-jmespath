@@ -7,6 +7,7 @@ module.exports = {
   testPathIgnorePatterns: ['.vscode', 'dist', 'node_modules'],
   maxConcurrency: 1,
   testRegex: '(/__tests__/.*|\\.?(test|spec))\\.(tsx?|jsx?)$',
+  moduleDirectories: ["node_modules", "src"],
   moduleFileExtensions: [
     "ts",
     "tsx",
