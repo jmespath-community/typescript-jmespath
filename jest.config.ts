@@ -1,5 +1,10 @@
-// jest.config.js
-module.exports = {
+// https://jestjs.io/docs/configuration
+//
+
+import type {Config} from 'jest';
+
+const config: Config = {
+  verbose: true,
   transform: {
     ".(ts|tsx)": "ts-jest"
   },
@@ -27,6 +32,8 @@ module.exports = {
     }
   },
   collectCoverageFrom: [
-    "src/*.{js,ts}"
+    "src/**/*.ts"
   ]
 };
+
+export default config;

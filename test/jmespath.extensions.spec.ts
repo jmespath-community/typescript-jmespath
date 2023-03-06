@@ -1,4 +1,5 @@
 import jmespath, { search, registerFunction } from '../src';
+import { JSONObject } from '../src/JSON.type';
 
 describe('registerFunction', () => {
   it('register a customFunction', () => {
@@ -44,6 +45,7 @@ describe('registerFunction', () => {
         'sum',
         () => {
           /* EMPTY FUNCTION */
+          return 'empty';
         },
         [],
       ),
@@ -54,6 +56,7 @@ describe('registerFunction', () => {
       'tooFewArgs',
       () => {
         /* EMPTY FUNCTION */
+        return 'empty';
       },
       [{ types: [jmespath.TYPE_ANY] }, { types: [jmespath.TYPE_NUMBER], optional: true }],
     );
@@ -90,6 +93,7 @@ describe('registerFunction', () => {
       'tooManyArgs',
       () => {
         /* EMPTY FUNCTION */
+        return 'empty';
       },
       [],
     );
@@ -109,6 +113,7 @@ describe('registerFunction', () => {
       'optionalVariadic',
       () => {
         /* EMPTY FUNCTION */
+        return 'empty';
       },
       [{ types: [jmespath.TYPE_ANY], optional: true, variadic: true }],
     );
@@ -128,6 +133,7 @@ describe('registerFunction', () => {
       'variadicAlwaysLast',
       () => {
         /* EMPTY FUNCTION */
+        return 'empty';
       },
       [
         { types: [jmespath.TYPE_ANY], variadic: true },
@@ -185,8 +191,9 @@ describe('registerFunction', () => {
 
 describe('root', () => {
   it('$ should give access to the root value', () => {
-    const value = search({ foo: { bar: 1 } }, 'foo.{ value: $.foo.bar }');
-    expect(value.value).toBe(1);
+    const value = <JSONObject>search({ foo: { bar: 1 } }, 'foo.{ value: $.foo.bar }');
+    expect(value).not.toBe(null);
+    expect(value?.['value']).toBe(1);
   });
   it('$ should give access to the root value after pipe', () => {
     const value = search({ foo: { bar: 1 } }, 'foo | $.foo.bar');

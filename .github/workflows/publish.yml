@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 12
           registry-url: https://registry.npmjs.org/
-      - run: npm ci
+      - run: npm install ## npm ci is not enough
       - run: npm run build
       - name: ✉️ publish
         run: npm publish --verbose --access public --tag latest
