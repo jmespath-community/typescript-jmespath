@@ -1,3 +1,4 @@
+import { expectError } from './compliance.spec';
 import { search } from '../src';
 
 describe('Evaluates functions', () => {
@@ -40,13 +41,13 @@ describe('Type-checks function arguments', () => {
   it('from_items()', () => {
     // TODO: must be "invalid-type"
     expectError(() => {
-      search(null, 'from_items(@)');
+      return search(null, 'from_items(@)');
     }, ['TypeError', 'null']);
   });
   it('from_items()', () => {
     // TODO: must be "invalid-type"
     expectError(() => {
-      search('foo', 'from_items(@)');
+      return search('foo', 'from_items(@)');
     }, ['TypeError', 'string']);
   });
   it('from_items()', () => {
@@ -60,30 +61,3 @@ describe('Type-checks function arguments', () => {
     }, 'invalid-value');
   });
 });
-
-function expectError(action, expected) {
-  let result = undefined;
-  let succeeded = false;
-
-  function getPattern(text) {
-    const pattern = `(${text})|(${text.replace('-', ' ')})`;
-    return new RegExp(pattern);
-  }
-
-  try {
-    result = action();
-    succeeded = true;
-  } catch (e) {
-    if (Array.isArray(expected)) {
-      expected.map(element => {
-        expect(e.message).toMatch(getPattern(element));
-      });
-    } else {
-      expect(e.message).toMatch(getPattern(expected));
-    }
-  }
-
-  if (succeeded) {
-    throw `the action was expected to throw an error but returned '${JSON.stringify(result)}' instead`;
-  }
-}
