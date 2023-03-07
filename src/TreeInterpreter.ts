@@ -24,8 +24,11 @@ export class TreeInterpreter {
         }
         return value[node.name] ?? null;
       case 'IndexExpression':
-      case 'Subexpression':
         return this.visit(node.right, this.visit(node.left, value));
+      case 'Subexpression': {
+        const result = this.visit(node.left, value);
+        return result != null && this.visit(node.right, result) || null;
+      }
       case 'Index': {
         if (!Array.isArray(value)) {
           return null;
@@ -129,9 +132,6 @@ export class TreeInterpreter {
       case 'Root':
         return this._rootValue;
       case 'MultiSelectList': {
-        if (value === null) {
-          return null;
-        }
         const collected: JSONArray = [];
         for (const child of node.children) {
           collected.push(this.visit(child, value) as JSONValue);
