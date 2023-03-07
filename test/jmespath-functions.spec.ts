@@ -1,4 +1,5 @@
 import { search } from '../src';
+import { expectError } from './compliance.spec';
 
 describe('Evaluates functions', () => {
   it('group_by()', () => {
@@ -28,40 +29,14 @@ describe('Type-checks function arguments', () => {
   it('group_by()', () => {
     // TODO: should be 'invalid-type'
     expectError(() => {
-      search({}, 'group_by(@, &`false`)');
+      return search({}, 'group_by(@, &`false`)');
     }, 'TypeError');
   });
   it('group_by()', () => {
     // TODO: should be 'invalid-type'
     expectError(() => {
-      search([{}, {}], 'group_by(@, &`false`)');
+      return search([{}, {}], 'group_by(@, &`false`)');
     }, 'TypeError');
   });
 });
 
-function expectError(action, expected) {
-  let result = undefined;
-  let succeeded = false;
-
-  function getPattern(text) {
-    const pattern = `(${text})|(${text.replace('-', ' ')})`;
-    return new RegExp(pattern);
-  }
-
-  try {
-    result = action();
-    succeeded = true;
-  } catch (e) {
-    if (Array.isArray(expected)) {
-      expected.map(element => {
-        expect(e.message).toMatch(getPattern(element));
-      });
-    } else {
-      expect(e.message).toMatch(getPattern(expected));
-    }
-  }
-
-  if (succeeded) {
-    throw `the action was expected to throw an error but returned '${JSON.stringify(result)}' instead`;
-  }
-}
