@@ -1,4 +1,5 @@
 import { JSONValue } from './JSON.type';
+import { Token } from './Lexer.type';
 
 export interface FieldNode {
   readonly type: 'Field';
@@ -61,15 +62,21 @@ export interface FunctionNode {
 }
 
 type BinaryExpressionType =
-  | 'Subexpression'
-  | 'Pipe'
-  | 'ValueProjection'
+  | 'AndExpression'
   | 'IndexExpression'
-  | 'Projection'
   | 'OrExpression'
-  | 'AndExpression';
+  | 'Pipe'
+  | 'Projection'
+  | 'Subexpression'
+  | 'ValueProjection'
+  ;
 
-type UnaryExpressionType = 'NotExpression' | 'Flatten' | 'ExpressionReference';
+type UnaryExpressionType =
+  | 'ExpressionReference'
+  | 'Flatten'
+  | 'NotExpression'
+  ;
+
 type SimpleExpressionType = 'Identity' | 'Current' | 'Root';
 
 export interface SimpleExpressionNode<T extends SimpleExpressionType = SimpleExpressionType> {
@@ -79,8 +86,26 @@ export interface UnaryExpressionNode<T extends UnaryExpressionType = UnaryExpres
   readonly type: T;
   readonly child: ExpressionNode;
 }
+
+export type UnaryOperatorType = 'Plus' | 'Minus';
+
+export interface UnaryArithmeticNode {
+  readonly type: 'Unary';
+  readonly operator: UnaryOperatorType;
+  readonly operand: ExpressionNode;
+}
+
 export interface BinaryExpressionNode<T extends BinaryExpressionType = BinaryExpressionType> {
   readonly type: T;
+  readonly left: ExpressionNode;
+  readonly right: ExpressionNode;
+}
+
+export type BinaryOperatorType = 'Plus' | 'Minus' | 'Multiply' | Token.TOK_STAR | 'Divide' | 'Modulo' | 'Div';
+
+export interface BinaryArithmeticNode {
+  readonly type: 'Arithmetic';
+  readonly operator: BinaryOperatorType;
   readonly left: ExpressionNode;
   readonly right: ExpressionNode;
 }
@@ -88,7 +113,9 @@ export interface BinaryExpressionNode<T extends BinaryExpressionType = BinaryExp
 export type ExpressionNode =
   | SimpleExpressionNode
   | UnaryExpressionNode
+  | UnaryArithmeticNode
   | BinaryExpressionNode
+  | BinaryArithmeticNode
   | ComparatorNode
   | SliceNode
   | FilterProjectionNode
