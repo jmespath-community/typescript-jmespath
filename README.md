@@ -1,4 +1,4 @@
-![Node.js CI](https://github.com/nanoporetech/jmespath-ts/workflows/Node.js%20CI/badge.svg?branch=master)
+![Build](https://github.com/jmespath-community/typescript-jmespath/workflows/nodejs/badge.svg?branch=main)
 
 # @jmespath-community/jmespath
 
