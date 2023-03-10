@@ -1,4 +1,4 @@
-![Build](https://github.com/jmespath-community/typescript-jmespath/workflows/nodejs/badge.svg?branch=main)
+![Build](https://github.com/jmespath-community/typescript-jmespath/actions/workflows/nodejs.yml/badge.svg?branch=main)
 
 # @jmespath-community/jmespath
 
