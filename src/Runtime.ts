@@ -1,7 +1,7 @@
 import type { ExpressionNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue, ObjectDict } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
-import { lower, replace, trim, trimLeft, trimRight, upper } from './utils/strings';
+import { findFirst, findLast, lower, replace, trim, trimLeft, trimRight, upper } from './utils/strings';
 
 export enum InputArgument {
   TYPE_NUMBER = 0,
@@ -249,6 +249,22 @@ export class Runtime {
   private functionEndsWith: RuntimeFunction<[string, string], boolean> = resolvedArgs => {
     const [searchStr, suffix] = resolvedArgs;
     return searchStr.includes(suffix, searchStr.length - suffix.length);
+  };
+
+  private functionFindFirst: RuntimeFunction<JSONValue[], number | null> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const search = <string>resolvedArgs[1];
+    const start = (resolvedArgs.length > 2 && <number>resolvedArgs[2]) || undefined;
+    const end = (resolvedArgs.length > 3 && <number>resolvedArgs[3]) || undefined;
+    return findFirst(subject, search, start, end);
+  };
+
+  private functionFindLast: RuntimeFunction<JSONValue[], number | null> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const search = <string>resolvedArgs[1];
+    const start = (resolvedArgs.length > 2 && <number>resolvedArgs[2]) || undefined;
+    const end = (resolvedArgs.length > 3 && <number>resolvedArgs[3]) || undefined;
+    return findLast(subject, search, start, end);
   };
 
   private functionFloor: RuntimeFunction<[number], number> = ([inputValue]) => {
@@ -571,6 +587,44 @@ export class Runtime {
         },
         {
           types: [InputArgument.TYPE_STRING],
+        },
+      ],
+    },
+    find_first: {
+      _func: this.functionFindFirst,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
+        },
+      ],
+    },
+    find_last: {
+      _func: this.functionFindLast,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
         },
       ],
     },
