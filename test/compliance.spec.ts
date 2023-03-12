@@ -13,8 +13,8 @@ const notImplementedYet: string[] = [];
 export function endsWith(str: string, suffix: string): boolean {
   return str.indexOf(suffix, str.length - suffix.length) !== -1;
 }
-export function expectError(action: () => JSONValue, expected: string): void {
-  let result = undefined;
+export function expectError(action: () => JSONValue, expected: string|string[]): void {
+  let result: JSONValue = null;
   let succeeded = false;
 
   const errorTypes = ['invalid-type', 'invalid-value', 'invalid-arity', 'not-a-number', 'syntax', 'unknown-function'];
@@ -30,7 +30,7 @@ export function expectError(action: () => JSONValue, expected: string): void {
       });
     }
 
-    pattern = text
+    pattern = pattern
       .replace(/\-/g, '\\-')
       .replace(/\(/g, '\\(')
       .replace(/\)/g, '\\)')
