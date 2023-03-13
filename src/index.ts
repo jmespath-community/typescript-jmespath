@@ -1,15 +1,18 @@
 import Parser from './Parser';
 import Lexer from './Lexer';
-import TreeInterpreterInst from './TreeInterpreter';
-import { InputArgument, RuntimeFunction, InputSignature } from './Runtime';
-import { LexerToken } from './Lexer.type';
+
 import { ExpressionNode } from './AST.type';
 import { JSONValue } from './JSON.type';
+import { LexerToken } from './Lexer.type';
+import TreeInterpreterInst from './TreeInterpreter';
+import { InputArgument, RuntimeFunction, InputSignature } from './Runtime';
+import { ScopeChain } from './Scope';
 
 export type { FunctionSignature, RuntimeFunction, InputSignature } from './Runtime';
 
 export const TYPE_ANY = InputArgument.TYPE_ANY;
 export const TYPE_ARRAY = InputArgument.TYPE_ARRAY;
+export const TYPE_ARRAY_ARRAY = InputArgument.TYPE_ARRAY_ARRAY;
 export const TYPE_ARRAY_NUMBER = InputArgument.TYPE_ARRAY_NUMBER;
 export const TYPE_ARRAY_OBJECT = InputArgument.TYPE_ARRAY_OBJECT;
 export const TYPE_ARRAY_STRING = InputArgument.TYPE_ARRAY_STRING;
@@ -41,6 +44,10 @@ export const registerFunction = (
 export function search(data: JSONValue, expression: string): JSONValue {
   const nodeTree = Parser.parse(expression);
   return TreeInterpreterInst.search(nodeTree, data);
+}
+
+export function Scope(): ScopeChain {
+  return new ScopeChain();
 }
 
 export const TreeInterpreter = TreeInterpreterInst;

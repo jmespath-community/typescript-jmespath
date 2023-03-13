@@ -1,31 +1,51 @@
-import { isFalse, strictDeepEqual } from './utils';
+import { Token } from './Lexer.type';
 import { Runtime } from './Runtime';
+import { ScopeChain } from './Scope';
+import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
+
 import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
 
 export class TreeInterpreter {
   runtime: Runtime;
   private _rootValue: JSONValue | null = null;
+  private _scope: ScopeChain | undefined = undefined;
 
   constructor() {
     this.runtime = new Runtime(this);
   }
 
+  withScope(scope: JSONObject): TreeInterpreter {
+    const interpreter = new TreeInterpreter();
+    interpreter._rootValue = this._rootValue;
+    interpreter._scope = this._scope?.withScope(scope);
+    return interpreter;
+  }
+
   search(node: ExpressionNode, value: JSONValue): JSONValue {
     this._rootValue = value;
+    this._scope = new ScopeChain();
     return this.visit(node, value) as JSONValue;
   }
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
     switch (node.type) {
       case 'Field':
-        if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-          return null;
+        const identifier = node.name;
+        let result: JSONValue = null;
+        if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+          result = value[identifier] ?? null;
         }
-        return value[node.name] ?? null;
+        if (result == null) {
+          result = this._scope?.getValue(identifier) ?? null;
+        }
+        return result;
       case 'IndexExpression':
-      case 'Subexpression':
         return this.visit(node.right, this.visit(node.left, value));
+      case 'Subexpression': {
+        const result = this.visit(node.left, value);
+        return result != null && this.visit(node.right, result) || null;
+      }
       case 'Index': {
         if (!Array.isArray(value)) {
           return null;
@@ -34,26 +54,43 @@ export class TreeInterpreter {
         return value[index] ?? null;
       }
       case 'Slice': {
-        if (!Array.isArray(value)) {
+        if (!Array.isArray(value) && typeof value !== 'string') {
           return null;
         }
         const { start, stop, step } = this.computeSliceParams(value.length, node);
-        const result = [];
-
-        if (step > 0) {
-          for (let i = start; i < stop; i += step) {
-            result.push(value[i]);
-          }
+        if (typeof value === 'string') {
+          // string slices is implemented by slicing
+          // the corresponding array of codepoints and
+          // converting the result back to a string
+          const chars = [...value];
+          const sliced = this.slice(chars, start, stop, step);
+          return sliced.join('');
         } else {
-          for (let i = start; i > stop; i += step) {
-            result.push(value[i]);
-          }
+          return this.slice(value, start, stop, step);
         }
-        return result;
       }
       case 'Projection': {
         const { left, right } = node;
+
+        // projections typically operate on arrays
+        // string slicing produces a 'Projection' whose
+        // first child is an 'IndexExpression' whose
+        // second child is an 'Slice'
+
+        // we allow execution of the left index-expression
+        // to return a string only if the AST has this
+        // specific shape
+
+        let allowString = false;
+        if (left.type === 'IndexExpression' && left.right.type === 'Slice') {
+          allowString = true;
+        }
+
         const base = this.visit(left, value);
+        if (allowString && typeof base === 'string') {
+          return base;
+        }
+
         if (!Array.isArray(base)) {
           return null;
         }
@@ -104,6 +141,48 @@ export class TreeInterpreter {
         }
         return results;
       }
+      case 'Arithmetic': {
+        const first = this.visit(node.left, value) as JSONValue;
+        const second = this.visit(node.right, value) as JSONValue;
+        switch (node.operator) {
+          case Token.TOK_PLUS:
+            return add(first, second);
+
+          case Token.TOK_MINUS:
+            return sub(first, second);
+
+          case Token.TOK_MULTIPLY:
+          case Token.TOK_STAR:
+            return mul(first, second);
+
+          case Token.TOK_DIVIDE:
+            return divide(first, second);
+
+          case Token.TOK_MODULO:
+            return mod(first, second);
+
+          case Token.TOK_DIV:
+            return div(first, second);
+
+          default:
+            throw new Error(`Unknown arithmetic operator: ${node.operator}`);
+        }
+      }
+      case 'Unary': {
+        const operand = this.visit(node.operand, value) as JSONValue;
+        switch (node.operator) {
+          case Token.TOK_PLUS:
+            ensureNumbers(operand);
+            return operand as number;
+
+          case Token.TOK_MINUS:
+            ensureNumbers(operand);
+            return -(operand as number);
+
+          default:
+            throw new Error(`Unknown arithmetic operator: ${node.operator}`);
+        }
+      }
       case 'Comparator': {
         const first = this.visit(node.left, value);
         const second = this.visit(node.right, value);
@@ -129,9 +208,6 @@ export class TreeInterpreter {
       case 'Root':
         return this._rootValue;
       case 'MultiSelectList': {
-        if (value === null) {
-          return null;
-        }
         const collected: JSONArray = [];
         for (const child of node.children) {
           collected.push(this.visit(child, value) as JSONValue);
@@ -178,6 +254,7 @@ export class TreeInterpreter {
       case 'ExpressionReference':
         return {
           expref: true,
+          context: <JSONValue>value,
           ...node.child,
         };
       case 'Current':
@@ -214,6 +291,20 @@ export class TreeInterpreter {
       nextActualValue = step < 0 ? arrayLength - 1 : arrayLength;
     }
     return nextActualValue;
+  }
+
+  slice(collection: JSONArray, start: number, end: number, step: number): JSONArray {
+    const result = [];
+    if (step > 0) {
+      for (let i = start; i < end; i += step) {
+        result.push(collection[i]);
+      }
+    } else {
+      for (let i = start; i > end; i += step) {
+        result.push(collection[i]);
+      }
+    }
+    return result;
   }
 }
 
