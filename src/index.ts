@@ -1,13 +1,15 @@
 import Parser from './Parser';
 import Lexer from './Lexer';
+import TreeInterpreterInst from './TreeInterpreter';
 
 import { ExpressionNode } from './AST.type';
 import { JSONValue } from './JSON.type';
-import { LexerToken } from './Lexer.type';
-import TreeInterpreterInst from './TreeInterpreter';
+import { LexerOptions, LexerToken } from './Lexer.type';
+import { Options } from './Parser.type';
 import { InputArgument, RuntimeFunction, InputSignature } from './Runtime';
 import { ScopeChain } from './Scope';
 
+export type { Options } from './Parser.type';
 export type { FunctionSignature, RuntimeFunction, InputSignature } from './Runtime';
 
 export const TYPE_ANY = InputArgument.TYPE_ANY;
@@ -23,13 +25,13 @@ export const TYPE_NUMBER = InputArgument.TYPE_NUMBER;
 export const TYPE_OBJECT = InputArgument.TYPE_OBJECT;
 export const TYPE_STRING = InputArgument.TYPE_STRING;
 
-export function compile(expression: string): ExpressionNode {
-  const nodeTree = Parser.parse(expression);
+export function compile(expression: string, options?: Options): ExpressionNode {
+  const nodeTree = Parser.parse(expression, options);
   return nodeTree;
 }
 
-export function tokenize(expression: string): LexerToken[] {
-  return Lexer.tokenize(expression);
+export function tokenize(expression: string, options?: LexerOptions): LexerToken[] {
+  return Lexer.tokenize(expression, options);
 }
 
 export const registerFunction = (
@@ -41,8 +43,8 @@ export const registerFunction = (
   TreeInterpreterInst.runtime.registerFunction(functionName, customFunction, signature);
 };
 
-export function search(data: JSONValue, expression: string): JSONValue {
-  const nodeTree = Parser.parse(expression);
+export function search(data: JSONValue, expression: string, options?: Options): JSONValue {
+  const nodeTree = Parser.parse(expression, options);
   return TreeInterpreterInst.search(nodeTree, data);
 }
 

@@ -1,6 +1,6 @@
-import { readdirSync, statSync, readFileSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { basename } from 'path';
-import { search } from '../src';
+import { Options, search } from '../src';
 import { JSONValue } from '../src/JSON.type';
 
 export type ComplianceTestCaseDefinition = { expression: string; result?: JSONValue; error?: string };
@@ -67,7 +67,8 @@ export function expectError(action: () => JSONValue, expected: string | string[]
   }
 }
 
-export function addTestSuitesFromFile(filename: string): void {
+export function addTestSuitesFromFile(filename: string, options?: Options): void {
+  options = options || {};
   describe(filename, () => {
     const spec: ComplianceTestSuite = JSON.parse(readFileSync(filename, 'utf-8'));
     for (let i = 0; i < spec.length; i++) {
@@ -79,10 +80,10 @@ export function addTestSuitesFromFile(filename: string): void {
         test.each(cases)('should pass test %# %s', (expression, result, error) => {
           if (error !== undefined) {
             expectError(() => {
-              return search(given, <string>expression);
+              return search(given, <string>expression, options);
             }, <string>error);
           } else {
-            expect(search(given, <string>expression)).toEqual(result);
+            expect(search(given, <string>expression, options)).toEqual(result);
           }
         });
       });
@@ -90,10 +91,31 @@ export function addTestSuitesFromFile(filename: string): void {
   });
 }
 
-const listing = readdirSync('test/compliance');
-for (let i = 0; i < listing.length; i++) {
-  const filename = 'test/compliance/' + listing[i];
-  if (statSync(filename).isFile() && endsWith(filename, '.json') && !notImplementedYet.includes(basename(filename))) {
-    addTestSuitesFromFile(filename);
+function getFileList(dirName: string): string[] {
+  let files: string[] = [];
+  const items = readdirSync(dirName, { withFileTypes: true, });
+  for (const item of items){
+    const itemName = `${dirName}/${item.name}`;
+    if (item.isDirectory()) {
+      files = [
+        ...files,
+        ...getFileList(itemName),
+      ];
+    } else {
+      if (item.name.endsWith('.json') && !notImplementedYet.includes(basename(item.name))) {
+        files.push(itemName);
+      }
+    }
   }
+
+  return files;
+}
+
+const listing = getFileList('test/compliance');
+for (let i = 0; i < listing.length; i++) {
+  let options: Options = {};
+  if (basename(listing[i]) === 'legacy-literal.json'){
+    options.enable_legacy_literals = true;
+  }
+  addTestSuitesFromFile(listing[i], options);
 }

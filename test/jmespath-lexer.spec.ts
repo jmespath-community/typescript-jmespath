@@ -76,10 +76,10 @@ describe('tokenize', () => {
   it('should tokenize json literals', () => {
     expect(tokenize('`true`')).toMatchObject([{ type: 'Literal', value: true, start: 0 }]);
   });
-  it('should not requiring surrounding quotes for strings', () => {
-    expect(tokenize('`foo`')).toMatchObject([{ type: 'Literal', value: 'foo', start: 0 }]);
+  it('should not require surrounding quotes for strings', () => {
+    expect(tokenize('`foo`', { enable_legacy_literals: true })).toMatchObject([{ type: 'Literal', value: 'foo', start: 0 }]);
   });
-  it('should not requiring surrounding quotes for numbers', () => {
+  it('should not require surrounding quotes for numbers', () => {
     expect(tokenize('`20`')).toMatchObject([{ type: 'Literal', value: 20, start: 0 }]);
   });
   it('should tokenize literal lists with chars afterwards', () => {
