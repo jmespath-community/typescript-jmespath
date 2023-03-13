@@ -1,5 +1,5 @@
 import type { ExpressionNode, ExpressionReference } from './AST.type';
-import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue, ObjectDict } from './JSON.type';
+import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONArrayObject, JSONObject, JSONValue, ObjectDict } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
 import {
   findFirst,
@@ -25,7 +25,8 @@ export enum InputArgument {
   TYPE_NULL = 7,
   TYPE_ARRAY_NUMBER = 8,
   TYPE_ARRAY_STRING = 9,
-  TYPE_ARRAY_ARRAY = 10,
+  TYPE_ARRAY_OBJECT = 10,
+  TYPE_ARRAY_ARRAY = 11,
 }
 
 export interface InputSignature {
@@ -48,7 +49,7 @@ export interface FunctionTable {
 }
 
 export class Runtime {
-  _interpreter?: TreeInterpreter;
+  _interpreter: TreeInterpreter;
   TYPE_NAME_TABLE: { [InputArgument: number]: string } = {
     [InputArgument.TYPE_NUMBER]: 'number',
     [InputArgument.TYPE_ANY]: 'any',
@@ -59,6 +60,7 @@ export class Runtime {
     [InputArgument.TYPE_EXPREF]: 'expression',
     [InputArgument.TYPE_NULL]: 'null',
     [InputArgument.TYPE_ARRAY_NUMBER]: 'Array<number>',
+    [InputArgument.TYPE_ARRAY_OBJECT]: 'Array<object>',
     [InputArgument.TYPE_ARRAY_STRING]: 'Array<string>',
     [InputArgument.TYPE_ARRAY_ARRAY]: 'Array<Array<any>>',
   };
@@ -154,6 +156,7 @@ export class Runtime {
     if (
       expected === InputArgument.TYPE_ARRAY_STRING ||
       expected === InputArgument.TYPE_ARRAY_NUMBER ||
+      expected === InputArgument.TYPE_ARRAY_OBJECT ||
       expected === InputArgument.TYPE_ARRAY_ARRAY ||
       expected === InputArgument.TYPE_ARRAY
     ) {
@@ -164,6 +167,8 @@ export class Runtime {
         let subtype;
         if (expected === InputArgument.TYPE_ARRAY_NUMBER) {
           subtype = InputArgument.TYPE_NUMBER;
+        } else if (expected === InputArgument.TYPE_ARRAY_OBJECT) {
+          subtype = InputArgument.TYPE_OBJECT;
         } else if (expected === InputArgument.TYPE_ARRAY_STRING) {
           subtype = InputArgument.TYPE_STRING;
         } else if (expected === InputArgument.TYPE_ARRAY_ARRAY) {
@@ -206,13 +211,7 @@ export class Runtime {
     }
   }
 
-  createKeyFunction(
-    exprefNode: ExpressionNode,
-    allowedTypes: InputArgument[],
-  ): ((x: JSONValue) => JSONValue) | undefined {
-    if (!this._interpreter) {
-      return;
-    }
+  createKeyFunction(exprefNode: ExpressionNode, allowedTypes: InputArgument[]): (x: JSONValue) => JSONValue {
     const interpreter = this._interpreter;
     const keyFunc = (x: JSONValue): JSONValue => {
       const current = interpreter.visit(exprefNode, x) as JSONValue;
@@ -296,6 +295,16 @@ export class Runtime {
     return Object.fromEntries(array);
   };
 
+  private functionGroupBy: RuntimeFunction<[JSONArrayObject, ExpressionNode], JSONValue> = ([array, exprefNode]) => {
+    const keyFunction = this.createKeyFunction(exprefNode, [InputArgument.TYPE_STRING]);
+    return array.reduce((acc, cur) => {
+      const k = keyFunction(cur ?? {});
+      const target = <JSONArray>(acc[<string>k] = acc[<string>k] || []);
+      target.push(cur);
+      return acc;
+    }, {});
+  };
+
   private functionItems: RuntimeFunction<[JSONObject], JSONArray> = ([inputValue]) => {
     return Object.entries(inputValue);
   };
@@ -318,9 +327,6 @@ export class Runtime {
 
   private functionLet: RuntimeFunction<[JSONObject, ExpressionReference], JSONValue> = ([inputScope, exprefNode]) => {
     const interpreter = this._interpreter?.withScope(inputScope);
-    if (!interpreter) {
-      return null;
-    }
     return interpreter.visit(exprefNode, exprefNode.context) as JSONValue;
   };
 
@@ -473,9 +479,6 @@ export class Runtime {
   };
 
   private functionSortBy: RuntimeFunction<[number[] | string[], ExpressionNode], JSONValue> = resolvedArgs => {
-    if (!this._interpreter) {
-      return [];
-    }
     const sortedArray = resolvedArgs[0].slice(0);
     if (sortedArray.length === 0) {
       return sortedArray;
@@ -702,6 +705,10 @@ export class Runtime {
           types: [InputArgument.TYPE_ARRAY_ARRAY],
         },
       ],
+    },
+    group_by: {
+      _func: this.functionGroupBy,
+      _signature: [{ types: [InputArgument.TYPE_ARRAY] }, { types: [InputArgument.TYPE_EXPREF] }],
     },
     items: {
       _func: this.functionItems,

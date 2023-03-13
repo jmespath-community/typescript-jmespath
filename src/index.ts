@@ -1,11 +1,12 @@
 import Parser from './Parser';
 import Lexer from './Lexer';
+
+import { ExpressionNode } from './AST.type';
+import { JSONValue } from './JSON.type';
+import { LexerToken } from './Lexer.type';
 import TreeInterpreterInst from './TreeInterpreter';
 import { InputArgument, RuntimeFunction, InputSignature } from './Runtime';
 import { ScopeChain } from './Scope';
-import { JSONValue } from './JSON.type';
-import { LexerToken } from './Lexer.type';
-import { ExpressionNode } from './AST.type';
 
 export type { FunctionSignature, RuntimeFunction, InputSignature } from './Runtime';
 
@@ -13,6 +14,7 @@ export const TYPE_ANY = InputArgument.TYPE_ANY;
 export const TYPE_ARRAY = InputArgument.TYPE_ARRAY;
 export const TYPE_ARRAY_ARRAY = InputArgument.TYPE_ARRAY_ARRAY;
 export const TYPE_ARRAY_NUMBER = InputArgument.TYPE_ARRAY_NUMBER;
+export const TYPE_ARRAY_OBJECT = InputArgument.TYPE_ARRAY_OBJECT;
 export const TYPE_ARRAY_STRING = InputArgument.TYPE_ARRAY_STRING;
 export const TYPE_BOOLEAN = InputArgument.TYPE_BOOLEAN;
 export const TYPE_EXPREF = InputArgument.TYPE_EXPREF;
