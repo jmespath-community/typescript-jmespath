@@ -304,6 +304,7 @@ export class Runtime {
       return null;
     }
     return interpreter.visit(exprefNode, exprefNode.context) as JSONValue;
+  };
 
   private functionLower: RuntimeFunction<[string], string> = ([subject]) => {
     return lower(subject);
