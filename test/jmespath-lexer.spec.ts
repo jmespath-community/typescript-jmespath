@@ -1,3 +1,4 @@
+import { expectError } from './compliance.spec';
 import { tokenize, } from '../src';
 
 describe('tokenize', () => {
@@ -105,6 +106,12 @@ describe('tokenize', () => {
   });
   it('should tokenize two char tokens without shared prefix', () => {
     expect(tokenize('==')).toMatchObject([{ type: 'EQ', value: '==', start: 0 }]);
+  });
+  it('should fail to tokenize incomplete char tokens without shared prefix', () => {
+    expectError(
+      () => { tokenize('='); return null; },
+      ['syntax', 'incomplete token']
+    );
   });
   it('should tokenize not equals', () => {
     expect(tokenize('!=')).toMatchObject([{ type: 'NE', value: '!=', start: 0 }]);

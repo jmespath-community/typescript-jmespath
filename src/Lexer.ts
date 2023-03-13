@@ -200,7 +200,7 @@ class StreamLexer {
       return { start: start, type: orElse, value: stream.slice(start, this._current) };
     }
     if (token === Token.TOK_EOF) {
-      const error = new Error(`Unknown incomplete token: ${stream[start]}`);
+      const error = new Error(`syntax: unknown incomplete token: ${stream[start]}`);
       error.name = 'LexerError';
       throw error;
     }
