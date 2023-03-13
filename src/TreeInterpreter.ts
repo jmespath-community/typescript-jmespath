@@ -49,26 +49,43 @@ export class TreeInterpreter {
         return value[index] ?? null;
       }
       case 'Slice': {
-        if (!Array.isArray(value)) {
+        if (!Array.isArray(value) && typeof value !== 'string') {
           return null;
         }
         const { start, stop, step } = this.computeSliceParams(value.length, node);
-        const result = [];
-
-        if (step > 0) {
-          for (let i = start; i < stop; i += step) {
-            result.push(value[i]);
-          }
+        if (typeof value === 'string') {
+          // string slices is implemented by slicing
+          // the corresponding array of codepoints and
+          // converting the result back to a string
+          const chars = [...value];
+          const sliced = this.slice(chars, start, stop, step);
+          return sliced.join('');
         } else {
-          for (let i = start; i > stop; i += step) {
-            result.push(value[i]);
-          }
+          return this.slice(value, start, stop, step);
         }
-        return result;
       }
       case 'Projection': {
         const { left, right } = node;
+
+        // projections typically operate on arrays
+        // string slicing produces a 'Projection' whose
+        // first child is an 'IndexExpression' whose
+        // second child is an 'Slice'
+
+        // we allow execution of the left index-expression
+        // to return a string only if the AST has this
+        // specific shape
+
+        let allowString = false;
+        if (left.type === 'IndexExpression' && left.right.type === 'Slice') {
+          allowString = true;
+        }
+
         const base = this.visit(left, value);
+        if (allowString && typeof base === 'string') {
+          return base;
+        }
+
         if (!Array.isArray(base)) {
           return null;
         }
@@ -230,6 +247,20 @@ export class TreeInterpreter {
       nextActualValue = step < 0 ? arrayLength - 1 : arrayLength;
     }
     return nextActualValue;
+  }
+
+  slice(collection: JSONArray, start: number, end: number, step: number): JSONArray {
+    const result = [];
+    if (step > 0) {
+      for (let i = start; i < end; i += step) {
+        result.push(collection[i]);
+      }
+    } else {
+      for (let i = start; i > end; i += step) {
+        result.push(collection[i]);
+      }
+    }
+    return result;
   }
 }
 
