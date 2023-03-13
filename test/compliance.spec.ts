@@ -111,7 +111,7 @@ function getFileList(dirName: string): string[] {
   return files;
 }
 
-const listing = getFileList('test/compliance');
+const listing = getFileList('test/compliance/tests');
 for (let i = 0; i < listing.length; i++) {
   let options: Options = {};
   if (basename(listing[i]) === 'legacy-literal.json'){
