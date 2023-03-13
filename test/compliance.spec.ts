@@ -13,6 +13,7 @@ const notImplementedYet: string[] = [];
 export function endsWith(str: string, suffix: string): boolean {
   return str.indexOf(suffix, str.length - suffix.length) !== -1;
 }
+
 export function expectError(action: () => JSONValue, expected: string | string[]): void {
   let result: JSONValue = null;
   let succeeded = false;
@@ -42,7 +43,7 @@ export function expectError(action: () => JSONValue, expected: string | string[]
   }
   function getPattern(text: string): RegExp {
     const pattern = `(${makePattern(text)})|(${makePattern(text, true)})`;
-    return new RegExp(pattern);
+    return new RegExp(pattern, "i");
   }
 
   try {

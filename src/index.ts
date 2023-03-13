@@ -2,6 +2,7 @@ import Parser from './Parser';
 import Lexer from './Lexer';
 import TreeInterpreterInst from './TreeInterpreter';
 import { InputArgument, RuntimeFunction, InputSignature } from './Runtime';
+import { ScopeChain } from './Scope';
 import { JSONValue } from './JSON.type';
 import { LexerToken } from './Lexer.type';
 import { ExpressionNode } from './AST.type';
@@ -41,6 +42,10 @@ export const registerFunction = (
 export function search(data: JSONValue, expression: string): JSONValue {
   const nodeTree = Parser.parse(expression);
   return TreeInterpreterInst.search(nodeTree, data);
+}
+
+export function Scope(): ScopeChain {
+  return new ScopeChain();
 }
 
 export const TreeInterpreter = TreeInterpreterInst;
