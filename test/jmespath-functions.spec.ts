@@ -102,9 +102,15 @@ describe('Type-checks function arguments', () => {
     }, 'TypeError');
   });
   it('group_by()', () => {
-    // TODO: should be 'invalid-type'
     expectError(() => {
+      // should be 'invalid-type'
       return search([{}, {}], 'group_by(@, &`false`)');
+    }, 'TypeError');
+  });
+  it('group_by()', () => {
+    // should be 'invalid-type'
+    expectError(() => {
+      return search([{a: 42}, {a: 42}], 'group_by(@, &a)');
     }, 'TypeError');
   });
   it('length()', () => {

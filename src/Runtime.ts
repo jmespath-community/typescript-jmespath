@@ -1,5 +1,5 @@
 import type { ExpressionNode, ExpressionReference } from './AST.type';
-import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue, ObjectDict } from './JSON.type';
+import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONArrayObject, JSONObject, JSONValue, ObjectDict } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
 import {
   findFirst,
@@ -299,9 +299,6 @@ export class Runtime {
     const keyFunction = this.createKeyFunction(exprefNode, [InputArgument.TYPE_STRING]);
     return array.reduce((acc, cur) => {
       const k = keyFunction(cur ?? {});
-      if (typeof k !== 'string') {
-        throw new Error('should be a string');
-      }
       const target = <JSONArray>(acc[<string>k] = acc[<string>k] || []);
       target.push(cur);
       return acc;
