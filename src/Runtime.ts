@@ -1,4 +1,4 @@
-import type { ExpressionNode } from './AST.type';
+import type { ExpressionNode, ExpressionReference } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue, ObjectDict } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
 import {
@@ -298,22 +298,15 @@ export class Runtime {
     return Object.keys(inputValue).length;
   };
 
+  private functionLet: RuntimeFunction<[JSONObject, ExpressionReference], JSONValue> = ([inputScope, exprefNode]) => {
+    const interpreter = this._interpreter?.withScope(inputScope);
+    if (!interpreter) {
+      return null;
+    }
+    return interpreter.visit(exprefNode, exprefNode.context) as JSONValue;
+
   private functionLower: RuntimeFunction<[string], string> = ([subject]) => {
     return lower(subject);
-  };
-
-  private functionPadLeft: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
-    const subject = <string>resolvedArgs[0];
-    const width = <number>resolvedArgs[1];
-    const padding = (resolvedArgs.length > 2 && <string>resolvedArgs[2]) || undefined;
-    return padLeft(subject, width, padding);
-  };
-
-  private functionPadRight: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
-    const subject = <string>resolvedArgs[0];
-    const width = <number>resolvedArgs[1];
-    const padding = (resolvedArgs.length > 2 && <string>resolvedArgs[2]) || undefined;
-    return padRight(subject, width, padding);
   };
 
   private functionMap: RuntimeFunction<[ExpressionNode, JSONArray], JSONArray> = ([exprefNode, elements]) => {
@@ -418,6 +411,20 @@ export class Runtime {
       }
     }
     return null;
+  };
+
+  private functionPadLeft: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const width = <number>resolvedArgs[1];
+    const padding = (resolvedArgs.length > 2 && <string>resolvedArgs[2]) || undefined;
+    return padLeft(subject, width, padding);
+  };
+
+  private functionPadRight: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const width = <number>resolvedArgs[1];
+    const padding = (resolvedArgs.length > 2 && <string>resolvedArgs[2]) || undefined;
+    return padRight(subject, width, padding);
   };
 
   private functionReplace: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
@@ -680,6 +687,10 @@ export class Runtime {
         },
       ],
     },
+    let: {
+      _func: this.functionLet,
+      _signature: [{ types: [InputArgument.TYPE_OBJECT] }, { types: [InputArgument.TYPE_EXPREF] }],
+    },
     length: {
       _func: this.functionLength,
       _signature: [
@@ -693,36 +704,6 @@ export class Runtime {
       _signature: [
         {
           types: [InputArgument.TYPE_STRING],
-        },
-      ],
-    },
-    pad_left: {
-      _func: this.functionPadLeft,
-      _signature: [
-        {
-          types: [InputArgument.TYPE_STRING],
-        },
-        {
-          types: [InputArgument.TYPE_NUMBER],
-        },
-        {
-          types: [InputArgument.TYPE_STRING],
-          optional: true,
-        },
-      ],
-    },
-    pad_right: {
-      _func: this.functionPadRight,
-      _signature: [
-        {
-          types: [InputArgument.TYPE_STRING],
-        },
-        {
-          types: [InputArgument.TYPE_NUMBER],
-        },
-        {
-          types: [InputArgument.TYPE_STRING],
-          optional: true,
         },
       ],
     },
@@ -790,6 +771,36 @@ export class Runtime {
         {
           types: [InputArgument.TYPE_ANY],
           variadic: true,
+        },
+      ],
+    },
+    pad_left: {
+      _func: this.functionPadLeft,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+          optional: true,
+        },
+      ],
+    },
+    pad_right: {
+      _func: this.functionPadRight,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+          optional: true,
         },
       ],
     },

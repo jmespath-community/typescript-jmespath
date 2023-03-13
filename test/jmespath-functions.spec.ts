@@ -2,6 +2,9 @@ import { expectError } from './compliance.spec';
 import { search } from '../src';
 
 describe('Evaluates functions', () => {
+  it('search a in lexical scope', () => {
+    expect(search({}, "let({foo: 'bar'}, &foo)") ).toEqual('bar');
+  });
   it('pad_left()', () => { // this should be included in the compliance test suite
     expect(search('', 'pad_left(@, `10`)')).toEqual('');
   });

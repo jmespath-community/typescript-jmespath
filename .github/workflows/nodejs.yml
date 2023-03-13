@@ -20,9 +20,9 @@ jobs:
 
     steps:
     - name: 📚 checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: 🟢 node ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install ## ci is not enough on node 14.x
