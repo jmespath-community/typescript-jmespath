@@ -72,7 +72,7 @@ describe('Type-checks function arguments', () => {
   it('from_items()', () => {
     expectError(() => {
       return search([[1, 'one']], 'from_items(@)');
-    }
+    }, 'invalid-value');
   });
   it('length()', () => {
     try {
