@@ -1,6 +1,18 @@
-import type { ExpressionNode } from './AST.type';
+import type { ExpressionNode, ExpressionReference } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue, ObjectDict } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
+import {
+  findFirst,
+  findLast,
+  lower,
+  padLeft,
+  padRight,
+  replace,
+  trim,
+  trimLeft,
+  trimRight,
+  upper,
+} from './utils/strings';
 
 export enum InputArgument {
   TYPE_NUMBER = 0,
@@ -250,6 +262,22 @@ export class Runtime {
     return searchStr.includes(suffix, searchStr.length - suffix.length);
   };
 
+  private functionFindFirst: RuntimeFunction<JSONValue[], number | null> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const search = <string>resolvedArgs[1];
+    const start = (resolvedArgs.length > 2 && <number>resolvedArgs[2]) || undefined;
+    const end = (resolvedArgs.length > 3 && <number>resolvedArgs[3]) || undefined;
+    return findFirst(subject, search, start, end);
+  };
+
+  private functionFindLast: RuntimeFunction<JSONValue[], number | null> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const search = <string>resolvedArgs[1];
+    const start = (resolvedArgs.length > 2 && <number>resolvedArgs[2]) || undefined;
+    const end = (resolvedArgs.length > 3 && <number>resolvedArgs[3]) || undefined;
+    return findLast(subject, search, start, end);
+  };
+
   private functionFloor: RuntimeFunction<[number], number> = ([inputValue]) => {
     return Math.floor(inputValue);
   };
@@ -268,6 +296,18 @@ export class Runtime {
       return inputValue.length;
     }
     return Object.keys(inputValue).length;
+  };
+
+  private functionLet: RuntimeFunction<[JSONObject, ExpressionReference], JSONValue> = ([inputScope, exprefNode]) => {
+    const interpreter = this._interpreter?.withScope(inputScope);
+    if (!interpreter) {
+      return null;
+    }
+    return interpreter.visit(exprefNode, exprefNode.context) as JSONValue;
+  };
+
+  private functionLower: RuntimeFunction<[string], string> = ([subject]) => {
+    return lower(subject);
   };
 
   private functionMap: RuntimeFunction<[ExpressionNode, JSONArray], JSONArray> = ([exprefNode, elements]) => {
@@ -374,6 +414,27 @@ export class Runtime {
     return null;
   };
 
+  private functionPadLeft: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const width = <number>resolvedArgs[1];
+    const padding = (resolvedArgs.length > 2 && <string>resolvedArgs[2]) || undefined;
+    return padLeft(subject, width, padding);
+  };
+
+  private functionPadRight: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const width = <number>resolvedArgs[1];
+    const padding = (resolvedArgs.length > 2 && <string>resolvedArgs[2]) || undefined;
+    return padRight(subject, width, padding);
+  };
+
+  private functionReplace: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const string = <string>resolvedArgs[1];
+    const by = <string>resolvedArgs[2];
+    return replace(subject, string, by, resolvedArgs.length > 3 ? <number>resolvedArgs[3] : undefined);
+  };
+
   private functionReverse: RuntimeFunction<[string | JSONArray], string | JSONArray> = ([inputValue]) => {
     const typeName = this.getTypeName(inputValue);
     if (typeName === InputArgument.TYPE_STRING) {
@@ -475,6 +536,19 @@ export class Runtime {
     return JSON.stringify(inputValue);
   };
 
+  private functionTrim: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    return trim(subject, resolvedArgs.length > 1 ? <string>resolvedArgs[1] : undefined);
+  };
+  private functionTrimLeft: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    return trimLeft(subject, resolvedArgs.length > 1 ? <string>resolvedArgs[1] : undefined);
+  };
+  private functionTrimRight: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    return trimRight(subject, resolvedArgs.length > 1 ? <string>resolvedArgs[1] : undefined);
+  };
+
   private functionType: RuntimeFunction<[JSONValue], string> = ([inputValue]) => {
     switch (this.getTypeName(inputValue)) {
       case InputArgument.TYPE_NUMBER:
@@ -492,6 +566,10 @@ export class Runtime {
       default:
         throw new Error('invalid-type');
     }
+  };
+
+  private functionUpper: RuntimeFunction<[string], string> = ([subject]) => {
+    return upper(subject);
   };
 
   private functionValues: RuntimeFunction<[JSONObject], JSONValue[]> = ([inputObject]) => {
@@ -545,6 +623,44 @@ export class Runtime {
         },
       ],
     },
+    find_first: {
+      _func: this.functionFindFirst,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
+        },
+      ],
+    },
+    find_last: {
+      _func: this.functionFindLast,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
+        },
+      ],
+    },
     floor: {
       _func: this.functionFloor,
       _signature: [
@@ -572,11 +688,23 @@ export class Runtime {
         },
       ],
     },
+    let: {
+      _func: this.functionLet,
+      _signature: [{ types: [InputArgument.TYPE_OBJECT] }, { types: [InputArgument.TYPE_EXPREF] }],
+    },
     length: {
       _func: this.functionLength,
       _signature: [
         {
           types: [InputArgument.TYPE_STRING, InputArgument.TYPE_ARRAY, InputArgument.TYPE_OBJECT],
+        },
+      ],
+    },
+    lower: {
+      _func: this.functionLower,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
         },
       ],
     },
@@ -644,6 +772,54 @@ export class Runtime {
         {
           types: [InputArgument.TYPE_ANY],
           variadic: true,
+        },
+      ],
+    },
+    pad_left: {
+      _func: this.functionPadLeft,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+          optional: true,
+        },
+      ],
+    },
+    pad_right: {
+      _func: this.functionPadRight,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+          optional: true,
+        },
+      ],
+    },
+    replace: {
+      _func: this.functionReplace,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
         },
       ],
     },
@@ -717,11 +893,55 @@ export class Runtime {
         },
       ],
     },
+    trim: {
+      _func: this.functionTrim,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+          optional: true,
+        },
+      ],
+    },
+    trim_left: {
+      _func: this.functionTrimLeft,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+          optional: true,
+        },
+      ],
+    },
+    trim_right: {
+      _func: this.functionTrimRight,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+          optional: true,
+        },
+      ],
+    },
     type: {
       _func: this.functionType,
       _signature: [
         {
           types: [InputArgument.TYPE_ANY],
+        },
+      ],
+    },
+    upper: {
+      _func: this.functionUpper,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_STRING],
         },
       ],
     },
