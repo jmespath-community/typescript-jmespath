@@ -34,7 +34,7 @@
   },
   "license": "MPL-2.0",
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=14.0.0"
   },
   "scripts": {
     "lint": "npx eslint --ignore-path .eslintignore './{src,test}/**/*.{js,ts}'",
