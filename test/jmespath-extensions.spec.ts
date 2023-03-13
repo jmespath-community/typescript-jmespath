@@ -68,7 +68,7 @@ describe('registerFunction', () => {
         },
         'tooFewArgs()',
       ),
-    ).toThrow('ArgumentError: tooFewArgs() takes 1 arguments but received 0');
+    ).toThrow('Invalid arity: tooFewArgs() takes 1 arguments but received 0');
     expect(() =>
       search(
         {
@@ -77,7 +77,7 @@ describe('registerFunction', () => {
         },
         'tooFewArgs(foo, @)',
       ),
-    ).toThrow('TypeError: tooFewArgs() expected argument 2 to be type (number) but received type object instead.');
+    ).toThrow('Invalid type: tooFewArgs() expected argument 2 to be type (number) but received type object instead.');
     expect(() =>
       search(
         {
@@ -86,7 +86,7 @@ describe('registerFunction', () => {
         },
         'tooFewArgs(foo, `2`, @)',
       ),
-    ).toThrow('ArgumentError: tooFewArgs() takes 1 arguments but received 3');
+    ).toThrow('Invalid arity: tooFewArgs() takes 1 arguments but received 3');
   });
   it('alerts too many arguments', () => {
     registerFunction(
@@ -105,7 +105,7 @@ describe('registerFunction', () => {
         },
         'tooManyArgs(foo)',
       ),
-    ).toThrow('ArgumentError: tooManyArgs() takes 0 argument but received 1');
+    ).toThrow('Invalid arity: tooManyArgs() takes 0 argument but received 1');
   });
 
   it('alerts optional variadic arguments', () => {
@@ -148,7 +148,7 @@ describe('registerFunction', () => {
         },
         'variadicAlwaysLast(foo)',
       ),
-    ).toThrow("ArgumentError: variadicAlwaysLast() 'variadic' argument 1 must occur last");
+    ).toThrow("Invalid arity: variadicAlwaysLast() 'variadic' argument 1 must occur last");
   });
 
   it('accounts for optional arguments', () => {
@@ -185,7 +185,7 @@ describe('registerFunction', () => {
         },
         'optionalArgs(foo, bar, [foo, bar])',
       ),
-    ).toThrow('ArgumentError: optionalArgs() takes 1 arguments but received 3');
+    ).toThrow('Invalid arity: optionalArgs() takes 1 arguments but received 3');
   });
 });
 

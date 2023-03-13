@@ -1,4 +1,4 @@
-import { expectError } from './compliance.spec';
+import { expectError } from './error.utils';
 import { divide, strictDeepEqual } from '../src/utils';
 
 describe('strictDeepEqual', () => {

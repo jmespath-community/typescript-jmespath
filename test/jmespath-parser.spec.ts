@@ -1,5 +1,5 @@
 import { compile } from '../src';
-import { expectError } from './compliance.spec';
+import { expectError } from './error.utils';
 
 describe('parsing', () => {
   it('should parse field node', () => {

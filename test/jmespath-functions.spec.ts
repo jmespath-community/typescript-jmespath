@@ -1,5 +1,5 @@
 import { search } from '../src';
-import { expectError } from './compliance.spec';
+import { expectError } from './error.utils';
 
 describe('Evaluates functions', () => {
   it('from_items()', () => {
@@ -74,16 +74,14 @@ describe('Type-checks function arguments', () => {
     }, 'invalid-value');
   });
   it('from_items()', () => {
-    // TODO: must be "invalid-type"
     expectError(() => {
       return search(null, 'from_items(@)');
-    }, ['TypeError', 'null']);
+    }, ['invalid-type', 'null']);
   });
   it('from_items()', () => {
-    // TODO: must be "invalid-type"
     expectError(() => {
       return search('foo', 'from_items(@)');
-    }, ['TypeError', 'string']);
+    }, ['invalid-type', 'string']);
   });
   it('from_items()', () => {
     expectError(() => {
@@ -96,22 +94,19 @@ describe('Type-checks function arguments', () => {
     }, 'invalid-value');
   });
   it('group_by()', () => {
-    // TODO: should be 'invalid-type'
     expectError(() => {
       return search({}, 'group_by(@, &`false`)');
-    }, 'TypeError');
+    }, 'invalid-type');
   });
   it('group_by()', () => {
     expectError(() => {
-      // should be 'invalid-type'
       return search([{}, {}], 'group_by(@, &`false`)');
-    }, 'TypeError');
+    }, 'invalid-type');
   });
   it('group_by()', () => {
-    // should be 'invalid-type'
     expectError(() => {
       return search([{a: 42}, {a: 42}], 'group_by(@, &a)');
-    }, 'TypeError');
+    }, 'invalid-type');
   });
   it('length()', () => {
     try {

@@ -1,4 +1,4 @@
-import { expectError } from './compliance.spec';
+import { expectError } from './error.utils';
 import { tokenize, } from '../src';
 
 describe('tokenize', () => {

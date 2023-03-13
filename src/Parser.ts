@@ -64,7 +64,7 @@ class TokenParser {
     const ast = this.expression(0);
     if (this.lookahead(0) !== Token.TOK_EOF) {
       const token = this.lookaheadToken(0);
-      this.errorToken(token, `Unexpected token type: ${token.type}, value: ${token.value}`);
+      this.errorToken(token, `Syntax error: unexpected token type: ${token.type}, value: ${token.value}`);
     }
     return ast;
   }
@@ -106,7 +106,7 @@ class TokenParser {
         return { type: 'Field', name: token.value as string };
       case Token.TOK_QUOTEDIDENTIFIER:
         if (this.lookahead(0) === Token.TOK_LPAREN) {
-          throw new Error('Quoted identifier not allowed for function names.');
+          throw new Error('Syntax error: quoted identifier not allowed for function names.');
         } else {
           return { type: 'Field', name: token.value as string };
         }
@@ -208,7 +208,7 @@ class TokenParser {
       }
       case Token.TOK_LPAREN: {
         if (left.type !== 'Field') {
-          throw new Error('Expected a Field node');
+          throw new Error('Syntax error: expected a Field node');
         }
         const name = left.name;
         const args: ExpressionNode[] = [];
@@ -279,12 +279,12 @@ class TokenParser {
       return;
     } else {
       const token = this.lookaheadToken(0);
-      this.errorToken(token, `Expected ${tokenType}, got: ${token.type}`);
+      this.errorToken(token, `Syntax error: expected ${tokenType}, got: ${token.type}`);
     }
   }
 
   private errorToken(token: LexerToken, message = ''): never {
-    const error = new Error(message || `Invalid token (${token.type}): "${token.value}"`);
+    const error = new Error(message || `Syntax error: invalid token (${token.type}): "${token.value}"`);
     error.name = 'ParserError';
     throw error;
   }
@@ -401,7 +401,7 @@ class TokenParser {
       if (this.lookahead(0) === Token.TOK_COMMA) {
         this.match(Token.TOK_COMMA);
         if (this.lookahead(0) === Token.TOK_RBRACKET) {
-          throw new Error('Unexpected token Rbracket');
+          throw new Error('Syntax error: unexpected token Rbracket');
         }
       }
     }
@@ -419,7 +419,7 @@ class TokenParser {
     for (;;) {
       keyToken = this.lookaheadToken(0);
       if (!identifierTypes.includes(keyToken.type)) {
-        throw new Error(`Expecting an identifier token, got: ${keyToken.type}`);
+        throw new Error(`Syntax error: expecting an identifier token, got: ${keyToken.type}`);
       }
       keyName = keyToken.value as string;
       this.advance();
