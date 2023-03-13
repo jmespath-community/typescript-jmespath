@@ -19,6 +19,16 @@ describe('Type-checks function arguments', () => {
       return search('subject string', "find_last(@, 's', `1.3`)");
     }, 'invalid-value');
   });
+  it('length()', () => {
+    try {
+      search([], 'length(`null`)');
+    } catch (e) {
+      if (e instanceof Error) {
+        expect(e.message).toContain('length() expected argument 1 to be type (string | array | object)');
+        expect(e.message).toContain('received type null instead.');
+      }
+    }
+  });
   it('pad_right()', () => { // this should be included in the compliance test suite
     expectError(() => {
       return search('subject string', "pad_right(@, `1`, '--')");
