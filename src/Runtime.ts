@@ -327,9 +327,6 @@ export class Runtime {
 
   private functionLet: RuntimeFunction<[JSONObject, ExpressionReference], JSONValue> = ([inputScope, exprefNode]) => {
     const interpreter = this._interpreter?.withScope(inputScope);
-    if (!interpreter) {
-      return null;
-    }
     return interpreter.visit(exprefNode, exprefNode.context) as JSONValue;
   };
 
@@ -482,9 +479,6 @@ export class Runtime {
   };
 
   private functionSortBy: RuntimeFunction<[number[] | string[], ExpressionNode], JSONValue> = resolvedArgs => {
-    if (!this._interpreter) {
-      return [];
-    }
     const sortedArray = resolvedArgs[0].slice(0);
     if (sortedArray.length === 0) {
       return sortedArray;
