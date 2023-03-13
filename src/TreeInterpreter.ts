@@ -165,7 +165,7 @@ export class TreeInterpreter {
             return div(first, second);
 
           default:
-            throw new Error(`Unknown arithmetic operator: ${node.operator}`);
+            throw new Error(`Syntax error: unknown arithmetic operator: ${node.operator}`);
         }
       }
       case 'Unary': {
@@ -180,7 +180,7 @@ export class TreeInterpreter {
             return -(operand as number);
 
           default:
-            throw new Error(`Unknown arithmetic operator: ${node.operator}`);
+            throw new Error(`Syntax error: unknown arithmetic operator: ${node.operator}`);
         }
       }
       case 'Comparator': {
@@ -269,7 +269,7 @@ export class TreeInterpreter {
     if (step === null) {
       step = 1;
     } else if (step === 0) {
-      const error = new Error('Invalid slice, step cannot be 0');
+      const error = new Error('Invalid value: slice step cannot be 0');
       error.name = 'RuntimeError';
       throw error;
     }

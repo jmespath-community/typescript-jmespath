@@ -115,7 +115,7 @@ class StreamLexer {
       } else if (skipChars[stream[this._current]] !== undefined) {
         this._current += 1;
       } else {
-        const error = new Error(`Unknown character: ${stream[this._current]}`);
+        const error = new Error(`Syntax error: unknown character: ${stream[this._current]}`);
         error.name = 'LexerError';
         throw error;
       }
@@ -146,7 +146,13 @@ class StreamLexer {
       this._current = current;
     }
     this._current += 1;
-    return JSON.parse(stream.slice(start, this._current)) as string;
+    const [value, ok] = this.parseJSON(stream.slice(start, this._current));
+    if (!ok) {
+      const error = new Error(`syntax: unexpected end of JSON input`);
+      error.name = 'LexerError';
+      throw error;
+    }
+    return <string>value;
   }
 
   private consumeRawStringLiteral(stream: string): string {
@@ -262,7 +268,7 @@ class StreamLexer {
     }
 
     if (!ok) {
-      const error = new Error(`Syntax: unexpected end of JSON input or invalid format for a JSON literal: ${stream[this._current]}`);
+      const error = new Error(`Syntax error: unexpected end of JSON input or invalid format for a JSON literal: ${stream[this._current]}`);
       error.name = 'LexerError';
       throw error;
     }

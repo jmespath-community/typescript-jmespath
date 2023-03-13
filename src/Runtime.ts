@@ -95,7 +95,7 @@ export class Runtime {
   private validateInputSignatures(name: string, signature: InputSignature[]): void {
     for (let i = 0; i < signature.length; i += 1) {
       if ('variadic' in signature[i] && i !== signature.length - 1) {
-        throw new Error(`ArgumentError: ${name}() 'variadic' argument ${i + 1} must occur last`);
+        throw new Error(`Invalid arity: ${name}() 'variadic' argument ${i + 1} must occur last`);
       }
     }
   }
@@ -113,7 +113,7 @@ export class Runtime {
     if ((lastArgIsVariadic && tooFewArgs) || (!lastArgIsVariadic && (tooFewArgs || tooManyArgs))) {
       pluralized = signature.length > 1;
       throw new Error(
-        `ArgumentError: ${name}() takes ${tooFewModifier}${numberOfRequiredArgs} argument${
+        `Invalid arity: ${name}() takes ${tooFewModifier}${numberOfRequiredArgs} argument${
           (pluralized && 's') || ''
         } but received ${args.length}`,
       );
@@ -141,7 +141,7 @@ export class Runtime {
           .join(' | ');
 
         throw new Error(
-          `TypeError: ${name}() expected argument ${i + 1} to be type (${expected}) but received type ${
+          `Invalid type: ${name}() expected argument ${i + 1} to be type (${expected}) but received type ${
             this.TYPE_NAME_TABLE[actualType]
           } instead.`,
         );
@@ -216,7 +216,7 @@ export class Runtime {
     const keyFunc = (x: JSONValue): JSONValue => {
       const current = interpreter.visit(exprefNode, x) as JSONValue;
       if (!allowedTypes.includes(this.getTypeName(current) as InputArgument)) {
-        const msg = `TypeError: expected one of (${allowedTypes
+        const msg = `Invalid type: expected one of (${allowedTypes
           .map(t => this.TYPE_NAME_TABLE[t])
           .join(' | ')}), received ${this.TYPE_NAME_TABLE[this.getTypeName(current) as InputArgument]}`;
         throw new Error(msg);
@@ -487,7 +487,7 @@ export class Runtime {
     const exprefNode = resolvedArgs[1];
     const requiredType = this.getTypeName(interpreter.visit(exprefNode, sortedArray[0]) as JSONValue);
     if (requiredType !== undefined && ![InputArgument.TYPE_NUMBER, InputArgument.TYPE_STRING].includes(requiredType)) {
-      throw new Error(`TypeError: unexpected type (${this.TYPE_NAME_TABLE[requiredType]})`);
+      throw new Error(`Invalid type: unexpected type (${this.TYPE_NAME_TABLE[requiredType]})`);
     }
     const decorated = [];
     for (let i = 0; i < sortedArray.length; i += 1) {
@@ -498,13 +498,13 @@ export class Runtime {
       const exprB = interpreter.visit(exprefNode, b[1]) as number | string;
       if (this.getTypeName(exprA) !== requiredType) {
         throw new Error(
-          `TypeError: expected (${this.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
+          `Invalid type: expected (${this.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
             this.TYPE_NAME_TABLE[this.getTypeName(exprA) as InputArgument]
           }`,
         );
       } else if (this.getTypeName(exprB) !== requiredType) {
         throw new Error(
-          `TypeError: expected (${this.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
+          `Invalid type: expected (${this.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
             this.TYPE_NAME_TABLE[this.getTypeName(exprB) as InputArgument]
           }`,
         );
