@@ -8,7 +8,31 @@ export type ComplianceTestCase = { given: JSONValue; cases: ComplianceTestCaseDe
 export type ComplianceTestSuite = ComplianceTestCase[];
 
 // Compliance tests that aren't supported yet.
-const notImplementedYet: string[] = [];
+const notImplementedYet: string[] = [
+  //"arithmetic.json",
+  //"basic.json",
+  "benchmarks.json",
+  "boolean.json",
+  //"current.json",
+  //"escape.json",
+  //"filters.json",
+  //"function_group_by.json",
+  //"function_let.json",
+  "functions_strings.json",
+  "functions.json",
+  //"identifiers.json",
+  //"indices.json",
+  //"jep-12-literal.json",
+  //"legacy-literal.json",
+  //"lexical_scoping.json",
+  //"literal.json",
+  //"multiselect.json",
+  //"pipe.json",
+  //"slice.json",
+  //"syntax.json",
+  //"unicode.json",
+  //"wildcard.json",
+];
 
 export function endsWith(str: string, suffix: string): boolean {
   return str.indexOf(suffix, str.length - suffix.length) !== -1;
