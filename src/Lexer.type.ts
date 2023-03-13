@@ -46,3 +46,13 @@ export interface LexerToken {
   value: LexerTokenValue;
   start: number;
 }
+
+export interface LexerOptions {
+  // The flag to enable pre-JEP-12 literal compatibility.
+  // JEP-12 deprecates `foo` -> "foo" syntax.
+  // Valid expressions MUST use: `"foo"` -> "foo"
+  //
+  // Setting this flag to `true` enables support for legacy syntax.
+  //
+  enable_legacy_literals?: boolean;
+}
