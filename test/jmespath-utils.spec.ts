@@ -1,5 +1,5 @@
-import { search, } from '../src';
-import { strictDeepEqual } from '../src/utils';
+import { expectError } from './compliance.spec';
+import { divide, strictDeepEqual } from '../src/utils';
 
 describe('strictDeepEqual', () => {
   it('should compare scalars', () => {
@@ -62,15 +62,21 @@ describe('strictDeepEqual', () => {
   });
 });
 
-describe('search', () => {
-  it('should throw a readable error when invalid arguments are provided to a function', () => {
-    try {
-      search([], 'length(`null`)');
-    } catch (e) {
-      if (e instanceof Error) {
-        expect(e.message).toContain('length() expected argument 1 to be type (string | array | object)');
-        expect(e.message).toContain('received type null instead.');
-      }
-    }
+describe('should throw a readable error when invalid arguments are provided to a function', () => {
+  it('divide()', () => {
+    expectError(() => divide(3, 0), 'not-a-number');
+  });
+  it('divide->ensureNumbers', () => {
+    expectError(() => divide(3, 'zero'), 'not-a-number');
+  });
+  it('divide->ensureNumbers', () => {
+    expectError(() => divide(3, null), 'not-a-number');
+  });
+  it('divide->ensureNumbers', () => {
+    expectError(() => divide(null, 42), 'not-a-number');
+  });
+  it('divide->ensureNumbers', () => {
+    expectError(() => divide('zero', 42), 'not-a-number');
   });
 });
+

@@ -13,7 +13,7 @@ export class ScopeChain {
 
   public getValue(identifier: string): JSONValue {
     if (identifier in this.data) {
-      const result = this.data?.[identifier];
+      const result = this.data[identifier];
       if (result) {
         return result;
       }

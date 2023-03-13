@@ -11,6 +11,7 @@ export type { FunctionSignature, RuntimeFunction, InputSignature } from './Runti
 
 export const TYPE_ANY = InputArgument.TYPE_ANY;
 export const TYPE_ARRAY = InputArgument.TYPE_ARRAY;
+export const TYPE_ARRAY_ARRAY = InputArgument.TYPE_ARRAY_ARRAY;
 export const TYPE_ARRAY_NUMBER = InputArgument.TYPE_ARRAY_NUMBER;
 export const TYPE_ARRAY_STRING = InputArgument.TYPE_ARRAY_STRING;
 export const TYPE_BOOLEAN = InputArgument.TYPE_BOOLEAN;
