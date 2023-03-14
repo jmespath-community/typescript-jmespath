@@ -1,8 +1,15 @@
 import { compile } from '../src';
+import { expectError } from './compliance.spec';
 
 describe('parsing', () => {
   it('should parse field node', () => {
     expect(compile('foo')).toMatchObject({ type: 'Field', name: 'foo' });
+  });
+  it('should fail to parse invalid slice expressions', () => {
+    expectError(
+      () => { compile('[:::]'); return null; },
+      ['syntax', 'too many colons in slice expression']
+    );
   });
   it('should parse arithmetic addition', () => {
     expect(compile('foo + bar')).toMatchObject({
