@@ -315,37 +315,35 @@ class TokenParser {
   }
 
   private parseSliceExpression(): SliceNode {
-    const parts = [];
+    const parts: (number | null)[] = [null, null, null];
 
-    for (let i = 0; i < 3; i += 1) {
-      let next = this.lookaheadToken(0);
-      if (next.type === Token.TOK_RBRACKET) {
-        break;
-      }
-      if (next.type === Token.TOK_NUMBER) {
-        this.advance();
-        parts.push(next.value as number);
-        next = this.lookaheadToken(0);
-      } else {
-        parts.push(null);
-      }
+    let index = 0;
+    let current = this.lookaheadToken(0);
 
-      // COLON/RBRACKET
-      // WARN technically allows for trailing colon
-      if (next.type !== Token.TOK_COLON) {
-        if (next.type !== Token.TOK_RBRACKET) {
-          this.errorToken(next, `Syntax error, unexpected token: ${next.value}(${next.type})`);
+    while (current.type != Token.TOK_RBRACKET && index < 3) {
+      if (current.type === Token.TOK_COLON) {
+        index++;
+        if (index === 3){
+          this.errorToken(this.lookaheadToken(0), 'Syntax error, too many colons in slice expression');
         }
-        break;
+        this.advance();
+      }
+      else if (current.type === Token.TOK_NUMBER) {
+        const part = this.lookaheadToken(0).value as number;
+        parts[index] = part;
+        this.advance();
+      }
+      else {
+        const next = this.lookaheadToken(0);
+        this.errorToken(next, `Syntax error, unexpected token: ${next.value}(${next.type})`);
       }
 
-      this.advance();
+      current = this.lookaheadToken(0);
     }
 
     this.match(Token.TOK_RBRACKET);
 
     const [start = null, stop = null, step = null] = parts;
-
     return { type: 'Slice', start, stop, step };
   }
 
