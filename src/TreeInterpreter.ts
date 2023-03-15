@@ -165,7 +165,7 @@ export class TreeInterpreter {
             return div(first, second);
 
           default:
-            throw new Error(`Unknown arithmetic operator: ${node.operator}`);
+            throw new Error(`Syntax error: unknown arithmetic operator: ${node.operator}`);
         }
       }
       case 'Unary': {
@@ -180,17 +180,29 @@ export class TreeInterpreter {
             return -(operand as number);
 
           default:
-            throw new Error(`Unknown arithmetic operator: ${node.operator}`);
+            throw new Error(`Syntax error: unknown arithmetic operator: ${node.operator}`);
         }
       }
       case 'Comparator': {
         const first = this.visit(node.left, value);
         const second = this.visit(node.right, value);
+
+        // equality is an exact match
+
         switch (node.name) {
           case 'EQ':
             return strictDeepEqual(first, second);
           case 'NE':
             return !strictDeepEqual(first, second);
+        }
+
+        // ordering operators are only valid for numbers
+
+        if (typeof first !== 'number' || typeof second !== 'number'){
+          return null;
+        }
+
+        switch (node.name){
           case 'GT':
             return (first as number) > (second as number);
           case 'GTE':
@@ -215,9 +227,6 @@ export class TreeInterpreter {
         return collected;
       }
       case 'MultiSelectHash': {
-        if (value === null) {
-          return null;
-        }
         const collected: JSONObject = {};
         for (const child of node.children) {
           collected[child.name] = this.visit(child.value, value) as JSONValue;
@@ -269,7 +278,7 @@ export class TreeInterpreter {
     if (step === null) {
       step = 1;
     } else if (step === 0) {
-      const error = new Error('Invalid slice, step cannot be 0');
+      const error = new Error('Invalid value: slice step cannot be 0');
       error.name = 'RuntimeError';
       throw error;
     }

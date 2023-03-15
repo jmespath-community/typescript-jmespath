@@ -1,6 +1,4 @@
-import type { ExpressionNode, ExpressionReference } from './AST.type';
-import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONArrayObject, JSONObject, JSONValue, ObjectDict } from './JSON.type';
-import type { TreeInterpreter } from './TreeInterpreter';
+import { Text } from './utils/text';
 import {
   findFirst,
   findLast,
@@ -14,6 +12,10 @@ import {
   trimRight,
   upper,
 } from './utils/strings';
+
+import type { ExpressionNode, ExpressionReference } from './AST.type';
+import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONArrayObject, JSONObject, JSONValue, ObjectDict } from './JSON.type';
+import type { TreeInterpreter } from './TreeInterpreter';
 
 export enum InputArgument {
   TYPE_NUMBER = 0,
@@ -96,7 +98,7 @@ export class Runtime {
   private validateInputSignatures(name: string, signature: InputSignature[]): void {
     for (let i = 0; i < signature.length; i += 1) {
       if ('variadic' in signature[i] && i !== signature.length - 1) {
-        throw new Error(`ArgumentError: ${name}() 'variadic' argument ${i + 1} must occur last`);
+        throw new Error(`Invalid arity: ${name}() 'variadic' argument ${i + 1} must occur last`);
       }
     }
   }
@@ -114,7 +116,7 @@ export class Runtime {
     if ((lastArgIsVariadic && tooFewArgs) || (!lastArgIsVariadic && (tooFewArgs || tooManyArgs))) {
       pluralized = signature.length > 1;
       throw new Error(
-        `ArgumentError: ${name}() takes ${tooFewModifier}${numberOfRequiredArgs} argument${
+        `Invalid arity: ${name}() takes ${tooFewModifier}${numberOfRequiredArgs} argument${
           (pluralized && 's') || ''
         } but received ${args.length}`,
       );
@@ -142,7 +144,7 @@ export class Runtime {
           .join(' | ');
 
         throw new Error(
-          `TypeError: ${name}() expected argument ${i + 1} to be type (${expected}) but received type ${
+          `Invalid type: ${name}() expected argument ${i + 1} to be type (${expected}) but received type ${
             this.TYPE_NAME_TABLE[actualType]
           } instead.`,
         );
@@ -217,7 +219,7 @@ export class Runtime {
     const keyFunc = (x: JSONValue): JSONValue => {
       const current = interpreter.visit(exprefNode, x) as JSONValue;
       if (!allowedTypes.includes(this.getTypeName(current) as InputArgument)) {
-        const msg = `TypeError: expected one of (${allowedTypes
+        const msg = `Invalid type: expected one of (${allowedTypes
           .map(t => this.TYPE_NAME_TABLE[t])
           .join(' | ')}), received ${this.TYPE_NAME_TABLE[this.getTypeName(current) as InputArgument]}`;
         throw new Error(msg);
@@ -231,7 +233,11 @@ export class Runtime {
     return Math.abs(inputValue);
   };
 
-  private functionAvg: RuntimeFunction<[number[]], number> = ([inputArray]) => {
+  private functionAvg: RuntimeFunction<[number[]], number | null> = ([inputArray]) => {
+    if (!inputArray || inputArray.length == 0){
+      return null;
+    }
+
     let sum = 0;
     for (let i = 0; i < inputArray.length; i += 1) {
       sum += inputArray[i];
@@ -320,7 +326,10 @@ export class Runtime {
   };
 
   private functionLength: RuntimeFunction<[string | JSONArray | JSONObject], number> = ([inputValue]) => {
-    if (typeof inputValue === 'string' || Array.isArray(inputValue)) {
+    if (typeof inputValue === 'string'){
+      return new Text(inputValue).length;
+    }
+    if (Array.isArray(inputValue)) {
       return inputValue.length;
     }
     return Object.keys(inputValue).length;
@@ -381,7 +390,7 @@ export class Runtime {
         maxRecord = resolvedArray[i];
       }
     }
-    return maxRecord;
+    return maxRecord || null;
   };
 
   private functionMerge: RuntimeFunction<JSONObject[], JSONObject> = resolvedArgs => {
@@ -427,7 +436,7 @@ export class Runtime {
         minRecord = resolvedArray[i];
       }
     }
-    return minRecord;
+    return minRecord || null;
   };
 
   private functionNotNull: RuntimeFunction<JSONArray, JSONValue> = resolvedArgs => {
@@ -469,12 +478,8 @@ export class Runtime {
   private functionReverse: RuntimeFunction<[string | JSONArray], string | JSONArray> = ([inputValue]) => {
     const typeName = this.getTypeName(inputValue);
     if (typeName === InputArgument.TYPE_STRING) {
-      const originalStr = inputValue as string;
-      let reversedStr = '';
-      for (let i = originalStr.length - 1; i >= 0; i -= 1) {
-        reversedStr += originalStr[i];
-      }
-      return reversedStr;
+      return new Text(inputValue as string)
+        .reverse();
     }
     const reversedArray = (inputValue as JSONArray).slice(0);
     reversedArray.reverse();
@@ -482,6 +487,12 @@ export class Runtime {
   };
 
   private functionSort: RuntimeFunction<[(string | number)[]], (string | number)[]> = ([inputValue]) => {
+    if (inputValue.length == 0){
+      return inputValue;
+    };
+    if (typeof inputValue[0] === 'string') {
+      return (<string[]>[...inputValue]).sort(Text.comparer);
+    }
     return [...inputValue].sort();
   };
 
@@ -494,37 +505,27 @@ export class Runtime {
     const exprefNode = resolvedArgs[1];
     const requiredType = this.getTypeName(interpreter.visit(exprefNode, sortedArray[0]) as JSONValue);
     if (requiredType !== undefined && ![InputArgument.TYPE_NUMBER, InputArgument.TYPE_STRING].includes(requiredType)) {
-      throw new Error(`TypeError: unexpected type (${this.TYPE_NAME_TABLE[requiredType]})`);
+      throw new Error(`Invalid type: unexpected type (${this.TYPE_NAME_TABLE[requiredType]})`);
     }
-    const decorated = [];
-    for (let i = 0; i < sortedArray.length; i += 1) {
-      decorated.push([i, sortedArray[i]]);
+    function throwInvalidTypeError(rt: Runtime, item: string | number): never{
+        throw new Error(
+          `Invalid type: expected (${rt.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
+            rt.TYPE_NAME_TABLE[rt.getTypeName(item) as InputArgument]}`);
     }
-    decorated.sort((a, b) => {
-      const exprA = interpreter.visit(exprefNode, a[1]) as number | string;
-      const exprB = interpreter.visit(exprefNode, b[1]) as number | string;
+
+    return sortedArray.sort((a, b) => {
+      const exprA = interpreter.visit(exprefNode, a) as number | string;
+      const exprB = interpreter.visit(exprefNode, b) as number | string;
       if (this.getTypeName(exprA) !== requiredType) {
-        throw new Error(
-          `TypeError: expected (${this.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
-            this.TYPE_NAME_TABLE[this.getTypeName(exprA) as InputArgument]
-          }`,
-        );
+        throwInvalidTypeError(this, exprA);
       } else if (this.getTypeName(exprB) !== requiredType) {
-        throw new Error(
-          `TypeError: expected (${this.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
-            this.TYPE_NAME_TABLE[this.getTypeName(exprB) as InputArgument]
-          }`,
-        );
+        throwInvalidTypeError(this, exprB);
       }
-      if (exprA > exprB) {
-        return 1;
+      if (requiredType === InputArgument.TYPE_STRING){
+        return Text.comparer(<string>exprA, <string>exprB);
       }
-      return exprA < exprB ? -1 : (a[0] as number) - (b[0] as number);
+      return <number>exprA - <number>exprB;
     });
-    for (let j = 0; j < decorated.length; j += 1) {
-      sortedArray[j] = decorated[j][1];
-    }
-    return sortedArray;
   };
 
   private functionStartsWith: RuntimeFunction<[string, string], boolean> = ([searchable, searchStr]) => {
