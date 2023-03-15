@@ -8,6 +8,7 @@ import {
   padLeft,
   padRight,
   replace,
+  split,
   trim,
   trimLeft,
   trimRight,
@@ -459,6 +460,12 @@ export class Runtime {
     return replace(subject, string, by, resolvedArgs.length > 3 ? <number>resolvedArgs[3] : undefined);
   };
 
+  private functionSplit: RuntimeFunction<JSONValue[], string[]> = resolvedArgs => {
+    const subject = <string>resolvedArgs[0];
+    const search = <string>resolvedArgs[1];
+    return split(subject, search, resolvedArgs.length > 2 ? <number>resolvedArgs[2] : undefined);
+  };
+
   private functionReverse: RuntimeFunction<[string | JSONArray], string | JSONArray> = ([inputValue]) => {
     const typeName = this.getTypeName(inputValue);
     if (typeName === InputArgument.TYPE_STRING) {
@@ -860,6 +867,21 @@ export class Runtime {
         {
           types: [InputArgument.TYPE_STRING],
         },
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_STRING],
+        },
+        {
+          types: [InputArgument.TYPE_NUMBER],
+          optional: true,
+        },
+      ],
+    },
+    split: {
+      _func: this.functionSplit,
+      _signature: [
         {
           types: [InputArgument.TYPE_STRING],
         },
