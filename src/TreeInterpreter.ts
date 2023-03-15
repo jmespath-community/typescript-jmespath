@@ -227,9 +227,6 @@ export class TreeInterpreter {
         return collected;
       }
       case 'MultiSelectHash': {
-        if (value === null) {
-          return null;
-        }
         const collected: JSONObject = {};
         for (const child of node.children) {
           collected[child.name] = this.visit(child.value, value) as JSONValue;
