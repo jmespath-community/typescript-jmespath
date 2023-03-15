@@ -20,18 +20,14 @@ npm install @jmespath-community/jmespath
 ### `search(data: JSONValue, expression: string): JSONValue`
 
 ```javascript
-/* using ES modules */
 import { search } from '@jmespath-community/jmespath';
 
-
-/* using CommonJS modules */
-const search = require('@jmespath-community/jmespath').search;
-
-
-search({foo: {bar: {baz: [0, 1, 2, 3, 4]}}}, "foo.bar.baz[2]")
+search(
+  {foo: {bar: {baz: [0, 1, 2, 3, 4]}}},
+  "foo.bar.baz[2]"
+  );
 
 // OUTPUTS: 2
-
 ```
 
 In the example we gave the `search` function input data of
