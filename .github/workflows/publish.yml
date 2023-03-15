@@ -10,10 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: 'true'
       - uses: actions/setup-node@v3
         with:
           node-version: 14
-      - run: npm ci
+      - run: npm install
       - run: npm test
 
   publish-npm:
@@ -23,12 +25,14 @@ jobs:
     steps:
       - name: 📚 checkout
         uses: actions/checkout@v3
+        with:
+          submodules: 'true'
       - name: 🟢 node
         uses: actions/setup-node@v3
         with:
           node-version: 14
           registry-url: https://registry.npmjs.org/
-      - run: npm install ## npm ci is not enough
+      - run: npm install
       - run: npm run build
       - name: ✉️ publish
         run: npm publish --verbose --access public --tag latest
