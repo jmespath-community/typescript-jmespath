@@ -141,4 +141,4 @@ export type ExpressionNode =
   | BindingNode
   | VariableNode;
 
-export type ExpressionReference = { expref: true; context: JSONValue } & ExpressionNode;
+export type ExpressionReference = { expref: true; } & ExpressionNode;

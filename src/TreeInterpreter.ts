@@ -37,9 +37,6 @@ export class TreeInterpreter {
         if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
           result = value[identifier] ?? null;
         }
-        if (result == null) {
-          result = this._scope?.getValue(identifier) ?? null;
-        }
         return result;
       case 'LetExpression': {
         const { bindings, expression } = node;
@@ -289,7 +286,6 @@ export class TreeInterpreter {
       case 'ExpressionReference':
         return {
           expref: true,
-          context: <JSONValue>value,
           ...node.child,
         };
       case 'Current':

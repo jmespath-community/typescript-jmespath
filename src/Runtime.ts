@@ -13,7 +13,7 @@ import {
   upper,
 } from './utils/strings';
 
-import type { ExpressionNode, ExpressionReference } from './AST.type';
+import type { ExpressionNode } from './AST.type';
 import type {
   JSONArray,
   JSONArrayArray,
@@ -341,11 +341,6 @@ export class Runtime {
       return inputValue.length;
     }
     return Object.keys(inputValue).length;
-  };
-
-  private functionLet: RuntimeFunction<[JSONObject, ExpressionReference], JSONValue> = ([inputScope, exprefNode]) => {
-    const interpreter = this._interpreter?.withScope(inputScope);
-    return interpreter.visit(exprefNode, exprefNode.context) as JSONValue;
   };
 
   private functionLower: RuntimeFunction<[string], string> = ([subject]) => {
@@ -753,10 +748,6 @@ export class Runtime {
           types: [InputArgument.TYPE_OBJECT],
         },
       ],
-    },
-    let: {
-      _func: this.functionLet,
-      _signature: [{ types: [InputArgument.TYPE_OBJECT] }, { types: [InputArgument.TYPE_EXPREF] }],
     },
     length: {
       _func: this.functionLength,
