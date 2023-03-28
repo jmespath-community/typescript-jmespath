@@ -4,7 +4,15 @@ export function expectError(action: () => JSONValue, expected: string | string[]
   let result: JSONValue = null;
   let succeeded = false;
 
-  const errorTypes = ['invalid-type', 'invalid-value', 'invalid-arity', 'not-a-number', 'syntax', 'unknown-function'];
+  const errorTypes = [
+    'invalid-type',
+    'invalid-value',
+    'invalid-arity',
+    'not-a-number',
+    'syntax',
+    'undefined-variable',
+    'unknown-function',
+  ];
 
   function makePattern(text: string, replaceHyphens = false): string {
     let pattern = text;
