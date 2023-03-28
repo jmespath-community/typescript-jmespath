@@ -1,4 +1,4 @@
-import { JSONValue } from "../JSON.type";
+import { JSONValue } from '../JSON.type';
 
 export const isObject = (obj: unknown): obj is Record<string, unknown> => {
   return obj !== null && Object.prototype.toString.call(obj) === '[object Object]';

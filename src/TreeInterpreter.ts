@@ -44,7 +44,7 @@ export class TreeInterpreter {
         return this.visit(node.right, this.visit(node.left, value));
       case 'Subexpression': {
         const result = this.visit(node.left, value);
-        return result != null && this.visit(node.right, result) || null;
+        return (result != null && this.visit(node.right, result)) || null;
       }
       case 'Index': {
         if (!Array.isArray(value)) {
@@ -198,11 +198,11 @@ export class TreeInterpreter {
 
         // ordering operators are only valid for numbers
 
-        if (typeof first !== 'number' || typeof second !== 'number'){
+        if (typeof first !== 'number' || typeof second !== 'number') {
           return null;
         }
 
-        switch (node.name){
+        switch (node.name) {
           case 'GT':
             return (first as number) > (second as number);
           case 'GTE':

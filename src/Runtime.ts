@@ -14,7 +14,15 @@ import {
 } from './utils/strings';
 
 import type { ExpressionNode, ExpressionReference } from './AST.type';
-import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONArrayObject, JSONObject, JSONValue, ObjectDict } from './JSON.type';
+import type {
+  JSONArray,
+  JSONArrayArray,
+  JSONArrayKeyValuePairs,
+  JSONArrayObject,
+  JSONObject,
+  JSONValue,
+  ObjectDict,
+} from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
 
 export enum InputArgument {
@@ -234,7 +242,7 @@ export class Runtime {
   };
 
   private functionAvg: RuntimeFunction<[number[]], number | null> = ([inputArray]) => {
-    if (!inputArray || inputArray.length == 0){
+    if (!inputArray || inputArray.length == 0) {
       return null;
     }
 
@@ -326,7 +334,7 @@ export class Runtime {
   };
 
   private functionLength: RuntimeFunction<[string | JSONArray | JSONObject], number> = ([inputValue]) => {
-    if (typeof inputValue === 'string'){
+    if (typeof inputValue === 'string') {
       return new Text(inputValue).length;
     }
     if (Array.isArray(inputValue)) {
@@ -478,8 +486,7 @@ export class Runtime {
   private functionReverse: RuntimeFunction<[string | JSONArray], string | JSONArray> = ([inputValue]) => {
     const typeName = this.getTypeName(inputValue);
     if (typeName === InputArgument.TYPE_STRING) {
-      return new Text(inputValue as string)
-        .reverse();
+      return new Text(inputValue as string).reverse();
     }
     const reversedArray = (inputValue as JSONArray).slice(0);
     reversedArray.reverse();
@@ -487,9 +494,9 @@ export class Runtime {
   };
 
   private functionSort: RuntimeFunction<[(string | number)[]], (string | number)[]> = ([inputValue]) => {
-    if (inputValue.length == 0){
+    if (inputValue.length == 0) {
       return inputValue;
-    };
+    }
     if (typeof inputValue[0] === 'string') {
       return (<string[]>[...inputValue]).sort(Text.comparer);
     }
@@ -507,10 +514,12 @@ export class Runtime {
     if (requiredType !== undefined && ![InputArgument.TYPE_NUMBER, InputArgument.TYPE_STRING].includes(requiredType)) {
       throw new Error(`Invalid type: unexpected type (${this.TYPE_NAME_TABLE[requiredType]})`);
     }
-    function throwInvalidTypeError(rt: Runtime, item: string | number): never{
-        throw new Error(
-          `Invalid type: expected (${rt.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
-            rt.TYPE_NAME_TABLE[rt.getTypeName(item) as InputArgument]}`);
+    function throwInvalidTypeError(rt: Runtime, item: string | number): never {
+      throw new Error(
+        `Invalid type: expected (${rt.TYPE_NAME_TABLE[requiredType as InputArgument]}), received ${
+          rt.TYPE_NAME_TABLE[rt.getTypeName(item) as InputArgument]
+        }`,
+      );
     }
 
     return sortedArray.sort((a, b) => {
@@ -521,7 +530,7 @@ export class Runtime {
       } else if (this.getTypeName(exprB) !== requiredType) {
         throwInvalidTypeError(this, exprB);
       }
-      if (requiredType === InputArgument.TYPE_STRING){
+      if (requiredType === InputArgument.TYPE_STRING) {
         return Text.comparer(<string>exprA, <string>exprB);
       }
       return <number>exprA - <number>exprB;

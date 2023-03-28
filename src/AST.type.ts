@@ -68,14 +68,9 @@ type BinaryExpressionType =
   | 'Pipe'
   | 'Projection'
   | 'Subexpression'
-  | 'ValueProjection'
-  ;
+  | 'ValueProjection';
 
-type UnaryExpressionType =
-  | 'ExpressionReference'
-  | 'Flatten'
-  | 'NotExpression'
-  ;
+type UnaryExpressionType = 'ExpressionReference' | 'Flatten' | 'NotExpression';
 
 type SimpleExpressionType = 'Identity' | 'Current' | 'Root';
 

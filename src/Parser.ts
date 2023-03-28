@@ -58,7 +58,7 @@ class TokenParser {
   tokens: LexerToken[] = [];
 
   parse(expression: string, options?: Options): ExpressionNode {
-    this.loadTokens(expression, options || { enable_legacy_literals: false, });
+    this.loadTokens(expression, options || { enable_legacy_literals: false });
     this.index = 0;
 
     const ast = this.expression(0);
@@ -70,7 +70,10 @@ class TokenParser {
   }
 
   private loadTokens(expression: string, options: Options): void {
-    this.tokens = [...Lexer.tokenize(expression, options), { type: Token.TOK_EOF, value: '', start: expression.length }];
+    this.tokens = [
+      ...Lexer.tokenize(expression, options),
+      { type: Token.TOK_EOF, value: '', start: expression.length },
+    ];
   }
 
   expression(rbp: number): ExpressionNode {
@@ -323,17 +326,15 @@ class TokenParser {
     while (current.type != Token.TOK_RBRACKET && index < 3) {
       if (current.type === Token.TOK_COLON) {
         index++;
-        if (index === 3){
+        if (index === 3) {
           this.errorToken(this.lookaheadToken(0), 'Syntax error, too many colons in slice expression');
         }
         this.advance();
-      }
-      else if (current.type === Token.TOK_NUMBER) {
+      } else if (current.type === Token.TOK_NUMBER) {
         const part = this.lookaheadToken(0).value as number;
         parts[index] = part;
         this.advance();
-      }
-      else {
+      } else {
         const next = this.lookaheadToken(0);
         this.errorToken(next, `Syntax error, unexpected token: ${next.value}(${next.type})`);
       }
@@ -343,7 +344,7 @@ class TokenParser {
 
     this.match(Token.TOK_RBRACKET);
 
-    const [start = null, stop = null, step = null] = parts;
+    const [start, stop, step] = parts;
     return { type: 'Slice', start, stop, step };
   }
 

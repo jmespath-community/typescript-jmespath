@@ -49,22 +49,19 @@ export const replace = (subject: string, string: string, by: string, count?: num
   return subject;
 };
 export const split = (subject: string, search: string, count?: number): string[] => {
-    if (subject.length == 0 && search.length === 0){
-        return []
-    }
-    if (count === null || count === undefined) {
-        return subject.split(search);
-    }
-    ensurePositiveInteger(count);
-    if (count === 0) {
-        return [subject];
-    }
-    const split = subject.split(search);
-    return [
-        ...split.slice(0, count),
-        split.slice(count).join(search)
-    ];
-}
+  if (subject.length == 0 && search.length === 0) {
+    return [];
+  }
+  if (count === null || count === undefined) {
+    return subject.split(search);
+  }
+  ensurePositiveInteger(count);
+  if (count === 0) {
+    return [subject];
+  }
+  const split = subject.split(search);
+  return [...split.slice(0, count), split.slice(count).join(search)];
+};
 export const trim = (subject: string, chars?: string): string => {
   return trimLeft(trimRight(subject, chars), chars);
 };

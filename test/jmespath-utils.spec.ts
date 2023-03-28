@@ -79,4 +79,3 @@ describe('should throw a readable error when invalid arguments are provided to a
     expectError(() => divide('zero', 42), 'not-a-number');
   });
 });
-

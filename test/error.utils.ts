@@ -1,4 +1,4 @@
-import { JSONValue } from "../src/JSON.type";
+import { JSONValue } from '../src/JSON.type';
 
 export function expectError(action: () => JSONValue, expected: string | string[]): void {
   let result: JSONValue = null;
@@ -29,7 +29,7 @@ export function expectError(action: () => JSONValue, expected: string | string[]
   }
   function getPattern(text: string): RegExp {
     const pattern = `(${makePattern(text)})|(${makePattern(text, true)})`;
-    return new RegExp(pattern, "i");
+    return new RegExp(pattern, 'i');
   }
 
   try {

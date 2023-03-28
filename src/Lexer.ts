@@ -268,7 +268,9 @@ class StreamLexer {
     }
 
     if (!ok) {
-      const error = new Error(`Syntax error: unexpected end of JSON input or invalid format for a JSON literal: ${stream[this._current]}`);
+      const error = new Error(
+        `Syntax error: unexpected end of JSON input or invalid format for a JSON literal: ${stream[this._current]}`,
+      );
       error.name = 'LexerError';
       throw error;
     }
@@ -292,13 +294,14 @@ class StreamLexer {
       return true;
     }
     if (numberLooking.includes(literalString[0])) {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       const [_, ok] = this.parseJSON(literalString);
       return ok;
     }
     return false;
   }
 
-  private parseJSON(text: string): [JSONValue, boolean]{
+  private parseJSON(text: string): [JSONValue, boolean] {
     try {
       const json = JSON.parse(text);
       return [json, true];
@@ -306,7 +309,6 @@ class StreamLexer {
       return [null, false];
     }
   }
-
 }
 
 export const Lexer = new StreamLexer();
