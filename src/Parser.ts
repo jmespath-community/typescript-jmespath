@@ -11,6 +11,9 @@ import type {
   BinaryOperatorType,
   SliceNode,
   UnaryExpressionNode,
+  LetExpressionNode,
+  BindingNode,
+  VariableNode,
 } from './AST.type';
 import Lexer from './Lexer';
 import { LexerToken, Token } from './Lexer.type';
@@ -18,6 +21,7 @@ import { Options } from './Parser.type';
 
 const bindingPower: Record<string, number> = {
   [Token.TOK_EOF]: 0,
+  [Token.TOK_VARIABLE]: 0,
   [Token.TOK_UNQUOTEDIDENTIFIER]: 0,
   [Token.TOK_QUOTEDIDENTIFIER]: 0,
   [Token.TOK_RBRACKET]: 0,
@@ -28,6 +32,7 @@ const bindingPower: Record<string, number> = {
   [Token.TOK_CURRENT]: 0,
   [Token.TOK_EXPREF]: 0,
   [Token.TOK_ROOT]: 0,
+  [Token.TOK_ASSIGN]: 1,
   [Token.TOK_PIPE]: 1,
   [Token.TOK_OR]: 2,
   [Token.TOK_AND]: 3,
@@ -103,10 +108,17 @@ class TokenParser {
 
   nud(token: LexerToken): ExpressionNode {
     switch (token.type) {
+      case Token.TOK_VARIABLE:
+        return { type: 'Variable', name: token.value as string };
       case Token.TOK_LITERAL:
         return { type: 'Literal', value: token.value };
-      case Token.TOK_UNQUOTEDIDENTIFIER:
-        return { type: 'Field', name: token.value as string };
+      case Token.TOK_UNQUOTEDIDENTIFIER: {
+        if (TokenParser.isKeyword(token, 'let') && this.lookahead(0) === Token.TOK_VARIABLE) {
+          return this.parseLetExpression();
+        } else {
+          return { type: 'Field', name: token.value as string };
+        }
+      }
       case Token.TOK_QUOTEDIDENTIFIER:
         if (this.lookahead(0) === Token.TOK_LPAREN) {
           throw new Error('Syntax error: quoted identifier not allowed for function names.');
@@ -214,21 +226,7 @@ class TokenParser {
           throw new Error('Syntax error: expected a Field node');
         }
         const name = left.name;
-        const args: ExpressionNode[] = [];
-        let expression: ExpressionNode;
-        while (this.lookahead(0) !== Token.TOK_RPAREN) {
-          if (this.lookahead(0) === Token.TOK_CURRENT) {
-            expression = { type: Token.TOK_CURRENT };
-            this.advance();
-          } else {
-            expression = this.expression(0);
-          }
-          if (this.lookahead(0) === Token.TOK_COMMA) {
-            this.match(Token.TOK_COMMA);
-          }
-          args.push(expression);
-        }
-        this.match(Token.TOK_RPAREN);
+        const args = this.parseCommaSeparatedExpressionsUntilToken(Token.TOK_RPAREN);
         const node: FunctionNode = { name, type: 'Function', children: args };
         return node;
       }
@@ -243,6 +241,15 @@ class TokenParser {
         const leftNode: UnaryExpressionNode = { type: 'Flatten', child: left };
         const right = this.parseProjectionRHS(bindingPower.Flatten);
         return { type: 'Projection', left: leftNode, right };
+      }
+      case Token.TOK_ASSIGN: {
+        const leftNode = left as VariableNode;
+        const right = this.expression(0);
+        return {
+          type: 'Binding',
+          variable: leftNode.name,
+          reference: right,
+        };
       }
       case Token.TOK_EQ:
       case Token.TOK_NE:
@@ -274,6 +281,10 @@ class TokenParser {
       default:
         return this.errorToken(this.lookaheadToken(0));
     }
+  }
+
+  private static isKeyword(token: LexerToken, keyword: string): boolean {
+    return token.type === Token.TOK_UNQUOTEDIDENTIFIER && token.value === keyword;
   }
 
   private match(tokenType: Token | LexerToken): void {
@@ -346,6 +357,53 @@ class TokenParser {
 
     const [start, stop, step] = parts;
     return { type: 'Slice', start, stop, step };
+  }
+
+  private parseLetExpression(): LetExpressionNode {
+    const separated = this.parseCommaSeparatedExpressionsUntilKeyword('in');
+    const expression = this.expression(0);
+    const bindings = separated.map(binding => binding as BindingNode);
+    return {
+      type: 'LetExpression',
+      bindings: bindings,
+      expression: expression,
+    };
+  }
+
+  private parseCommaSeparatedExpressionsUntilKeyword(keyword: string): ExpressionNode[] {
+    return this.parseCommaSeparatedExpressionsUntil(
+      () => {
+        return TokenParser.isKeyword(this.lookaheadToken(0), keyword);
+      },
+      () => {
+        this.advance();
+      },
+    );
+  }
+
+  private parseCommaSeparatedExpressionsUntilToken(token: Token): ExpressionNode[] {
+    return this.parseCommaSeparatedExpressionsUntil(
+      () => {
+        return this.lookahead(0) === token;
+      },
+      () => {
+        return this.match(token);
+      },
+    );
+  }
+
+  private parseCommaSeparatedExpressionsUntil(isEndToken: () => boolean, matchEndToken: () => void): ExpressionNode[] {
+    const args: ExpressionNode[] = [];
+    let expression: ExpressionNode;
+    while (!isEndToken()) {
+      expression = this.expression(0);
+      if (this.lookahead(0) === Token.TOK_COMMA) {
+        this.match(Token.TOK_COMMA);
+      }
+      args.push(expression);
+    }
+    matchEndToken();
+    return args;
   }
 
   private parseComparator(left: ExpressionNode, comparator: ComparatorType): ComparatorNode {

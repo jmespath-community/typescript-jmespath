@@ -40,6 +40,9 @@ export class TreeInterpreter {
           result = this._scope?.getValue(identifier) ?? null;
         }
         return result;
+      case 'LetExpression': return 'not-implemented';
+      case 'Binding': return 'not-implemented';
+      case 'Variable': return 'not-implemented';
       case 'IndexExpression':
         return this.visit(node.right, this.visit(node.left, value));
       case 'Subexpression': {
