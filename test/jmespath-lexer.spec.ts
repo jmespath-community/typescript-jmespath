@@ -10,6 +10,9 @@ describe('tokenize', () => {
   it('should tokenize assign operator', () => {
     expect(tokenize('=')).toMatchObject([{ type: 'Assign', value: '=', start: 0 }]);
   });
+  it('should tokenize lambda arrow', () => {
+    expect(tokenize('=>')).toMatchObject([{ type: 'Arrow', value: '=>', start: 0 }]);
+  });
   it('should tokenize arithmetic + plus sign', () => {
     expect(tokenize('+')).toMatchObject([{ type: 'Plus', value: '+', start: 0 }]);
   });

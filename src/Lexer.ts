@@ -235,8 +235,19 @@ class StreamLexer {
         return this.consumeOrElse(stream, '=', Token.TOK_LT, Token.TOK_LTE);
       case '>':
         return this.consumeOrElse(stream, '=', Token.TOK_GT, Token.TOK_GTE);
-      case '=':
-        return this.consumeOrElse(stream, '=', Token.TOK_ASSIGN, Token.TOK_EQ);
+      case '=': {
+        const start = this._current;
+        this._current += 1;
+        if (this._current < stream.length && stream[this._current] === '=') {
+          this._current += 1;
+          return { start: start, type: Token.TOK_EQ, value: stream.slice(start, this._current) };
+        } else if (this._current < stream.length && stream[this._current] === '>') {
+          this._current += 1;
+          return { start: start, type: Token.TOK_ARROW, value: stream.slice(start, this._current) };
+        } else {
+          return { start: start, type: Token.TOK_ASSIGN, value: stream[start] };
+        }
+      }
       case '&':
         return this.consumeOrElse(stream, '&', Token.TOK_EXPREF, Token.TOK_AND);
       case '|':
