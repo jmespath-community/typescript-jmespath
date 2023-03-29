@@ -55,4 +55,26 @@ describe('parsing', () => {
       return null;
     }, 'syntax');
   });
+  it('should parse lambda expression', () => {
+    expect(compile('<$foo, $bar> => @')).toMatchObject({
+      type: 'ExpressionReference',
+      arguments: [
+        { type: 'Variable', name: 'foo' },
+        { type: 'Variable', name: 'bar' },
+      ],
+      child: {
+        type: 'Current',
+      },
+    });
+  });
+  it('should fail to parse invalid lambda expression', () => {
+    expectError(() => {
+      compile('<$foo $bar> => @');
+      return null;
+    }, ['syntax', 'comma', '>']);
+    expectError(() => {
+      compile('<$foo,> => @');
+      return null;
+    }, ['syntax', 'unexpected token']);
+  });
 });

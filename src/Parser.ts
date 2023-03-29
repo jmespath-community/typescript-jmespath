@@ -177,6 +177,37 @@ class TokenParser {
         const child = this.expression(bindingPower.Expref);
         return { type: 'ExpressionReference', child };
       }
+      case Token.TOK_LT: {
+        const args: VariableNode[] = [];
+        while (true) {
+          const peek = this.lookaheadToken(0);
+          if (peek.type != Token.TOK_VARIABLE) {
+            throw new Error(`Syntax error: unexpected token ${peek.type}, expected variable reference`);
+          }
+          args.push({
+            type: 'Variable',
+            name: peek.value as string,
+          });
+          this.advance();
+          const index = [Token.TOK_GT, Token.TOK_COMMA].indexOf(this.lookahead(0));
+          if (index === -1) {
+            throw new Error(`Syntax error: unexpected token ${this.lookahead(0)}, expected comma or '>' token`);
+          }
+          if (index === 0) {
+            break;
+          }
+          if (index === 1) {
+            this.match(Token.TOK_COMMA);
+          }
+        }
+        this.match(Token.TOK_GT);
+        this.match(Token.TOK_ARROW);
+        return {
+          type: 'ExpressionReference',
+          arguments: args,
+          child: this.expression(bindingPower.Expref),
+        };
+      }
       case Token.TOK_LPAREN: {
         const args: ExpressionNode[] = [];
         while (this.lookahead(0) !== Token.TOK_RPAREN) {

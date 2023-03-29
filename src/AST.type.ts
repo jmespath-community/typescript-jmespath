@@ -78,6 +78,12 @@ export interface VariableNode {
   readonly name: string;
 }
 
+export interface ExpressionTypeNode {
+  readonly type: 'ExpressionReference';
+  readonly arguments?: VariableNode[];
+  readonly child: ExpressionNode;
+}
+
 type BinaryExpressionType =
   | 'AndExpression'
   | 'IndexExpression'
@@ -87,7 +93,7 @@ type BinaryExpressionType =
   | 'Subexpression'
   | 'ValueProjection';
 
-type UnaryExpressionType = 'ExpressionReference' | 'Flatten' | 'NotExpression';
+type UnaryExpressionType = 'Flatten' | 'NotExpression';
 
 type SimpleExpressionType = 'Identity' | 'Current' | 'Root';
 
@@ -129,6 +135,7 @@ export type ExpressionNode =
   | BinaryExpressionNode
   | BinaryArithmeticNode
   | ComparatorNode
+  | ExpressionTypeNode
   | SliceNode
   | FilterProjectionNode
   | IndexNode
@@ -141,4 +148,6 @@ export type ExpressionNode =
   | BindingNode
   | VariableNode;
 
-export type ExpressionReference = { expref: true; } & ExpressionNode;
+export type ExpressionReference = {
+  expref: true;
+} & ExpressionNode;
