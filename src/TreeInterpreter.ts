@@ -280,6 +280,7 @@ export class TreeInterpreter {
       case 'Function': {
         const args: JSONArray = [];
         for (const child of node.children) {
+          console.log(`callFunction: ${JSON.stringify(child)}`);
           args.push(this.visit(child, value) as JSONValue);
         }
         return this.runtime.callFunction(node.name, args);

@@ -478,6 +478,25 @@ export class Runtime {
     return split(subject, search, resolvedArgs.length > 2 ? <number>resolvedArgs[2] : undefined);
   };
 
+  private functionReduce: RuntimeFunction<[JSONArray, JSONValue, ExpressionNode], JSONValue> = resolvedArgs => {
+    const interpreter = this._interpreter;
+    const array = resolvedArgs[0].slice(0);
+    const seed = resolvedArgs[1];
+    const exprefNode = resolvedArgs[2];
+
+    let acc = seed;
+    array.map(cur => {
+      // get variable names acc, cur
+      console.log(JSON.stringify(exprefNode));
+      // create bindings acc, cur
+      // evaluate expression
+      acc = interpreter.visit(exprefNode, cur) as JSONValue;
+      // discard binding
+    });
+
+    return acc;
+  };
+
   private functionReverse: RuntimeFunction<[string | JSONArray], string | JSONArray> = ([inputValue]) => {
     const typeName = this.getTypeName(inputValue);
     if (typeName === InputArgument.TYPE_STRING) {
@@ -892,6 +911,20 @@ export class Runtime {
         {
           types: [InputArgument.TYPE_NUMBER],
           optional: true,
+        },
+      ],
+    },
+    reduce: {
+      _func: this.functionReduce,
+      _signature: [
+        {
+          types: [InputArgument.TYPE_ARRAY],
+        },
+        {
+          types: [InputArgument.TYPE_ANY],
+        },
+        {
+          types: [InputArgument.TYPE_EXPREF],
         },
       ],
     },
