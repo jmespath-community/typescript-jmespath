@@ -150,4 +150,5 @@ export type ExpressionNode =
 
 export type ExpressionReference = {
   expref: true;
+  arguments: VariableNode[];
 } & ExpressionNode;

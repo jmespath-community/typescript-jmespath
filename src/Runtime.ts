@@ -13,7 +13,7 @@ import {
   upper,
 } from './utils/strings';
 
-import type { ExpressionNode } from './AST.type';
+import type { ExpressionNode, ExpressionReference } from './AST.type';
 import type {
   JSONArray,
   JSONArrayArray,
@@ -482,16 +482,19 @@ export class Runtime {
     const interpreter = this._interpreter;
     const array = resolvedArgs[0].slice(0);
     const seed = resolvedArgs[1];
-    const exprefNode = resolvedArgs[2];
+    const exprefNode = resolvedArgs[2] as ExpressionReference;
+
+    const args = exprefNode.arguments;
+
+    // TODO: make sure two args
 
     let acc = seed;
     array.map(cur => {
-      // get variable names acc, cur
-      console.log(JSON.stringify(exprefNode));
-      // create bindings acc, cur
-      // evaluate expression
-      acc = interpreter.visit(exprefNode, cur) as JSONValue;
-      // discard binding
+      const scope: JSONObject = {
+        [args[0].name]: acc,
+        [args[1].name]: cur,
+      };
+      acc = interpreter.withScope(scope).visit(exprefNode, null) as JSONValue;
     });
 
     return acc;

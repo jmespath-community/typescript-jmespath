@@ -6,5 +6,6 @@ describe('Searches compiled ast', () => {
   });
   it('evaluates reduce function with lambda expression', () => {
     expect(search([1, 2, 3], 'reduce(@, `1`, <$lhs, $rhs> => $lhs × $rhs)')).toEqual(6);
+    expect(search([1, 2, 3], 'reduce(@, `1`, <$lhs, $rhs> => $lhs × $[0])')).toEqual(1);
   });
 });
