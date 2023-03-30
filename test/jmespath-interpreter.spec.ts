@@ -14,4 +14,22 @@ describe('Searches compiled ast', () => {
       in $cat('1', '2')`;
     expect(search([], expression)).toEqual('1~2');
   });
+  it('fibonacci', () => {
+    const expression = `
+    let $fib = <$n> => (
+      ($n == \`0\` && \`0\`) ||
+      (($n == \`1\` && \`1\`) ||
+      ( $fib($n - \`1\`) + $fib($n - \`2\`) )
+      )
+    ) in
+      $fib(@)
+      `;
+    expect(search(0, expression)).toEqual(0);
+    expect(search(1, expression)).toEqual(1);
+    expect(search(2, expression)).toEqual(1);
+    expect(search(3, expression)).toEqual(2);
+    expect(search(4, expression)).toEqual(3);
+    expect(search(5, expression)).toEqual(5);
+    expect(search(6, expression)).toEqual(8);
+  });
 });
