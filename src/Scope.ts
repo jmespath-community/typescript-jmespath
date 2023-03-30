@@ -1,17 +1,17 @@
-import { JSONObject, JSONValue } from './JSON.type';
+import { ScopeEntry, ScopeItem } from './Parser.type';
 
 export class ScopeChain {
   private inner?: ScopeChain = undefined;
-  private data: JSONObject = {};
+  private data: ScopeEntry = {};
 
-  public withScope(data: JSONObject): ScopeChain {
+  public withScope(data: ScopeEntry): ScopeChain {
     const outer: ScopeChain = new ScopeChain();
     outer.inner = this;
     outer.data = data;
     return outer;
   }
 
-  public getValue(identifier: string): JSONValue {
+  public getValue(identifier: string): ScopeItem {
     if (identifier in this.data) {
       const result = this.data[identifier];
       if (result !== null && result !== undefined) {

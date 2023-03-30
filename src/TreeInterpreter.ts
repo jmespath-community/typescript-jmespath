@@ -282,7 +282,32 @@ export class TreeInterpreter {
         for (const child of node.children) {
           args.push(this.visit(child, value) as JSONValue);
         }
-        return this.runtime.callFunction(node.name, args);
+        if (node.name.startsWith('$')) {
+          const name = node.name.slice(1);
+          const func = this._scope.getValue(name) ?? null;
+          if (!func) {
+            throw new Error(`Error referencing undefined variable ${name}`);
+          }
+          // TODO: check this is an expression type
+          const exprefNode = func as ExpressionReference;
+          const exprefArgs = exprefNode.arguments;
+          // bind arguments
+          if (args.length != exprefArgs.length) {
+            throw new Error(
+              `Invalid arity: $${name} references a function accepting ${exprefArgs.length} arguments but is called with ${args.length} instead`,
+            );
+          }
+          let scope = {};
+          exprefArgs.map((item, index) => {
+            scope = {
+              ...scope,
+              [item.name]: args[index],
+            };
+          });
+          return this.withScope(scope).visit(exprefNode, null);
+        } else {
+          return this.runtime.callFunction(node.name, args);
+        }
       }
       case 'ExpressionReference':
         return {

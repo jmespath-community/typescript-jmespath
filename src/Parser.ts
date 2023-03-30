@@ -253,7 +253,6 @@ class TokenParser {
         return { type: 'AndExpression', left, right };
       }
       case Token.TOK_LPAREN: {
-        console.log(left);
         if (left.type !== 'Field' && left.type !== 'Variable') {
           throw new Error('Syntax error: expected either a Field or Variable node');
         }
