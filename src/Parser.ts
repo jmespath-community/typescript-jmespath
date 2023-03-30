@@ -253,10 +253,14 @@ class TokenParser {
         return { type: 'AndExpression', left, right };
       }
       case Token.TOK_LPAREN: {
-        if (left.type !== 'Field') {
-          throw new Error('Syntax error: expected a Field node');
+        console.log(left);
+        if (left.type !== 'Field' && left.type !== 'Variable') {
+          throw new Error('Syntax error: expected either a Field or Variable node');
         }
-        const name = left.name;
+        let name = left.name;
+        if (left.type === 'Variable') {
+          name = `$${name}`;
+        }
         const args = this.parseCommaSeparatedExpressionsUntilToken(Token.TOK_RPAREN);
         const node: FunctionNode = { name, type: 'Function', children: args };
         return node;

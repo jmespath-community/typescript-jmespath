@@ -77,4 +77,14 @@ describe('parsing', () => {
       return null;
     }, ['syntax', 'unexpected token']);
   });
+  it('should parse function call via variable reference', () => {
+    expect(compile('$function(foo, bar)')).toMatchObject({
+      name: '$function',
+      type: 'Function',
+      children: [
+        { type: 'Field', name: 'foo' },
+        { type: 'Field', name: 'bar' },
+      ],
+    });
+  });
 });
