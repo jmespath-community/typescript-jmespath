@@ -5,6 +5,7 @@ import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, su
 
 import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
+import { ScopeEntry } from './Parser.type';
 
 export class TreeInterpreter {
   runtime: Runtime;
@@ -16,7 +17,7 @@ export class TreeInterpreter {
     this._scope = new ScopeChain();
   }
 
-  withScope(scope: JSONObject): TreeInterpreter {
+  withScope(scope: ScopeEntry): TreeInterpreter {
     const interpreter = new TreeInterpreter();
     interpreter._rootValue = this._rootValue;
     interpreter._scope = this._scope.withScope(scope);
@@ -58,7 +59,7 @@ export class TreeInterpreter {
       case 'Variable': {
         const variable = node.name;
         const result = this._scope.getValue(variable) ?? null;
-        if (!result) {
+        if (result === null || result === undefined) {
           throw new Error(`Error referencing undefined variable ${variable}`);
         }
         return result;
