@@ -14,7 +14,7 @@ export class ScopeChain {
   public getValue(identifier: string): JSONValue {
     if (identifier in this.data) {
       const result = this.data[identifier];
-      if (result) {
+      if (result !== null && result !== undefined) {
         return result;
       }
     }
