@@ -38,4 +38,19 @@ describe('parsing', () => {
     expect(compile('-bar')).toMatchObject(expected);
     expect(compile('\u2212bar')).toMatchObject(expected);
   });
+  it('should parse match expression', () => {
+    const expected = {
+      type: 'Comparator',
+      name: 'Match',
+      left: {
+        type: 'Field',
+        name: 'foo'
+      },
+      right: {
+        type: 'Literal',
+        value: 'ba[rz]'
+      }
+    };
+    expect(compile("foo match 'ba[rz]'")).toMatchObject(expected);
+  });
 });

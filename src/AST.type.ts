@@ -30,7 +30,7 @@ export interface SliceNode {
   readonly step: number | null;
 }
 
-export type ComparatorType = 'GT' | 'LT' | 'GTE' | 'LTE' | 'NE' | 'EQ';
+export type ComparatorType = 'GT' | 'LT' | 'GTE' | 'LTE' | 'NE' | 'EQ' | 'Match';
 
 export interface ComparatorNode {
   readonly type: 'Comparator';

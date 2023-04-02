@@ -18,7 +18,6 @@ import { Options } from './Parser.type';
 
 const bindingPower: Record<string, number> = {
   [Token.TOK_EOF]: 0,
-  [Token.TOK_UNQUOTEDIDENTIFIER]: 0,
   [Token.TOK_QUOTEDIDENTIFIER]: 0,
   [Token.TOK_RBRACKET]: 0,
   [Token.TOK_RPAREN]: 0,
@@ -37,6 +36,7 @@ const bindingPower: Record<string, number> = {
   [Token.TOK_GTE]: 5,
   [Token.TOK_LTE]: 5,
   [Token.TOK_NE]: 5,
+  [Token.TOK_UNQUOTEDIDENTIFIER]: 0,
   [Token.TOK_MINUS]: 6,
   [Token.TOK_PLUS]: 6,
   [Token.TOK_DIV]: 7,
@@ -80,6 +80,25 @@ class TokenParser {
     const leftToken = this.lookaheadToken(0);
     this.advance();
     let left = this.nud(leftToken);
+
+    // contextual keywords
+
+    const next = this.lookaheadToken(0);
+    if (next.type == Token.TOK_UNQUOTEDIDENTIFIER) {
+      if (next.value == 'match') {
+        this.advance();
+        const right = this.expression(0);
+        return {
+          type: 'Comparator',
+          name: 'Match',
+          left: left,
+          right: right,
+        };
+      }
+    }
+
+    // let
+
     let currentTokenType = this.lookahead(0);
     while (rbp < bindingPower[currentTokenType]) {
       this.advance();

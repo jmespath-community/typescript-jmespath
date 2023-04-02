@@ -5,6 +5,7 @@ import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, su
 
 import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
+import iregexp from '@springcomp/iregexp';
 
 export class TreeInterpreter {
   runtime: Runtime;
@@ -194,6 +195,26 @@ export class TreeInterpreter {
             return strictDeepEqual(first, second);
           case 'NE':
             return !strictDeepEqual(first, second);
+        }
+
+        if (node.name == 'Match') {
+          const regex = second as string;
+          try{
+            iregexp.ensureExpression(regex);
+          }
+          catch (err) {
+            if (err instanceof Error) {
+              err.name = 'Syntax';
+              throw err;
+            }
+            const error = new Error('invalid regular expression');
+            error.name = 'Syntax';
+            throw error;
+          }
+
+          const re = new RegExp(regex);
+          const match = re.test(first as string);
+          return match;
         }
 
         // ordering operators are only valid for numbers
