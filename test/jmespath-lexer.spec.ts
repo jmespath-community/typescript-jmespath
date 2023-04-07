@@ -1,9 +1,14 @@
-import { expectError } from './error.utils';
 import { tokenize } from '../src';
 
 describe('tokenize', () => {
   it('should tokenize root node reference', () => {
     expect(tokenize('$')).toMatchObject([{ type: 'Root', value: '$', start: 0 }]);
+  });
+  it('should tokenize variable reference', () => {
+    expect(tokenize('$foo')).toMatchObject([{ type: 'Variable', value: 'foo', start: 0 }]);
+  });
+  it('should tokenize assign operator', () => {
+    expect(tokenize('=')).toMatchObject([{ type: 'Assign', value: '=', start: 0 }]);
   });
   it('should tokenize arithmetic + plus sign', () => {
     expect(tokenize('+')).toMatchObject([{ type: 'Plus', value: '+', start: 0 }]);
@@ -108,12 +113,6 @@ describe('tokenize', () => {
   });
   it('should tokenize two char tokens without shared prefix', () => {
     expect(tokenize('==')).toMatchObject([{ type: 'EQ', value: '==', start: 0 }]);
-  });
-  it('should fail to tokenize incomplete char tokens without shared prefix', () => {
-    expectError(() => {
-      tokenize('=');
-      return null;
-    }, ['syntax', 'incomplete token']);
   });
   it('should tokenize not equals', () => {
     expect(tokenize('!=')).toMatchObject([{ type: 'NE', value: '!=', start: 0 }]);

@@ -5,20 +5,22 @@ import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, su
 
 import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
+import { ScopeEntry } from './Parser.type';
 
 export class TreeInterpreter {
   runtime: Runtime;
   private _rootValue: JSONValue | null = null;
-  private _scope: ScopeChain | undefined = undefined;
+  private _scope: ScopeChain;
 
   constructor() {
     this.runtime = new Runtime(this);
+    this._scope = new ScopeChain();
   }
 
-  withScope(scope: JSONObject): TreeInterpreter {
+  withScope(scope: ScopeEntry): TreeInterpreter {
     const interpreter = new TreeInterpreter();
     interpreter._rootValue = this._rootValue;
-    interpreter._scope = this._scope?.withScope(scope);
+    interpreter._scope = this._scope.withScope(scope);
     return interpreter;
   }
 
@@ -36,10 +38,32 @@ export class TreeInterpreter {
         if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
           result = value[identifier] ?? null;
         }
-        if (result == null) {
-          result = this._scope?.getValue(identifier) ?? null;
+        return result;
+      case 'LetExpression': {
+        const { bindings, expression } = node;
+        let scope = {};
+        bindings.forEach(binding => {
+          const reference = this.visit(binding, value) as JSONObject;
+          scope = {
+            ...scope,
+            ...reference,
+          };
+        });
+        return this.withScope(scope).visit(expression, value);
+      }
+      case 'Binding': {
+        const { variable, reference } = node;
+        const result = this.visit(reference, value);
+        return { [variable]: result } as JSONObject;
+      }
+      case 'Variable': {
+        const variable = node.name;
+        const result = this._scope.getValue(variable) ?? null;
+        if (result === null || result === undefined) {
+          throw new Error(`Error referencing undefined variable ${variable}`);
         }
         return result;
+      }
       case 'IndexExpression':
         return this.visit(node.right, this.visit(node.left, value));
       case 'Subexpression': {
@@ -263,7 +287,6 @@ export class TreeInterpreter {
       case 'ExpressionReference':
         return {
           expref: true,
-          context: <JSONValue>value,
           ...node.child,
         };
       case 'Current':

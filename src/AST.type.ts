@@ -61,6 +61,23 @@ export interface FunctionNode {
   readonly children: ExpressionNode[];
 }
 
+export interface LetExpressionNode {
+  readonly type: 'LetExpression';
+  readonly bindings: BindingNode[];
+  readonly expression: ExpressionNode;
+}
+
+export interface BindingNode {
+  readonly type: 'Binding';
+  readonly variable: string;
+  readonly reference: ExpressionNode;
+}
+
+export interface VariableNode {
+  readonly type: 'Variable';
+  readonly name: string;
+}
+
 type BinaryExpressionType =
   | 'AndExpression'
   | 'IndexExpression'
@@ -119,6 +136,9 @@ export type ExpressionNode =
   | FieldNode
   | MultiSelectHashNode
   | MultiSelectListNode
-  | FunctionNode;
+  | FunctionNode
+  | LetExpressionNode
+  | BindingNode
+  | VariableNode;
 
-export type ExpressionReference = { expref: true; context: JSONValue } & ExpressionNode;
+export type ExpressionReference = { expref: true; } & ExpressionNode;

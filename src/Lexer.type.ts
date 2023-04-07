@@ -2,6 +2,8 @@ import { JSONValue } from './JSON.type';
 
 export enum Token {
   TOK_EOF = 'EOF',
+  TOK_VARIABLE = 'Variable',
+  TOK_ASSIGN = 'Assign',
   TOK_UNQUOTEDIDENTIFIER = 'UnquotedIdentifier',
   TOK_QUOTEDIDENTIFIER = 'QuotedIdentifier',
   TOK_RBRACKET = 'Rbracket',

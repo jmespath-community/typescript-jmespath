@@ -10,7 +10,6 @@ export const basicTokens: Record<string, Token> = {
   '.': Token.TOK_DOT,
   ':': Token.TOK_COLON,
   '@': Token.TOK_CURRENT,
-  ['$']: Token.TOK_ROOT,
   ']': Token.TOK_RBRACKET,
   '{': Token.TOK_LBRACE,
   '}': Token.TOK_RBRACE,
@@ -66,6 +65,24 @@ class StreamLexer {
           value: stream[this._current],
         });
         this._current += 1;
+      } else if (stream[this._current] === '$') {
+        start = this._current;
+        if (this._current + 1 < stream.length && isAlpha(stream[this._current + 1])) {
+          this._current += 1;
+          identifier = this.consumeUnquotedIdentifier(stream);
+          tokens.push({
+            start,
+            type: Token.TOK_VARIABLE,
+            value: identifier,
+          });
+        } else {
+          tokens.push({
+            start: start,
+            type: Token.TOK_ROOT,
+            value: stream[this._current],
+          });
+          this._current += 1;
+        }
       } else if (stream[this._current] === '-') {
         if (this._current + 1 < stream.length && isNum(stream[this._current + 1])) {
           const token = this.consumeNumber(stream);
@@ -205,11 +222,6 @@ class StreamLexer {
       this._current += 1;
       return { start: start, type: orElse, value: stream.slice(start, this._current) };
     }
-    if (token === Token.TOK_EOF) {
-      const error = new Error(`syntax: unknown incomplete token: ${stream[start]}`);
-      error.name = 'LexerError';
-      throw error;
-    }
     return { start: start, type: token, value: stream[start] };
   }
 
@@ -224,7 +236,7 @@ class StreamLexer {
       case '>':
         return this.consumeOrElse(stream, '=', Token.TOK_GT, Token.TOK_GTE);
       case '=':
-        return this.consumeOrElse(stream, '=', Token.TOK_EOF, Token.TOK_EQ);
+        return this.consumeOrElse(stream, '=', Token.TOK_ASSIGN, Token.TOK_EQ);
       case '&':
         return this.consumeOrElse(stream, '&', Token.TOK_EXPREF, Token.TOK_AND);
       case '|':

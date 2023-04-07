@@ -38,4 +38,21 @@ describe('parsing', () => {
     expect(compile('-bar')).toMatchObject(expected);
     expect(compile('\u2212bar')).toMatchObject(expected);
   });
+  it('should parse let expression', () => {
+    const expected = {
+      type: 'LetExpression',
+      bindings: [
+        { type: 'Binding', variable: 'foo', reference: { type: 'Field', name: 'bar' } },
+        { type: 'Binding', variable: 'baz', reference: { type: 'Field', name: 'qux' } },
+      ],
+      expression: { type: 'Current' },
+    };
+    expect(compile('let $foo = bar, $baz = qux in @')).toMatchObject(expected);
+  });
+  it('should fail to parse invalid let expression', () => {
+    expectError(() => {
+      compile('let $foo = bar = qux');
+      return null;
+    }, 'syntax');
+  });
 });
