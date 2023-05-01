@@ -112,7 +112,9 @@ export class TreeInterpreter {
 
         const base = this.visit(left, value);
         if (allowString && typeof base === 'string') {
-          return base;
+          // a projection is really a sub-expression in disguise
+          // we must evaluate the right hand expression
+          return this.visit(right, base) as JSONValue;
         }
 
         if (!Array.isArray(base)) {
