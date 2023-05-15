@@ -1,4 +1,5 @@
 import { JSONValue } from './JSON.type';
+import { replace } from './utils/strings';
 import { LexerOptions, LexerToken, Token } from './Lexer.type';
 import { isAlpha, isNum, isAlphaNum } from './utils/index';
 
@@ -187,7 +188,7 @@ class StreamLexer {
     }
     this._current += 1;
     const literal = stream.slice(start + 1, this._current - 1);
-    return literal.replace(`\\'`, `'`).replace(`\\\\`, `\\`);
+    return replace(replace(literal, `\\\\`, `\\`), `\\'`, `'`);
   }
 
   private consumeNumber(stream: string): LexerToken {

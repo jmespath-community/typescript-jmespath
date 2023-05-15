@@ -82,6 +82,18 @@ describe('tokenize', () => {
   it('should tokenize json literals', () => {
     expect(tokenize('`true`')).toMatchObject([{ type: 'Literal', value: true, start: 0 }]);
   });
+  it('should tokenize raw strings', () => {
+    expect(tokenize("'raw-string'")).toMatchObject([{ type: 'Literal', value: "raw-string", start: 0 }]);
+  });
+  it('should tokenize raw strings single quote', () => {
+    expect(tokenize("'\\''")).toMatchObject([{ type: 'Literal', value: "'", start: 0 }]);
+  });
+  it('should tokenize raw strings surrounding quotes', () => {
+    expect(tokenize("'\\'raw-string\\''")).toMatchObject([{ type: 'Literal', value: "'raw-string'", start: 0 }]);
+  });
+  it('should tokenize raw strings backslash characters', () => {
+    expect(tokenize("'\\\\'")).toMatchObject([{ type: 'Literal', value: "\\", start: 0 }]);
+  });
   it('should not require surrounding quotes for strings', () => {
     expect(tokenize('`foo`', { enable_legacy_literals: true })).toMatchObject([
       { type: 'Literal', value: 'foo', start: 0 },
