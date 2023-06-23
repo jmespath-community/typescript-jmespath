@@ -1,6 +1,9 @@
 import { tokenize } from '../src';
 
 describe('tokenize', () => {
+  it('should tokenize descendant operator', () => {
+    expect(tokenize('..')).toMatchObject([{ type: 'Descendant', value: '..', start: 0 }]);
+  });
   it('should tokenize root node reference', () => {
     expect(tokenize('$')).toMatchObject([{ type: 'Root', value: '$', start: 0 }]);
   });

@@ -67,6 +67,11 @@ export interface LetExpressionNode {
   readonly expression: ExpressionNode;
 }
 
+export interface DescendantNode {
+  readonly type: 'DescendantExpression';
+  readonly name: string;
+}
+
 export interface BindingNode {
   readonly type: 'Binding';
   readonly variable: string;
@@ -138,6 +143,7 @@ export type ExpressionNode =
   | MultiSelectListNode
   | FunctionNode
   | LetExpressionNode
+  | DescendantNode
   | BindingNode
   | VariableNode;
 

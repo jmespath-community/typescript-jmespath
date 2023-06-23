@@ -8,7 +8,6 @@ export const basicTokens: Record<string, Token> = {
   ')': Token.TOK_RPAREN,
   '*': Token.TOK_STAR,
   ',': Token.TOK_COMMA,
-  '.': Token.TOK_DOT,
   ':': Token.TOK_COLON,
   '@': Token.TOK_CURRENT,
   ']': Token.TOK_RBRACKET,
@@ -29,6 +28,7 @@ const operatorStartToken: Record<string, boolean> = {
   '&': true,
   '|': true,
   '/': true,
+  '.': true,
 };
 
 const skipChars: Record<string, boolean> = {
@@ -244,6 +244,8 @@ class StreamLexer {
         return this.consumeOrElse(stream, '|', Token.TOK_PIPE, Token.TOK_OR);
       case '/':
         return this.consumeOrElse(stream, '/', Token.TOK_DIVIDE, Token.TOK_DIV);
+      case '.':
+        return this.consumeOrElse(stream, '.', Token.TOK_DOT, Token.TOK_DESCENDANT);
     }
   }
 

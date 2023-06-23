@@ -55,4 +55,33 @@ describe('parsing', () => {
       return null;
     }, 'syntax');
   });
+  it('should parse descendant expression', () => {
+    const expected = {
+      type: 'Projection',
+      left: {
+        type: 'DescendantExpression',
+        name: 'name'
+      }
+    };
+    expect(compile('..name')).toMatchObject(expected);
+  });
+  it('should parse descendant projection', () => {
+    const expected = {
+      type: 'Projection',
+      left: {
+        type: 'DescendantExpression',
+        name: 'name'
+      },
+      right: {
+        type: 'Function',
+        name: 'length',
+        children: [
+          {
+            type: 'Current'
+          }
+        ]
+      }
+    };
+    expect(compile('..name.length(@)')).toMatchObject(expected);
+  });
 });

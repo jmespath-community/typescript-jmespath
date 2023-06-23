@@ -51,6 +51,10 @@ export class TreeInterpreter {
         });
         return this.withScope(scope).visit(expression, value);
       }
+      case 'DescendantExpression': {
+        const { name } = node;
+        return this.getAllElementsWithName(value as JSONValue, name);
+      }
       case 'Binding': {
         const { variable, reference } = node;
         const result = this.visit(reference, value);
@@ -338,6 +342,26 @@ export class TreeInterpreter {
         result.push(collection[i]);
       }
     }
+    return result;
+  }
+
+  getAllElementsWithName(obj: JSONValue, name: string): JSONValue {
+    var result: JSONArray = [];
+
+    // Recursive function to traverse the object
+    function traverse(obj: JSONValue) {
+      if (!obj) return;
+      if (typeof obj === 'object') {
+        if (obj.hasOwnProperty(name)) {
+          result.push(obj[name]);
+        }
+        for (var key in obj) {
+          traverse(obj[key]);
+        }
+      }
+    }
+
+    traverse(obj);
     return result;
   }
 }

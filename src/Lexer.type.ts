@@ -39,6 +39,7 @@ export enum Token {
   TOK_LBRACKET = 'Lbracket',
   TOK_LPAREN = 'Lparen',
   TOK_LITERAL = 'Literal',
+  TOK_DESCENDANT = "Descendant",
 }
 
 export type LexerTokenValue = JSONValue;

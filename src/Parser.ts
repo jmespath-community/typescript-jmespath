@@ -14,6 +14,7 @@ import type {
   LetExpressionNode,
   BindingNode,
   VariableNode,
+  FieldNode,
 } from './AST.type';
 import Lexer from './Lexer';
 import { LexerToken, Token } from './Lexer.type';
@@ -173,6 +174,17 @@ class TokenParser {
         return { type: Token.TOK_CURRENT };
       case Token.TOK_ROOT:
         return { type: Token.TOK_ROOT };
+      case Token.TOK_DESCENDANT: {
+        const leftToken = this.lookaheadToken(0);
+        if (leftToken.type != Token.TOK_UNQUOTEDIDENTIFIER && leftToken.type != Token.TOK_QUOTEDIDENTIFIER) {
+          throw new Error('Syntax error: unexpected token: expected identifier after descendant node');
+        }
+        this.advance();
+        let { name } = this.nud(leftToken) as FieldNode;
+        const left: ExpressionNode =  { type: 'DescendantExpression', name };
+        const right = this.parseProjectionRHS(bindingPower.Flatten);
+        return { type: 'Projection', left, right };
+      }
       case Token.TOK_EXPREF: {
         const child = this.expression(bindingPower.Expref);
         return { type: 'ExpressionReference', child };
@@ -475,7 +487,7 @@ class TokenParser {
     let keyName: string;
     let value: ExpressionNode;
     // tslint:disable-next-line: prettier
-    for (;;) {
+    for (; ;) {
       keyToken = this.lookaheadToken(0);
       if (!identifierTypes.includes(keyToken.type)) {
         throw new Error(`Syntax error: expecting an identifier token, got: ${keyToken.type}`);
