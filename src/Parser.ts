@@ -50,6 +50,7 @@ const bindingPower: Record<string, number> = {
   [Token.TOK_MODULO]: 7,
   [Token.TOK_MULTIPLY]: 7,
   [Token.TOK_FLATTEN]: 9,
+  [Token.TOK_DESCENDANT]: 9,
   [Token.TOK_STAR]: 20,
   [Token.TOK_FILTER]: 21,
   [Token.TOK_DOT]: 40,
@@ -181,7 +182,7 @@ class TokenParser {
         }
         this.advance();
         let { name } = this.nud(leftToken) as FieldNode;
-        const left: ExpressionNode =  { type: 'DescendantExpression', name };
+        const left: ExpressionNode = { type: 'DescendantExpression', name };
         const right = this.parseProjectionRHS(bindingPower.Flatten);
         return { type: 'Projection', left, right };
       }
@@ -211,6 +212,16 @@ class TokenParser {
 
   led(tokenName: string, left: ExpressionNode): ExpressionNode {
     switch (tokenName) {
+      case Token.TOK_DESCENDANT: {
+        const infixToken = this.lookaheadToken(0);
+        if (infixToken.type != Token.TOK_UNQUOTEDIDENTIFIER && infixToken.type != Token.TOK_QUOTEDIDENTIFIER) {
+          throw new Error('Syntax error: unexpected token: expected identifier after descendant node');
+        }
+        this.advance();
+        const infix: ExpressionNode = { type: 'DescendantExpression', name: infixToken.value as string };
+        const right = this.parseProjectionRHS(bindingPower.Flatten);
+        return { type: 'Subexpression', left, right: { type: 'Projection', left: infix, right } };
+      }
       case Token.TOK_DOT: {
         const rbp = bindingPower.Dot;
         if (this.lookahead(0) !== Token.TOK_STAR) {
@@ -430,7 +441,7 @@ class TokenParser {
 
   private parseDotRHS(rbp: number): ExpressionNode {
     const lookahead = this.lookahead(0);
-    const exprTokens = [Token.TOK_UNQUOTEDIDENTIFIER, Token.TOK_QUOTEDIDENTIFIER, Token.TOK_STAR];
+    const exprTokens = [Token.TOK_UNQUOTEDIDENTIFIER, Token.TOK_QUOTEDIDENTIFIER, Token.TOK_STAR, Token.TOK_DESCENDANT];
     if (exprTokens.includes(lookahead)) {
       return this.expression(rbp);
     }
@@ -459,6 +470,9 @@ class TokenParser {
     if (this.lookahead(0) === Token.TOK_DOT) {
       this.match(Token.TOK_DOT);
       return this.parseDotRHS(rbp);
+    }
+    if (this.lookahead(0) === Token.TOK_DESCENDANT) {
+      return this.expression(rbp);
     }
     const token = this.lookaheadToken(0);
     this.errorToken(token, `Syntax error, unexpected token: ${token.value}(${token.type})`);

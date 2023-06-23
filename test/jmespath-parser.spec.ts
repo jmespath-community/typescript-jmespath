@@ -84,4 +84,29 @@ describe('parsing', () => {
     };
     expect(compile('..name.length(@)')).toMatchObject(expected);
   });
+  it('should parse descendant sub-expression', () => {
+    const expected = {
+      type: 'Subexpression',
+      left: {
+        type: 'Current'
+      },
+      right: {
+        type: 'Projection',
+        left: {
+          type: 'DescendantExpression',
+          name: 'name'
+        },
+        right: {
+          type: 'Function',
+          name: 'length',
+          children: [
+            {
+              type: 'Current'
+            }
+          ]
+        }
+      }
+    };
+    expect(compile('@..name.length(@)')).toMatchObject(expected);
+  });
 });
