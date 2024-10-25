@@ -36,7 +36,7 @@ export class TreeInterpreter {
         const identifier = node.name;
         let result: JSONValue = null;
         if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-          result = value[identifier] ?? null;
+          result = (value as JSONObject)[identifier] ?? null;
         }
         return result;
       case 'LetExpression': {
