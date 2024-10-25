@@ -55,4 +55,14 @@ describe('parsing', () => {
       return null;
     }, 'syntax');
   });
+  it('should parse paren expression', () => {
+    // see #22 - issue with parenthesized expression-type
+    const expected = {
+      type: 'AndExpression',
+      left: { type: 'Current' },
+      right: { type: 'Literal' }
+    };
+    expect(compile('  @ && \'truthy\' ')).toMatchObject(expected);
+    expect(compile('( @ && \'truthy\' )')).toMatchObject(expected);
+  });
 });
