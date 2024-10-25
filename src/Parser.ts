@@ -178,17 +178,10 @@ class TokenParser {
         return { type: 'ExpressionReference', child };
       }
       case Token.TOK_LPAREN: {
+        console.log('nud::TOK_LPAREN');
         const args: ExpressionNode[] = [];
-        while (this.lookahead(0) !== Token.TOK_RPAREN) {
-          let expression: ExpressionNode;
-          if (this.lookahead(0) === Token.TOK_CURRENT) {
-            expression = { type: Token.TOK_CURRENT };
-            this.advance();
-          } else {
-            expression = this.expression(0);
-          }
-          args.push(expression);
-        }
+        let expression = this.expression(0);
+        args.push(expression);
         this.match(Token.TOK_RPAREN);
         return args[0];
       }
