@@ -114,7 +114,7 @@ export class Runtime {
   private validateArgs(name: string, args: (JSONValue | ExpressionNode)[], signature: InputSignature[]): void {
     let pluralized: boolean;
     this.validateInputSignatures(name, signature);
-    const numberOfRequiredArgs = signature.filter(argSignature => !argSignature.optional ?? false).length;
+    const numberOfRequiredArgs = signature.filter(argSignature => !(argSignature.optional ?? false)).length;
     const lastArgIsVariadic = signature[signature.length - 1]?.variadic ?? false;
     const tooFewArgs = args.length < numberOfRequiredArgs;
     const tooManyArgs = args.length > signature.length;
