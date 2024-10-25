@@ -19,6 +19,7 @@ export class TreeInterpreter {
 
   withScope(scope: ScopeEntry): TreeInterpreter {
     const interpreter = new TreeInterpreter();
+    interpreter.runtime._functionTable = this.runtime._functionTable;
     interpreter._rootValue = this._rootValue;
     interpreter._scope = this._scope.withScope(scope);
     return interpreter;

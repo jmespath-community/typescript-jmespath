@@ -61,6 +61,7 @@ export interface FunctionTable {
 
 export class Runtime {
   _interpreter: TreeInterpreter;
+  _functionTable: FunctionTable;
   TYPE_NAME_TABLE: { [InputArgument: number]: string } = {
     [InputArgument.TYPE_NUMBER]: 'number',
     [InputArgument.TYPE_ANY]: 'any',
@@ -78,6 +79,7 @@ export class Runtime {
 
   constructor(interpreter: TreeInterpreter) {
     this._interpreter = interpreter;
+    this._functionTable = this.functionTable
   }
 
   registerFunction(
@@ -85,17 +87,17 @@ export class Runtime {
     customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
     signature: InputSignature[],
   ): void {
-    if (name in this.functionTable) {
+    if (name in this._functionTable) {
       throw new Error(`Function already defined: ${name}()`);
     }
-    this.functionTable[name] = {
+    this._functionTable[name] = {
       _func: customFunction.bind(this),
       _signature: signature,
     };
   }
 
   callFunction(name: string, resolvedArgs: (JSONValue | ExpressionNode)[]): JSONValue {
-    const functionEntry = this.functionTable[name];
+    const functionEntry = this._functionTable[name];
     if (functionEntry === undefined) {
       throw new Error(`Unknown function: ${name}()`);
     }
