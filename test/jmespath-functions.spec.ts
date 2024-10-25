@@ -1,4 +1,4 @@
-import { search } from '../src';
+import { search, registerFunction, TYPE_NUMBER } from '../src';
 import { expectError } from './error.utils';
 
 describe('Evaluates functions', () => {
@@ -123,5 +123,19 @@ describe('Type-checks function arguments', () => {
     expectError(() => {
       return search('subject string', "pad_right(@, `1`, '--')");
     }, 'invalid-value');
+  });
+});
+
+describe('custom functions', () => {
+  it('must be in scope for let expression', () => {
+    registerFunction(
+      'plusplus', // FUNCTION NAME
+      (resolvedArgs) => {   // CUSTOM FUNCTION
+        const [num] = resolvedArgs;
+        return num + 1;
+      },
+      [{ types: [TYPE_NUMBER] }] //SIGNATURE
+    );
+    expect(search({index: 0}, 'let $n = index in plusplus($n)')).toEqual(1);
   });
 });

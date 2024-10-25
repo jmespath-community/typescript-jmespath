@@ -19,6 +19,7 @@ export class TreeInterpreter {
 
   withScope(scope: ScopeEntry): TreeInterpreter {
     const interpreter = new TreeInterpreter();
+    interpreter.runtime._functionTable = this.runtime._functionTable;
     interpreter._rootValue = this._rootValue;
     interpreter._scope = this._scope.withScope(scope);
     return interpreter;
@@ -36,7 +37,7 @@ export class TreeInterpreter {
         const identifier = node.name;
         let result: JSONValue = null;
         if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-          result = value[identifier] ?? null;
+          result = (value as JSONObject)[identifier] ?? null;
         }
         return result;
       case 'LetExpression': {
