@@ -79,7 +79,7 @@ export class Runtime {
 
   constructor(interpreter: TreeInterpreter) {
     this._interpreter = interpreter;
-    this._functionTable = this.functionTable
+    this._functionTable = this.functionTable;
   }
 
   registerFunction(

@@ -221,7 +221,11 @@ class StreamLexer {
     this._current += 1;
     if (this._current < stream.length && stream[this._current] === peek) {
       this._current += 1;
-      return { start: start, type: orElse, value: stream.slice(start, this._current) };
+      return {
+        start: start,
+        type: orElse,
+        value: stream.slice(start, this._current),
+      };
     }
     return { start: start, type: token, value: stream[start] };
   }
