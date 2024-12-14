@@ -131,11 +131,19 @@ class TokenParser {
       }
       case Token.TOK_MINUS: {
         const child = this.expression(bindingPower.Minus);
-        return { type: 'Unary', operator: token.type, operand: child } as UnaryArithmeticNode;
+        return {
+          type: 'Unary',
+          operator: token.type,
+          operand: child,
+        } as UnaryArithmeticNode;
       }
       case Token.TOK_PLUS: {
         const child = this.expression(bindingPower.Plus);
-        return { type: 'Unary', operator: token.type, operand: child } as UnaryArithmeticNode;
+        return {
+          type: 'Unary',
+          operator: token.type,
+          operand: child,
+        } as UnaryArithmeticNode;
       }
       case Token.TOK_STAR: {
         const left: ExpressionNode = { type: 'Identity' };
@@ -148,7 +156,10 @@ class TokenParser {
       case Token.TOK_LBRACE:
         return this.parseMultiselectHash();
       case Token.TOK_FLATTEN: {
-        const left: ExpressionNode = { type: 'Flatten', child: { type: 'Identity' } };
+        const left: ExpressionNode = {
+          type: 'Flatten',
+          child: { type: 'Identity' },
+        };
         const right: ExpressionNode = this.parseProjectionRHS(bindingPower.Flatten);
         return { type: 'Projection', left, right };
       }
@@ -178,7 +189,6 @@ class TokenParser {
         return { type: 'ExpressionReference', child };
       }
       case Token.TOK_LPAREN: {
-        console.log('nud::TOK_LPAREN');
         const args: ExpressionNode[] = [];
         let expression = this.expression(0);
         args.push(expression);
@@ -310,7 +320,11 @@ class TokenParser {
     left: ExpressionNode,
     right: ExpressionNode,
   ): BinaryExpressionNode<'Projection' | 'IndexExpression'> {
-    const indexExpr: BinaryExpressionNode<'IndexExpression'> = { type: 'IndexExpression', left, right };
+    const indexExpr: BinaryExpressionNode<'IndexExpression'> = {
+      type: 'IndexExpression',
+      left,
+      right,
+    };
     if (right.type === 'Slice') {
       return {
         left: indexExpr,
