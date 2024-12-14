@@ -1,3 +1,4 @@
+import { expect } from 'vitest';
 import { JSONValue } from '../src/JSON.type';
 
 export function expectError(action: () => JSONValue, expected: string | string[]): void {
