@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { search, registerFunction, TYPE_NUMBER } from '../src';
 import { expectError } from './error.utils';
 
@@ -130,12 +131,13 @@ describe('custom functions', () => {
   it('must be in scope for let expression', () => {
     registerFunction(
       'plusplus', // FUNCTION NAME
-      (resolvedArgs) => {   // CUSTOM FUNCTION
+      resolvedArgs => {
+        // CUSTOM FUNCTION
         const [num] = resolvedArgs;
         return num + 1;
       },
-      [{ types: [TYPE_NUMBER] }] //SIGNATURE
+      [{ types: [TYPE_NUMBER] }], //SIGNATURE
     );
-    expect(search({index: 0}, 'let $n = index in plusplus($n)')).toEqual(1);
+    expect(search({ index: 0 }, 'let $n = index in plusplus($n)')).toEqual(1);
   });
 });

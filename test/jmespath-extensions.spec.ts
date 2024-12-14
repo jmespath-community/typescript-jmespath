@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import jmespath, { search, registerFunction } from '../src';
 import { JSONObject } from '../src/JSON.type';
 
@@ -155,7 +156,11 @@ describe('registerFunction', () => {
     registerFunction(
       'optionalArgs',
       ([first, second, third]) => {
-        return { first, second: second ?? 'default[2]', third: third ?? 'default[3]' };
+        return {
+          first,
+          second: second ?? 'default[2]',
+          third: third ?? 'default[3]',
+        };
       },
       [{ types: [jmespath.TYPE_ANY] }, { types: [jmespath.TYPE_ANY], optional: true }],
     );

@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { tokenize } from '../src';
 
 describe('tokenize', () => {
@@ -83,7 +84,7 @@ describe('tokenize', () => {
     expect(tokenize('`true`')).toMatchObject([{ type: 'Literal', value: true, start: 0 }]);
   });
   it('should tokenize raw strings', () => {
-    expect(tokenize("'raw-string'")).toMatchObject([{ type: 'Literal', value: "raw-string", start: 0 }]);
+    expect(tokenize("'raw-string'")).toMatchObject([{ type: 'Literal', value: 'raw-string', start: 0 }]);
   });
   it('should tokenize raw strings single quote', () => {
     expect(tokenize("'\\''")).toMatchObject([{ type: 'Literal', value: "'", start: 0 }]);
@@ -92,7 +93,7 @@ describe('tokenize', () => {
     expect(tokenize("'\\'raw-string\\''")).toMatchObject([{ type: 'Literal', value: "'raw-string'", start: 0 }]);
   });
   it('should tokenize raw strings backslash characters', () => {
-    expect(tokenize("'\\\\'")).toMatchObject([{ type: 'Literal', value: "\\", start: 0 }]);
+    expect(tokenize("'\\\\'")).toMatchObject([{ type: 'Literal', value: '\\', start: 0 }]);
   });
   it('should not require surrounding quotes for strings', () => {
     expect(tokenize('`foo`', { enable_legacy_literals: true })).toMatchObject([

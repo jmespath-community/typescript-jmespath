@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { expectError } from './error.utils';
 import { divide, strictDeepEqual } from '../src/utils';
 

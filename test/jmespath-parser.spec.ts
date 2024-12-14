@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { compile } from '../src';
 import { expectError } from './error.utils';
 
@@ -42,8 +43,16 @@ describe('parsing', () => {
     const expected = {
       type: 'LetExpression',
       bindings: [
-        { type: 'Binding', variable: 'foo', reference: { type: 'Field', name: 'bar' } },
-        { type: 'Binding', variable: 'baz', reference: { type: 'Field', name: 'qux' } },
+        {
+          type: 'Binding',
+          variable: 'foo',
+          reference: { type: 'Field', name: 'bar' },
+        },
+        {
+          type: 'Binding',
+          variable: 'baz',
+          reference: { type: 'Field', name: 'qux' },
+        },
       ],
       expression: { type: 'Current' },
     };
@@ -60,9 +69,9 @@ describe('parsing', () => {
     const expected = {
       type: 'AndExpression',
       left: { type: 'Current' },
-      right: { type: 'Literal' }
+      right: { type: 'Literal' },
     };
-    expect(compile('  @ && \'truthy\' ')).toMatchObject(expected);
-    expect(compile('( @ && \'truthy\' )')).toMatchObject(expected);
+    expect(compile("  @ && 'truthy' ")).toMatchObject(expected);
+    expect(compile("( @ && 'truthy' )")).toMatchObject(expected);
   });
 });

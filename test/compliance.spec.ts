@@ -1,11 +1,19 @@
+import { describe, expect, test } from 'vitest';
 import { readdirSync, readFileSync } from 'fs';
 import { basename } from 'path';
 import { Options, search } from '../src';
 import { JSONValue } from '../src/JSON.type';
 import { expectError } from './error.utils';
 
-export type ComplianceTestCaseDefinition = { expression: string; result?: JSONValue; error?: string };
-export type ComplianceTestCase = { given: JSONValue; cases: ComplianceTestCaseDefinition[] };
+export type ComplianceTestCaseDefinition = {
+  expression: string;
+  result?: JSONValue;
+  error?: string;
+};
+export type ComplianceTestCase = {
+  given: JSONValue;
+  cases: ComplianceTestCaseDefinition[];
+};
 export type ComplianceTestSuite = ComplianceTestCase[];
 
 // Compliance tests that aren't supported yet.
