@@ -59,11 +59,13 @@ export class TreeInterpreter {
       }
       case 'Variable': {
         const variable = node.name;
-        const result = this._scope.getValue(variable) ?? null;
-        if (result === null || result === undefined) {
+        if (
+          !this._scope.getValue(variable) &&
+          !Object.prototype.hasOwnProperty.call(this._scope.currentScopeData, variable)
+        ) {
           throw new Error(`Error referencing undefined variable ${variable}`);
         }
-        return result;
+        return this._scope.getValue(variable);
       }
       case 'IndexExpression':
         return this.visit(node.right, this.visit(node.left, value));

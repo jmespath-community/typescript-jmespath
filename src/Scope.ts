@@ -4,6 +4,10 @@ export class ScopeChain {
   private inner?: ScopeChain = undefined;
   private data: JSONObject = {};
 
+  get currentScopeData(): JSONObject {
+    return this.data;
+  }
+
   public withScope(data: JSONObject): ScopeChain {
     const outer: ScopeChain = new ScopeChain();
     outer.inner = this;
@@ -12,15 +16,14 @@ export class ScopeChain {
   }
 
   public getValue(identifier: string): JSONValue {
-    if (identifier in this.data) {
-      const result = this.data[identifier];
-      if (result !== null && result !== undefined) {
-        return result;
-      }
+    if (Object.prototype.hasOwnProperty.call(this.data, identifier)) {
+      return this.data[identifier];
     }
+
     if (this.inner) {
       return this.inner.getValue(identifier);
     }
+
     return null;
   }
 }
