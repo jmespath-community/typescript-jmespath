@@ -12,6 +12,8 @@ import { ScopeChain } from './Scope';
 export type { Options } from './Parser.type';
 export type { FunctionSignature, RuntimeFunction, InputSignature } from './Runtime';
 
+export type { JSONValue, JSONPrimitive, JSONArray, JSONObject } from './JSON.type';
+
 export const TYPE_ANY = InputArgument.TYPE_ANY;
 export const TYPE_ARRAY = InputArgument.TYPE_ARRAY;
 export const TYPE_ARRAY_ARRAY = InputArgument.TYPE_ARRAY_ARRAY;
