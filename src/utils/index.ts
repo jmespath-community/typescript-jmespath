@@ -40,33 +40,34 @@ export const strictDeepEqual = (first: unknown, second: unknown): boolean => {
 };
 
 export const isFalse = (obj: unknown): boolean => {
+  // falsey values
+  if (obj === null || obj === undefined || obj === false) {
+    return true;
+  }
+  if (typeof obj === 'string') {
+    return obj === '';
+  }
   if (typeof obj === 'object') {
-    if (obj === null) {
-      return true;
-    }
     if (Array.isArray(obj)) {
       return obj.length === 0;
     }
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    for (const _key in obj) {
-      return false;
+    if (obj === null) {
+      return true;
     }
-    return true;
+    // check if object is empty
+    return Object.keys(obj).length === 0;
   }
-  return !(typeof obj === 'number' || obj);
+  return false;
 };
 
 export const isAlpha = (ch: string): boolean => {
-  // tslint:disable-next-line: strict-comparisons
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_';
 };
 
 export const isNum = (ch: string): boolean => {
-  // tslint:disable-next-line: strict-comparisons
   return (ch >= '0' && ch <= '9') || ch === '-';
 };
 export const isAlphaNum = (ch: string): boolean => {
-  // tslint:disable-next-line: strict-comparisons
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch === '_';
 };
 
