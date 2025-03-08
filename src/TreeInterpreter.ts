@@ -33,13 +33,20 @@ export class TreeInterpreter {
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
     switch (node.type) {
+      case 'Ternary': {
+        const condition = this.visit(node.condition, value);
+        if (!isFalse(condition)) {
+          return this.visit(node.trueExpr, value);
+        }
+        return this.visit(node.falseExpr, value);
+      }
       case 'Field':
         const identifier = node.name;
-        let result: JSONValue = null;
-        if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-          result = (value as JSONObject)[identifier] ?? null;
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+          return null;
         }
-        return result;
+        // return the value of the field
+        return (value as JSONObject)[identifier] ?? null;
       case 'LetExpression': {
         const { bindings, expression } = node;
         let scope = {};
