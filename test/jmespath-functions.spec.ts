@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { search, registerFunction, TYPE_NUMBER } from '../src';
+import { describe, expect, it } from 'vitest';
+import { TYPE_NUMBER, registerFunction, search } from '../src';
 import { expectError } from './error.utils';
 
 describe('Evaluates functions', () => {

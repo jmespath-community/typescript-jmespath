@@ -71,7 +71,7 @@ export class TreeInterpreter {
         return this.visit(node.right, this.visit(node.left, value));
       case 'Subexpression': {
         const result = this.visit(node.left, value);
-        return result != null ? this.visit(node.right, result) ?? null : null;
+        return result != null ? (this.visit(node.right, result) ?? null) : null;
       }
       case 'Index': {
         if (!Array.isArray(value)) {

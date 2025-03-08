@@ -1,7 +1,7 @@
 import { JSONValue } from './JSON.type';
-import { replace } from './utils/strings';
 import { LexerOptions, LexerToken, Token } from './Lexer.type';
-import { isAlpha, isNum, isAlphaNum } from './utils/index';
+import { isAlpha, isAlphaNum, isNum } from './utils/index';
+import { replace } from './utils/strings';
 
 export const basicTokens: Record<string, Token> = {
   '(': Token.TOK_LPAREN,

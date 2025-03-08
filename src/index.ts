@@ -1,12 +1,12 @@
-import Parser from './Parser';
 import Lexer from './Lexer';
+import Parser from './Parser';
 import TreeInterpreterInst from './TreeInterpreter';
 
 import { ExpressionNode } from './AST.type';
 import { JSONValue } from './JSON.type';
 import { LexerOptions, LexerToken } from './Lexer.type';
 import { Options } from './Parser.type';
-import { InputArgument, RuntimeFunction, InputSignature } from './Runtime';
+import { InputArgument, InputSignature, RuntimeFunction } from './Runtime';
 import { ScopeChain } from './Scope';
 
 export type { Options } from './Parser.type';

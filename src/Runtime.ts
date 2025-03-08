@@ -1,4 +1,3 @@
-import { Text } from './utils/text';
 import {
   findFirst,
   findLast,
@@ -12,6 +11,7 @@ import {
   trimRight,
   upper,
 } from './utils/strings';
+import { Text } from './utils/text';
 
 import type { ExpressionNode } from './AST.type';
 import type {

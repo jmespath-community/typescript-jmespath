@@ -1,6 +1,3 @@
 {
-  "**/{src,test}/**/*.{ts,js}": [
-    "prettier --write",
-    "git add"
-  ]
+  "**/{src,test}/**/*.{ts,js}": ["biome check --write", "git add"]
 }

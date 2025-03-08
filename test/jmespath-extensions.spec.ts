@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import jmespath, { search, registerFunction } from '../src';
 import { JSONObject } from '../src/JSON.type';
 

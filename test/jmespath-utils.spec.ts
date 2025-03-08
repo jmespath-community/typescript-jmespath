@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { expectError } from './error.utils';
+import { describe, expect, it } from 'vitest';
 import { divide, strictDeepEqual } from '../src/utils';
+import { expectError } from './error.utils';
 
 describe('strictDeepEqual', () => {
   it('should compare scalars', () => {

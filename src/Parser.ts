@@ -1,18 +1,18 @@
 import type {
   BinaryArithmeticNode,
-  UnaryArithmeticNode,
   BinaryExpressionNode,
+  BinaryOperatorType,
+  BindingNode,
   ComparatorNode,
   ComparatorType,
   ExpressionNode,
   FunctionNode,
   IndexNode,
   KeyValuePairNode,
-  BinaryOperatorType,
-  SliceNode,
-  UnaryExpressionNode,
   LetExpressionNode,
-  BindingNode,
+  SliceNode,
+  UnaryArithmeticNode,
+  UnaryExpressionNode,
   VariableNode,
 } from './AST.type';
 import Lexer from './Lexer';
@@ -190,7 +190,7 @@ class TokenParser {
       }
       case Token.TOK_LPAREN: {
         const args: ExpressionNode[] = [];
-        let expression = this.expression(0);
+        const expression = this.expression(0);
         args.push(expression);
         this.match(Token.TOK_RPAREN);
         return args[0];
