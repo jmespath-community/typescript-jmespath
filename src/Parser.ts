@@ -20,6 +20,7 @@ import { LexerToken, Token } from './Lexer.type';
 import { Options } from './Parser.type';
 
 const bindingPower: Record<string, number> = {
+  [Token.TOK_QUESTION]: 4,
   [Token.TOK_EOF]: 0,
   [Token.TOK_VARIABLE]: 0,
   [Token.TOK_UNQUOTEDIDENTIFIER]: 0,
@@ -202,6 +203,17 @@ class TokenParser {
 
   led(tokenName: string, left: ExpressionNode): ExpressionNode {
     switch (tokenName) {
+      case Token.TOK_QUESTION: {
+        const trueExpr = this.expression(0);
+        this.match(Token.TOK_COLON);
+        const falseExpr = this.expression(0);
+        return {
+          type: 'Ternary',
+          condition: left,
+          trueExpr,
+          falseExpr,
+        };
+      }
       case Token.TOK_DOT: {
         const rbp = bindingPower.Dot;
         if (this.lookahead(0) !== Token.TOK_STAR) {
