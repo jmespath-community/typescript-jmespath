@@ -9,12 +9,12 @@
   },
   "main": "dist/jmespath.umd.js",
   "bin": {
-    "jp": "scripts/jp.js"
+    "jp": "dist/lib/scripts/jp.js"
   },
   "module": "dist/jmespath.esm.js",
   "typings": "dist/types/index.d.ts",
   "types": "dist/types/index.d.ts",
-  "files": ["dist/", "scripts/jp.js"],
+  "files": ["dist/"],
   "homepage": "https://github.com/nanoporetech/jmespath-ts#readme",
   "bugs": {
     "url": "https://github.com/nanoporetech/jmespath-ts/issues",

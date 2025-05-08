@@ -2,9 +2,10 @@
 
 'use strict';
 
-import jmespath from '../dist/jmespath.umd';
+import jmespath from '../src';
 import { parseArgs, ParseArgsConfig } from 'node:util';
 import * as fs from 'fs';
+import pkg from '../package.json';
 
 const args = getArgs();
 
@@ -80,7 +81,6 @@ function getArgs() {
 
 
 function printHelp(): void {
-  const pkg = require('../package.json');
   console.log(`
     NAME:
     jp - jp [<options>] <expression>
@@ -101,11 +101,17 @@ function printHelp(): void {
 
 
 function printResult(inputJSON: string, expression: string, compact: boolean = false) {
+  let parsedInput: any = null;
+
   try {
-    var parsedInput = JSON.parse(inputJSON);
-    console.log(JSON.stringify(jmespath.search(parsedInput, expression, null), null, compact ? 0 : 2));
+    parsedInput = JSON.parse(inputJSON);
   } catch (e) {
-    console.error('Error parsing JSON input:', e.message);
-    process.exit(1);
+    throw e;
+  }
+
+  try {
+    console.log(JSON.stringify(jmespath.search(parsedInput, expression, undefined), null, compact ? 0 : 2));
+  } catch (e) {
+    throw e
   }
 }
