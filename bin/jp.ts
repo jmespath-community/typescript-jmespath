@@ -2,10 +2,10 @@
 
 'use strict';
 
-import jmespath from '../src';
-import { parseArgs, ParseArgsConfig } from 'node:util';
 import * as fs from 'fs';
+import { ParseArgsConfig, parseArgs } from 'node:util';
 import pkg from '../package.json';
+import jmespath, { JSONValue } from '../src';
 
 const args = getArgs();
 
@@ -21,7 +21,7 @@ if (!args.values['expr-file'] && args.positionals.length < 1) {
 }
 
 
-var expression = '';
+let expression = '';
 if (args.values['expr-file']) {
   expression = fs.readFileSync(<string>args.values['expr-file'], { encoding: 'utf8', flag: 'r' });
 } else {
@@ -29,7 +29,7 @@ if (args.values['expr-file']) {
 }
 
 
-var inputJSON = '';
+let inputJSON = '';
 if (args?.values?.filename) {
   inputJSON = fs.readFileSync(<string>args.values.filename, { encoding: 'utf8', flag: 'r' });
   printResult(inputJSON, expression, <boolean>args.values.compact);
@@ -38,7 +38,7 @@ if (args?.values?.filename) {
 
   process.stdin.setEncoding('utf-8');
   process.stdin.on('readable', function () {
-    var chunk = process.stdin.read();
+    const chunk = process.stdin.read();
     if (chunk !== null) {
       inputJSON += chunk;
     }
@@ -100,8 +100,8 @@ function printHelp(): void {
 }
 
 
-function printResult(inputJSON: string, expression: string, compact: boolean = false) {
-  let parsedInput: any = null;
+function printResult(inputJSON: string, expression: string, compact = false) {
+  let parsedInput: JSONValue | null = null;
 
   try {
     parsedInput = JSON.parse(inputJSON);
