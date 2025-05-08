@@ -38,8 +38,7 @@ export function tokenize(expression: string, options?: LexerOptions): LexerToken
 
 export const registerFunction = (
   functionName: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  customFunction: RuntimeFunction<any[], JSONValue>,
+  customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
   signature: InputSignature[],
 ): void => {
   TreeInterpreterInst.runtime.registerFunction(functionName, customFunction, signature);
