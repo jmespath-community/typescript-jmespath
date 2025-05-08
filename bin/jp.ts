@@ -9,7 +9,6 @@ import jmespath, { JSONValue } from '../src';
 
 const args = getArgs();
 
-
 if (args.values.help) {
   printHelp();
   process.exit(0);
@@ -20,7 +19,6 @@ if (!args.values['expr-file'] && args.positionals.length < 1) {
   process.exit(1);
 }
 
-
 let expression = '';
 if (args.values['expr-file']) {
   expression = fs.readFileSync(<string>args.values['expr-file'], { encoding: 'utf8', flag: 'r' });
@@ -28,14 +26,11 @@ if (args.values['expr-file']) {
   expression = args.positionals[0];
 }
 
-
 let inputJSON = '';
 if (args?.values?.filename) {
   inputJSON = fs.readFileSync(<string>args.values.filename, { encoding: 'utf8', flag: 'r' });
   printResult(inputJSON, expression, <boolean>args.values.compact);
-
 } else {
-
   process.stdin.setEncoding('utf-8');
   process.stdin.on('readable', function () {
     const chunk = process.stdin.read();
@@ -48,7 +43,6 @@ if (args?.values?.filename) {
     printResult(inputJSON, expression, <boolean>args.values.compact);
   });
 }
-
 
 function getArgs() {
   const config: ParseArgsConfig = {
@@ -70,15 +64,13 @@ function getArgs() {
       'expr-file': {
         type: 'string',
         short: 'e',
-      }
-
+      },
     },
     allowPositionals: true,
-  }
+  };
 
   return parseArgs(config);
 }
-
 
 function printHelp(): void {
   console.log(`
@@ -99,7 +91,6 @@ function printHelp(): void {
       `);
 }
 
-
 function printResult(inputJSON: string, expression: string, compact = false) {
   let parsedInput: JSONValue | null = null;
 
@@ -112,6 +103,6 @@ function printResult(inputJSON: string, expression: string, compact = false) {
   try {
     console.log(JSON.stringify(jmespath.search(parsedInput, expression, undefined), null, compact ? 0 : 2));
   } catch (e) {
-    throw e
+    throw e;
   }
 }
