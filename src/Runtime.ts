@@ -46,11 +46,11 @@ export interface InputSignature {
   optional?: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type RuntimeFunction<T extends any[], U> = (resolvedArgs: T) => U;
+export type RuntimeFunction<T extends (JSONValue | ExpressionNode)[], U> = (resolvedArgs: T) => U;
 
 export interface FunctionSignature {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint: lint/suspicious/noExplicitAny
   _func: RuntimeFunction<any, JSONValue>;
   _signature: InputSignature[];
 }

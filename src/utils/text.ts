@@ -41,6 +41,7 @@ export class Text {
 
   private get codePoints(): number[] {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    // biome-ignore lint: lint/style/noNonNullAssertion
     const array = [...this._text].map(s => s.codePointAt(0)!);
     return array;
   }
