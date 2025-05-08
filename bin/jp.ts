@@ -2,13 +2,12 @@
 
 'use strict';
 
-import jmespath from '../src';
-import { parseArgs, ParseArgsConfig } from 'node:util';
 import * as fs from 'fs';
+import { ParseArgsConfig, parseArgs } from 'node:util';
 import pkg from '../package.json';
+import jmespath, { JSONValue } from '../src';
 
 const args = getArgs();
-
 
 if (args.values.help) {
   printHelp();
@@ -20,25 +19,21 @@ if (!args.values['expr-file'] && args.positionals.length < 1) {
   process.exit(1);
 }
 
-
-var expression = '';
+let expression = '';
 if (args.values['expr-file']) {
   expression = fs.readFileSync(<string>args.values['expr-file'], { encoding: 'utf8', flag: 'r' });
 } else {
   expression = args.positionals[0];
 }
 
-
-var inputJSON = '';
+let inputJSON = '';
 if (args?.values?.filename) {
   inputJSON = fs.readFileSync(<string>args.values.filename, { encoding: 'utf8', flag: 'r' });
   printResult(inputJSON, expression, <boolean>args.values.compact);
-
 } else {
-
   process.stdin.setEncoding('utf-8');
   process.stdin.on('readable', function () {
-    var chunk = process.stdin.read();
+    const chunk = process.stdin.read();
     if (chunk !== null) {
       inputJSON += chunk;
     }
@@ -48,7 +43,6 @@ if (args?.values?.filename) {
     printResult(inputJSON, expression, <boolean>args.values.compact);
   });
 }
-
 
 function getArgs() {
   const config: ParseArgsConfig = {
@@ -70,15 +64,13 @@ function getArgs() {
       'expr-file': {
         type: 'string',
         short: 'e',
-      }
-
+      },
     },
     allowPositionals: true,
-  }
+  };
 
   return parseArgs(config);
 }
-
 
 function printHelp(): void {
   console.log(`
@@ -99,9 +91,8 @@ function printHelp(): void {
       `);
 }
 
-
-function printResult(inputJSON: string, expression: string, compact: boolean = false) {
-  let parsedInput: any = null;
+function printResult(inputJSON: string, expression: string, compact = false) {
+  let parsedInput: JSONValue | null = null;
 
   try {
     parsedInput = JSON.parse(inputJSON);
@@ -112,6 +103,6 @@ function printResult(inputJSON: string, expression: string, compact: boolean = f
   try {
     console.log(JSON.stringify(jmespath.search(parsedInput, expression, undefined), null, compact ? 0 : 2));
   } catch (e) {
-    throw e
+    throw e;
   }
 }

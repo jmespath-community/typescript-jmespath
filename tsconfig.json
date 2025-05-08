@@ -27,5 +27,5 @@
     "typeRoots": ["node_modules/@types"]
   },
   "exclude": ["node_modules", "dist", "test"],
-  "include": ["src", "scripts"],
+  "include": ["src", "bin"]
 }
