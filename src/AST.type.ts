@@ -78,6 +78,13 @@ export interface VariableNode {
   readonly name: string;
 }
 
+export interface TernaryNode {
+  readonly type: 'Ternary';
+  readonly condition: ExpressionNode;
+  readonly trueExpr: ExpressionNode;
+  readonly falseExpr: ExpressionNode;
+}
+
 type BinaryExpressionType =
   | 'AndExpression'
   | 'IndexExpression'
@@ -139,6 +146,7 @@ export type ExpressionNode =
   | FunctionNode
   | LetExpressionNode
   | BindingNode
-  | VariableNode;
+  | VariableNode
+  | TernaryNode;
 
 export type ExpressionReference = { expref: true } & ExpressionNode;

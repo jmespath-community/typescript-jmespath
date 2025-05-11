@@ -2,7 +2,6 @@
 
 # @jmespath-community/jmespath
 
-
 @jmespath-community/jmespath is a **TypeScript** implementation of the [JMESPath](https://jmespath.site/) spec.
 
 JMESPath is a query language for JSON. It will take a JSON document
@@ -20,12 +19,9 @@ npm install @jmespath-community/jmespath
 ### `search(data: JSONValue, expression: string): JSONValue`
 
 ```javascript
-import { search } from '@jmespath-community/jmespath';
+import { search } from "@jmespath-community/jmespath";
 
-search(
-  {foo: {bar: {baz: [0, 1, 2, 3, 4]}}},
-  "foo.bar.baz[2]"
-  );
+search({ foo: { bar: { baz: [0, 1, 2, 3, 4] } } }, "foo.bar.baz[2]");
 
 // OUTPUTS: 2
 ```
@@ -35,50 +31,42 @@ In the example we gave the `search` function input data of
 expression `foo.bar.baz[2]`, and the `search` function evaluated
 the expression against the input data to produce the result `2`.
 
-The JMESPath language can do *a lot* more than select an element
-from a list.  Here are a few more examples:
+The JMESPath language can do _a lot_ more than select an element
+from a list. Here are a few more examples:
 
 ```javascript
-import { search } from '@jmespath-community/jmespath';
+import { search } from "@jmespath-community/jmespath";
 
 /* --- EXAMPLE 1 --- */
 
 let JSON_DOCUMENT = {
   foo: {
     bar: {
-      baz: [0, 1, 2, 3, 4]
-    }
-  }
+      baz: [0, 1, 2, 3, 4],
+    },
+  },
 };
 
 search(JSON_DOCUMENT, "foo.bar");
 // OUTPUTS: { baz: [ 0, 1, 2, 3, 4 ] }
 
-
 /* --- EXAMPLE 2 --- */
 
 JSON_DOCUMENT = {
-  "foo": [
-    {"first": "a", "last": "b"},
-    {"first": "c", "last": "d"}
-  ]
+  foo: [
+    { first: "a", last: "b" },
+    { first: "c", last: "d" },
+  ],
 };
 
-search(JSON_DOCUMENT, "foo[*].first")
+search(JSON_DOCUMENT, "foo[*].first");
 // OUTPUTS: [ 'a', 'c' ]
-
 
 /* --- EXAMPLE 3 --- */
 
 JSON_DOCUMENT = {
-  "foo": [
-    {"age": 20},
-    {"age": 25},
-    {"age": 30},
-    {"age": 35},
-    {"age": 40}
-  ]
-}
+  foo: [{ age: 20 }, { age: 25 }, { age: 30 }, { age: 35 }, { age: 40 }],
+};
 
 search(JSON_DOCUMENT, "foo[?age > `30`]");
 // OUTPUTS: [ { age: 35 }, { age: 40 } ]
@@ -86,91 +74,138 @@ search(JSON_DOCUMENT, "foo[?age > `30`]");
 
 ### `compile(expression: string): ExpressionNodeTree`
 
-You can precompile all your expressions ready for use later on. the `compile`
+You can precompile all your expressions ready for use later on. The `compile`
 function takes a JMESPath expression and returns an abstract syntax tree that
 can be used by the TreeInterpreter function
 
 ```javascript
-import { compile, TreeInterpreter } from '@jmespath-community/jmespath';
+import { compile, TreeInterpreter } from "@jmespath-community/jmespath";
 
-const ast = compile('foo.bar');
+const ast = compile("foo.bar");
 
-TreeInterpreter.search(ast, {foo: {bar: 'BAZ'}})
+TreeInterpreter.search(ast, { foo: { bar: "BAZ" } });
 // RETURNS: "BAZ"
-
 ```
 
 ---
+
 ## EXTENSIONS TO ORIGINAL SPEC
 
 1. ### Register you own custom functions
 
-    #### `registerFunction(functionName: string, customFunction: RuntimeFunction, signature: InputSignature[]): void`
+   #### `registerFunction(functionName: string, customFunction: RuntimeFunction, signature: InputSignature[]): void`
 
-    Extend the list of built in JMESpath expressions with your own functions.
+   Extend the list of built in JMESpath expressions with your own functions.
 
-    ```javascript
-      import {search, registerFunction, TYPE_NUMBER} from '@jmespath-community/jmespath'
+   ```javascript
+   import { search, registerFunction, TYPE_NUMBER } from "@jmespath-community/jmespath";
 
+   search({ foo: 60, bar: 10 }, "divide(foo, bar)");
+   // THROWS ERROR: Error: Unknown function: divide()
 
-      search({ foo: 60, bar: 10 }, 'divide(foo, bar)')
-      // THROWS ERROR: Error: Unknown function: divide()
+   registerFunction(
+     "divide", // FUNCTION NAME
+     (resolvedArgs) => {
+       // CUSTOM FUNCTION
+       const [dividend, divisor] = resolvedArgs;
+       return dividend / divisor;
+     },
+     [{ types: [TYPE_NUMBER] }, { types: [TYPE_NUMBER] }], //SIGNATURE
+   );
 
-      registerFunction(
-        'divide', // FUNCTION NAME
-        (resolvedArgs) => {   // CUSTOM FUNCTION
-          const [dividend, divisor] = resolvedArgs;
-          return dividend / divisor;
-        },
-        [{ types: [TYPE_NUMBER] }, { types: [TYPE_NUMBER] }] //SIGNATURE
-      );
+   search({ foo: 60, bar: 10 }, "divide(foo, bar)");
+   // OUTPUTS: 6
+   ```
 
-      search({ foo: 60,bar: 10 }, 'divide(foo, bar)');
-      // OUTPUTS: 6
+   Optional arguments are supported by setting `{..., optional: true}` in argument signatures
 
-    ```
+   ```javascript
+   registerFunction(
+     "divide",
+     (resolvedArgs) => {
+       const [dividend, divisor] = resolvedArgs;
+       return dividend / divisor ?? 1; //OPTIONAL DIVISOR THAT DEFAULTS TO 1
+     },
+     [{ types: [TYPE_NUMBER] }, { types: [TYPE_NUMBER], optional: true }], //SIGNATURE
+   );
 
-    Optional arguments are supported by setting `{..., optional: true}` in argument signatures
-
-
-    ```javascript
-
-      registerFunction(
-        'divide',
-        (resolvedArgs) => {
-          const [dividend, divisor] = resolvedArgs;
-          return dividend / divisor ?? 1; //OPTIONAL DIVISOR THAT DEFAULTS TO 1
-        },
-        [{ types: [TYPE_NUMBER] }, { types: [TYPE_NUMBER], optional: true }] //SIGNATURE
-      );
-
-      search({ foo: 60, bar: 10 }, 'divide(foo)');
-      // OUTPUTS: 60
-
-    ```
+   search({ foo: 60, bar: 10 }, "divide(foo)");
+   // OUTPUTS: 60
+   ```
 
 2. ### Root value access with `$` symbol
 
 ```javascript
-
-search({foo: {bar: 999}, baz: [1, 2, 3]}, '$.baz[*].[@, $.foo.bar]')
+search({ foo: { bar: 999 }, baz: [1, 2, 3] }, "$.baz[*].[@, $.foo.bar]");
 
 // OUTPUTS:
 // [ [ 1, 999 ], [ 2, 999 ], [ 3, 999 ] ]
 ```
 
-
 ## More Resources
 
 The example above only show a small amount of what
 a JMESPath expression can do. If you want to take a
-tour of the language, the *best* place to go is the
+tour of the language, the _best_ place to go is the
 [JMESPath Tutorial](http://jmespath.site/main#tutorial).
 
 One of the best things about JMESPath is that it is
 implemented in many different programming languages including
-python, ruby, php, lua, etc.  To see a complete list of libraries,
+python, ruby, php, lua, etc. To see a complete list of libraries,
 check out the [JMESPath libraries page](http://jmespath.site/main#libraries).
 
 And finally, the full JMESPath specification can be found
 on the [JMESPath site](https://jmespath.site/main/#specification).
+
+## Experimental Features
+
+### Ternary Operations (`? :`)
+
+**Supported Version:** 1.1.6
+
+Experimental support for [ternary operations](https://github.com/jmespath-community/jmespath.spec/discussions/179) has been added, allowing for conditional logic within your JMESPath expressions. The syntax is `condition ? value_if_true : value_if_false`.
+
+- **Condition:** The expression before the `?`. JMESPath determines truthiness based on the evaluated value:
+  - `true` is truthy.
+  - Any non-empty object, array, or string is truthy.
+  - Any non-zero number is truthy.
+  - `false`, `null`, empty objects `{}`, empty arrays `[]`, and empty strings `''` are falsy.
+- **Value if true:** The expression between the `?` and `:`. This is evaluated and returned if the condition is truthy.
+- **Value if false:** The expression after the `:`. This is evaluated and returned if the condition is falsy.
+
+**Examples:**
+
+Basic usage:
+
+```javascript
+search({ is_active: true, user: "Alice" }, "is_active ? user : 'Guest'");
+// OUTPUTS: "Alice"
+
+search({ is_active: false, user: "Bob" }, "is_active ? user : 'Guest'");
+// OUTPUTS: "Guest"
+```
+
+Truthiness with different types:
+
+```javascript
+search({ data: [1, 2] }, "data ? 'has_data' : 'no_data'");
+// OUTPUTS: "has_data"
+
+search({ data: [] }, "data ? 'has_data' : 'no_data'");
+// OUTPUTS: "no_data"
+
+search({ count: 5 }, "count ? 'count_present' : 'no_count'");
+// OUTPUTS: "count_present"
+
+search({ count: 0 }, "count ? 'count_present' : 'no_count'");
+// OUTPUTS: "no_count"
+```
+
+Nested Ternaries:
+
+```javascript
+search({ a: true, b: false, val1: 10, val2: 20, val3: 30 }, "a ? (b ? val1 : val2) : val3");
+// OUTPUTS: 20
+```
+
+This feature is currently experimental and its syntax or behavior might change in future releases.
