@@ -147,9 +147,7 @@ class TokenParser {
       }
       case Token.TOK_STAR: {
         const left: ExpressionNode = { type: 'Identity' };
-        const right: ExpressionNode =
-          this.lookahead(0) === Token.TOK_RBRACKET ? left : this.parseProjectionRHS(bindingPower.Star);
-        return { type: 'ValueProjection', left, right };
+        return { type: 'ValueProjection', left, right: this.parseProjectionRHS(bindingPower.Star) };
       }
       case Token.TOK_FILTER:
         return this.led(token.type, { type: 'Identity' });
