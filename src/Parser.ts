@@ -187,11 +187,9 @@ class TokenParser {
         return { type: 'ExpressionReference', child };
       }
       case Token.TOK_LPAREN: {
-        const args: ExpressionNode[] = [];
         const expression = this.expression(0);
-        args.push(expression);
         this.match(Token.TOK_RPAREN);
-        return args[0];
+        return expression;
       }
       default:
         this.errorToken(token);
