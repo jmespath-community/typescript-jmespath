@@ -20,7 +20,6 @@ import { LexerToken, Token } from './Lexer.type';
 import { Options } from './Parser.type';
 
 const bindingPower: Record<string, number> = {
-  [Token.TOK_QUESTION]: 4,
   [Token.TOK_EOF]: 0,
   [Token.TOK_VARIABLE]: 0,
   [Token.TOK_UNQUOTEDIDENTIFIER]: 0,
@@ -35,8 +34,9 @@ const bindingPower: Record<string, number> = {
   [Token.TOK_ROOT]: 0,
   [Token.TOK_ASSIGN]: 1,
   [Token.TOK_PIPE]: 1,
-  [Token.TOK_OR]: 2,
-  [Token.TOK_AND]: 3,
+  [Token.TOK_QUESTION]: 2,
+  [Token.TOK_OR]: 3,
+  [Token.TOK_AND]: 4,
   [Token.TOK_EQ]: 5,
   [Token.TOK_GT]: 5,
   [Token.TOK_LT]: 5,
@@ -494,7 +494,7 @@ class TokenParser {
     let keyName: string;
     let value: ExpressionNode;
     // tslint:disable-next-line: prettier
-    for (;;) {
+    for (; ;) {
       keyToken = this.lookaheadToken(0);
       if (!identifierTypes.includes(keyToken.type)) {
         throw new Error(`Syntax error: expecting an identifier token, got: ${keyToken.type}`);
