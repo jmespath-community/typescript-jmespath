@@ -16,6 +16,7 @@ export const basicTokens: Record<string, Token> = {
   '}': Token.TOK_RBRACE,
   '+': Token.TOK_PLUS,
   '%': Token.TOK_MODULO,
+  '?': Token.TOK_QUESTION,
   '\u2212': Token.TOK_MINUS,
   '\u00d7': Token.TOK_MULTIPLY,
   '\u00f7': Token.TOK_DIVIDE,
