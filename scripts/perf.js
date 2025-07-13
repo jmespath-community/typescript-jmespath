@@ -14,6 +14,11 @@ async function runBenchmarks() {
     time: 1000,
   });
 
+  // Test data for TreeInterpreter benchmarks
+  const simpleData = { foo: { bar: 'baz' } };
+  const arrayData = { items: Array.from({ length: 100 }, (_, i) => ({ id: i, name: `item${i}`, price: i * 10 })) };
+  const nestedData = { level1: { level2: { level3: { level4: { value: 42 } } } } };
+
   // Baseline parsing benchmarks
   bench
     .add('Parser#single_expr', () => {
@@ -44,6 +49,41 @@ async function runBenchmarks() {
     })
     .add('Lexer#function_calls', () => {
       jmespath.compile('sort_by(items, &price).name');
+    })
+    // TreeInterpreter evaluation benchmarks
+    .add('Eval#simple_field', () => {
+      jmespath.search(simpleData, 'foo.bar');
+    })
+    .add('Eval#array_projection', () => {
+      jmespath.search(arrayData, 'items[*].name');
+    })
+    .add('Eval#filter_projection', () => {
+      jmespath.search(arrayData, 'items[?price > `500`].name');
+    })
+    .add('Eval#function_call', () => {
+      jmespath.search(arrayData, 'length(items)');
+    })
+    .add('Eval#nested_access', () => {
+      jmespath.search(nestedData, 'level1.level2.level3.level4.value');
+    })
+    .add('Eval#slice_operation', () => {
+      jmespath.search(arrayData, 'items[10:20]');
+    })
+    // Runtime function call benchmarks
+    .add('Runtime#length_function', () => {
+      jmespath.search(arrayData, 'length(items)');
+    })
+    .add('Runtime#max_function', () => {
+      jmespath.search(arrayData, 'max(items[*].price)');
+    })
+    .add('Runtime#sort_by_function', () => {
+      jmespath.search(arrayData, 'sort_by(items, &price)');
+    })
+    .add('Runtime#map_function', () => {
+      jmespath.search(arrayData, 'map(&name, items)');
+    })
+    .add('Runtime#contains_function', () => {
+      jmespath.search(arrayData, 'contains(items[*].name, `"item50"`)');
     });
 
   await bench.run();
