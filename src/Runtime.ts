@@ -1,3 +1,14 @@
+import type { ExpressionNode } from './AST.type';
+import type {
+  JSONArray,
+  JSONArrayArray,
+  JSONArrayKeyValuePairs,
+  JSONArrayObject,
+  JSONObject,
+  JSONValue,
+  ObjectDict,
+} from './JSON.type';
+import type { TreeInterpreter } from './TreeInterpreter';
 import {
   findFirst,
   findLast,
@@ -12,18 +23,6 @@ import {
   upper,
 } from './utils/strings';
 import { Text } from './utils/text';
-
-import type { ExpressionNode } from './AST.type';
-import type {
-  JSONArray,
-  JSONArrayArray,
-  JSONArrayKeyValuePairs,
-  JSONArrayObject,
-  JSONObject,
-  JSONValue,
-  ObjectDict,
-} from './JSON.type';
-import type { TreeInterpreter } from './TreeInterpreter';
 
 export enum InputArgument {
   TYPE_NUMBER = 0,

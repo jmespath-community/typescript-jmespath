@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import jmespath, { search, registerFunction } from '../src';
+import jmespath, { registerFunction, search } from '../src';
 import { JSONObject } from '../src/JSON.type';
 
 describe('registerFunction', () => {
@@ -42,25 +42,17 @@ describe('registerFunction', () => {
   });
   it("won't register a customFunction if one already exists", () => {
     expect(() =>
-      registerFunction(
-        'sum',
-        () => {
-          /* EMPTY FUNCTION */
-          return 'empty';
-        },
-        [],
-      ),
+      registerFunction('sum', () => {
+        /* EMPTY FUNCTION */
+        return 'empty';
+      }, []),
     ).toThrow('Function already defined: sum()');
   });
   it('alerts too few arguments', () => {
-    registerFunction(
-      'tooFewArgs',
-      () => {
-        /* EMPTY FUNCTION */
-        return 'empty';
-      },
-      [{ types: [jmespath.TYPE_ANY] }, { types: [jmespath.TYPE_NUMBER], optional: true }],
-    );
+    registerFunction('tooFewArgs', () => {
+      /* EMPTY FUNCTION */
+      return 'empty';
+    }, [{ types: [jmespath.TYPE_ANY] }, { types: [jmespath.TYPE_NUMBER], optional: true }]);
     expect(() =>
       search(
         {
@@ -90,14 +82,10 @@ describe('registerFunction', () => {
     ).toThrow('Invalid arity: tooFewArgs() takes 1 arguments but received 3');
   });
   it('alerts too many arguments', () => {
-    registerFunction(
-      'tooManyArgs',
-      () => {
-        /* EMPTY FUNCTION */
-        return 'empty';
-      },
-      [],
-    );
+    registerFunction('tooManyArgs', () => {
+      /* EMPTY FUNCTION */
+      return 'empty';
+    }, []);
     expect(() =>
       search(
         {
@@ -110,14 +98,10 @@ describe('registerFunction', () => {
   });
 
   it('alerts optional variadic arguments', () => {
-    registerFunction(
-      'optionalVariadic',
-      () => {
-        /* EMPTY FUNCTION */
-        return 'empty';
-      },
-      [{ types: [jmespath.TYPE_ANY], optional: true, variadic: true }],
-    );
+    registerFunction('optionalVariadic', () => {
+      /* EMPTY FUNCTION */
+      return 'empty';
+    }, [{ types: [jmespath.TYPE_ANY], optional: true, variadic: true }]);
     expect(() =>
       search(
         {
@@ -130,17 +114,13 @@ describe('registerFunction', () => {
   });
 
   it('alerts variadic is always last argument', () => {
-    registerFunction(
-      'variadicAlwaysLast',
-      () => {
-        /* EMPTY FUNCTION */
-        return 'empty';
-      },
-      [
-        { types: [jmespath.TYPE_ANY], variadic: true },
-        { types: [jmespath.TYPE_ANY], optional: true },
-      ],
-    );
+    registerFunction('variadicAlwaysLast', () => {
+      /* EMPTY FUNCTION */
+      return 'empty';
+    }, [
+      { types: [jmespath.TYPE_ANY], variadic: true },
+      { types: [jmespath.TYPE_ANY], optional: true },
+    ]);
     expect(() =>
       search(
         {

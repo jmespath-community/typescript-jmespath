@@ -1,7 +1,7 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.0.6/schema.json",
   "vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
-  "files": { "ignoreUnknown": false, "ignore": ["dist", "coverage", "test/compliance"] },
+  "files": { "ignoreUnknown": false, "includes": ["**", "!**/dist", "!**/coverage", "!**/test/compliance"] },
   "formatter": {
     "enabled": true,
     "useEditorconfig": true,
@@ -12,21 +12,22 @@
     "lineWidth": 120,
     "attributePosition": "auto",
     "bracketSpacing": true,
-    "ignore": ["**/tests/fixtures/**/*", "**/dist", "**/coverage", "**/.vscode"]
+    "includes": ["**", "!**/tests/fixtures/**/*", "!**/dist", "!**/coverage", "!**/.vscode"]
   },
-  "organizeImports": { "enabled": true },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": false,
       "complexity": { "noBannedTypes": "error" },
-      "correctness": { "noUnusedVariables": "warn", "useArrayLiterals": "off" },
+      "correctness": { "noUnusedVariables": "warn" },
       "style": {
         "noInferrableTypes": "error",
         "noNamespace": "error",
         "noNonNullAssertion": "warn",
         "useAsConstAssertion": "error",
-        "useBlockStatements": "error"
+        "useBlockStatements": "error",
+        "useArrayLiterals": "off"
       },
       "suspicious": {
         "noEmptyBlockStatements": "off",
@@ -36,15 +37,16 @@
         "useNamespaceKeyword": "error"
       }
     },
-    "ignore": [
-      "**/node_modules",
-      "**/dist",
-      "**/jest.config.js",
-      "**/fixtures",
-      "**/shared-fixtures",
-      "**/coverage",
-      "**/__snapshots__",
-      "src/**/*.js"
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/jest.config.js",
+      "!**/fixtures",
+      "!**/shared-fixtures",
+      "!**/coverage",
+      "!**/__snapshots__",
+      "!**/src/**/*.js"
     ]
   },
   "javascript": {
@@ -62,22 +64,21 @@
   },
   "overrides": [
     {
-      "include": ["*.ts", "*.tsx"],
+      "includes": ["**/*.ts", "**/*.tsx"],
       "linter": {
         "rules": {
           "correctness": {
             "noConstAssign": "off",
             "noGlobalObjectCalls": "off",
             "noInvalidConstructorSuper": "off",
-            "noNewSymbol": "off",
             "noSetterReturn": "off",
             "noUndeclaredVariables": "off",
             "noUnreachable": "off",
-            "noUnreachableSuper": "off"
+            "noUnreachableSuper": "off",
+            "noInvalidBuiltinInstantiation": "off",
+            "useValidTypeof": "off"
           },
           "style": {
-            "noArguments": "error",
-            "noVar": "error",
             "useConst": "error"
           },
           "suspicious": {
@@ -89,7 +90,10 @@
             "noRedeclare": "off",
             "noUnsafeNegation": "off",
             "useGetterReturn": "off",
-            "useValidTypeof": "off"
+            "noVar": "error"
+          },
+          "complexity": {
+            "noArguments": "error"
           }
         }
       }

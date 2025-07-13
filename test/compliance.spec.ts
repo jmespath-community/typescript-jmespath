@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { basename } from 'path';
 import { describe, expect, test } from 'vitest';
 import { Options, search } from '../src';

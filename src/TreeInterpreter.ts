@@ -1,11 +1,10 @@
+import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
+import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
 import { Token } from './Lexer.type';
+import { ScopeEntry } from './Parser.type';
 import { Runtime } from './Runtime';
 import { ScopeChain } from './Scope';
 import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
-
-import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
-import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
-import { ScopeEntry } from './Parser.type';
 
 export class TreeInterpreter {
   runtime: Runtime;
