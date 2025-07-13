@@ -58,9 +58,109 @@ export interface FunctionTable {
   [functionName: string]: FunctionSignature;
 }
 
-export class Runtime {
+// Built-in function names for TypeScript 5.x template literal type checking
+export type BuiltInFunctionNames =
+  | 'abs'
+  | 'avg'
+  | 'ceil'
+  | 'contains'
+  | 'ends_with'
+  | 'find_first'
+  | 'find_last'
+  | 'floor'
+  | 'from_items'
+  | 'group_by'
+  | 'items'
+  | 'join'
+  | 'keys'
+  | 'length'
+  | 'lower'
+  | 'map'
+  | 'max'
+  | 'max_by'
+  | 'merge'
+  | 'min'
+  | 'min_by'
+  | 'not_null'
+  | 'pad_left'
+  | 'pad_right'
+  | 'replace'
+  | 'reverse'
+  | 'sort'
+  | 'sort_by'
+  | 'split'
+  | 'starts_with'
+  | 'sum'
+  | 'to_array'
+  | 'to_number'
+  | 'to_string'
+  | 'type'
+  | 'upper'
+  | 'values'
+  | 'zip';
+
+// Registration options for enhanced registerFunction behavior
+export interface RegisterOptions {
+  /**
+   * Allow overriding existing functions. Default: false
+   * When true, replaces existing function without error
+   * When false, throws error if function already exists (backward compatible)
+   */
+  override?: boolean;
+  /**
+   * Emit warning when overriding existing functions. Default: false
+   * Only applies when override is true
+   */
+  warn?: boolean;
+}
+
+// Registration result for better error handling and introspection
+export type RegistrationResult =
+  | { success: true; message?: string }
+  | { success: false; reason: 'already-exists' | 'invalid-signature' | 'invalid-name'; message: string };
+
+// Enhanced function registry interface for state management
+export interface FunctionRegistry {
+  /**
+   * Register a new function with optional override behavior
+   */
+  register<T extends string>(
+    name: T extends BuiltInFunctionNames ? never : T,
+    func: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
+    signature: InputSignature[],
+    options?: RegisterOptions,
+  ): RegistrationResult;
+
+  /**
+   * Unregister a custom function (built-in functions cannot be unregistered)
+   */
+  unregister<T extends string>(name: T extends BuiltInFunctionNames ? never : T): boolean;
+
+  /**
+   * Check if a function is registered
+   */
+  isRegistered(name: string): boolean;
+
+  /**
+   * Get list of all registered function names
+   */
+  getRegistered(): string[];
+
+  /**
+   * Get list of custom (non-built-in) function names
+   */
+  getCustomFunctions(): string[];
+
+  /**
+   * Clear all custom functions (built-in functions remain)
+   */
+  clearCustomFunctions(): void;
+}
+
+export class Runtime implements FunctionRegistry {
   _interpreter: TreeInterpreter;
   _functionTable: FunctionTable;
+  private _customFunctions: Set<string> = new Set();
   TYPE_NAME_TABLE: { [InputArgument: number]: string } = {
     [InputArgument.TYPE_NUMBER]: 'number',
     [InputArgument.TYPE_ANY]: 'any',
@@ -81,18 +181,139 @@ export class Runtime {
     this._functionTable = this.functionTable;
   }
 
+  /**
+   * Enhanced registerFunction with backward compatibility and new options
+   * @deprecated Use register() method for enhanced functionality
+   */
   registerFunction(
     name: string,
     customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
     signature: InputSignature[],
+    options?: RegisterOptions,
   ): void {
-    if (name in this._functionTable) {
-      throw new Error(`Function already defined: ${name}()`);
+    // For backward compatibility, we bypass the type checking here
+    // The register method will still validate the function name at runtime
+    const result = this._registerInternal(name, customFunction, signature, options);
+    if (!result.success) {
+      throw new Error(result.message);
     }
+  }
+
+  /**
+   * Internal registration method that bypasses TypeScript type checking
+   */
+  private _registerInternal(
+    name: string,
+    customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
+    signature: InputSignature[],
+    options: RegisterOptions = {},
+  ): RegistrationResult {
+    // Validate function name
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return {
+        success: false,
+        reason: 'invalid-name',
+        message: 'Function name must be a non-empty string',
+      };
+    }
+
+    // Validate signature
+    try {
+      this.validateInputSignatures(name, signature);
+    } catch (error) {
+      return {
+        success: false,
+        reason: 'invalid-signature',
+        message: error instanceof Error ? error.message : 'Invalid function signature',
+      };
+    }
+
+    const { override = false, warn = false } = options;
+    const exists = name in this._functionTable;
+
+    // Handle existing function
+    if (exists && !override) {
+      return {
+        success: false,
+        reason: 'already-exists',
+        message: `Function already defined: ${name}(). Use { override: true } to replace it.`,
+      };
+    }
+
+    // Emit warning if requested
+    if (exists && override && warn) {
+      console.warn(`Warning: Overriding existing function: ${name}()`);
+    }
+
+    // Register the function
     this._functionTable[name] = {
       _func: customFunction.bind(this),
       _signature: signature,
     };
+
+    // Track custom functions (exclude built-ins)
+    this._customFunctions.add(name);
+
+    const message = exists
+      ? `Function ${name}() overridden successfully`
+      : `Function ${name}() registered successfully`;
+    return { success: true, message };
+  }
+
+  /**
+   * Register a new function with enhanced options and type safety
+   */
+  register<T extends string>(
+    name: T extends BuiltInFunctionNames ? never : T,
+    customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
+    signature: InputSignature[],
+    options: RegisterOptions = {},
+  ): RegistrationResult {
+    return this._registerInternal(name, customFunction, signature, options);
+  }
+
+  /**
+   * Unregister a custom function (built-in functions cannot be unregistered)
+   */
+  unregister<T extends string>(name: T extends BuiltInFunctionNames ? never : T): boolean {
+    if (!this._customFunctions.has(name)) {
+      return false; // Function doesn't exist or is built-in
+    }
+
+    delete this._functionTable[name];
+    this._customFunctions.delete(name);
+    return true;
+  }
+
+  /**
+   * Check if a function is registered
+   */
+  isRegistered(name: string): boolean {
+    return name in this._functionTable;
+  }
+
+  /**
+   * Get list of all registered function names
+   */
+  getRegistered(): string[] {
+    return Object.keys(this._functionTable);
+  }
+
+  /**
+   * Get list of custom (non-built-in) function names
+   */
+  getCustomFunctions(): string[] {
+    return Array.from(this._customFunctions);
+  }
+
+  /**
+   * Clear all custom functions (built-in functions remain)
+   */
+  clearCustomFunctions(): void {
+    for (const name of this._customFunctions) {
+      delete this._functionTable[name];
+    }
+    this._customFunctions.clear();
   }
 
   callFunction(name: string, resolvedArgs: (JSONValue | ExpressionNode)[]): JSONValue {

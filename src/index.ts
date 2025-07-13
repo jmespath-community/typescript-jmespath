@@ -4,13 +4,28 @@ import Lexer from './Lexer';
 import { LexerOptions, LexerToken } from './Lexer.type';
 import Parser from './Parser';
 import { Options } from './Parser.type';
-import { InputArgument, InputSignature, RuntimeFunction } from './Runtime';
+import {
+  BuiltInFunctionNames,
+  InputArgument,
+  InputSignature,
+  RegisterOptions,
+  RegistrationResult,
+  RuntimeFunction,
+} from './Runtime';
 import { ScopeChain } from './Scope';
 import TreeInterpreterInst from './TreeInterpreter';
 
 export type { JSONArray, JSONObject, JSONPrimitive, JSONValue } from './JSON.type';
 export type { Options } from './Parser.type';
-export type { FunctionSignature, InputSignature, RuntimeFunction } from './Runtime';
+export type {
+  BuiltInFunctionNames,
+  FunctionRegistry,
+  FunctionSignature,
+  InputSignature,
+  RegisterOptions,
+  RegistrationResult,
+  RuntimeFunction,
+} from './Runtime';
 
 export const TYPE_ANY = InputArgument.TYPE_ANY;
 export const TYPE_ARRAY = InputArgument.TYPE_ARRAY;
@@ -34,12 +49,44 @@ export function tokenize(expression: string, options?: LexerOptions): LexerToken
   return Lexer.tokenize(expression, options);
 }
 
+// Enhanced registerFunction with backward compatibility
 export const registerFunction = (
   functionName: string,
   customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
   signature: InputSignature[],
+  options?: RegisterOptions,
 ): void => {
-  TreeInterpreterInst.runtime.registerFunction(functionName, customFunction, signature);
+  TreeInterpreterInst.runtime.registerFunction(functionName, customFunction, signature, options);
+};
+
+// Enhanced registry functions with type safety
+export const register = <T extends string>(
+  name: T extends BuiltInFunctionNames ? never : T,
+  customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
+  signature: InputSignature[],
+  options?: RegisterOptions,
+): RegistrationResult => {
+  return TreeInterpreterInst.runtime.register(name, customFunction, signature, options);
+};
+
+export const unregisterFunction = <T extends string>(name: T extends BuiltInFunctionNames ? never : T): boolean => {
+  return TreeInterpreterInst.runtime.unregister(name);
+};
+
+export const isRegistered = (name: string): boolean => {
+  return TreeInterpreterInst.runtime.isRegistered(name);
+};
+
+export const getRegisteredFunctions = (): string[] => {
+  return TreeInterpreterInst.runtime.getRegistered();
+};
+
+export const getCustomFunctions = (): string[] => {
+  return TreeInterpreterInst.runtime.getCustomFunctions();
+};
+
+export const clearCustomFunctions = (): void => {
+  TreeInterpreterInst.runtime.clearCustomFunctions();
 };
 
 export function search(data: JSONValue, expression: string, options?: Options): JSONValue {
@@ -56,6 +103,12 @@ export const TreeInterpreter = TreeInterpreterInst;
 export const jmespath = {
   compile,
   registerFunction,
+  register,
+  unregisterFunction,
+  isRegistered,
+  getRegisteredFunctions,
+  getCustomFunctions,
+  clearCustomFunctions,
   search,
   tokenize,
   TreeInterpreter,
