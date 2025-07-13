@@ -76,10 +76,8 @@ class TokenParser {
   }
 
   private loadTokens(expression: string, options: Options): void {
-    this.tokens = [
-      ...Lexer.tokenize(expression, options),
-      { type: Token.TOK_EOF, value: '', start: expression.length },
-    ];
+    this.tokens = Lexer.tokenize(expression, options);
+    this.tokens.push({ type: Token.TOK_EOF, value: '', start: expression.length });
   }
 
   expression(rbp: number): ExpressionNode {

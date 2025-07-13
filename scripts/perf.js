@@ -1,4 +1,4 @@
-const jmespath = require('../dist/lib');
+const jmespath = require('../dist/lib/src');
 const { Bench } = require('tinybench');
 
 async function runBenchmarks() {
@@ -14,6 +14,7 @@ async function runBenchmarks() {
     time: 1000,
   });
 
+  // Baseline parsing benchmarks
   bench
     .add('Parser#single_expr', () => {
       jmespath.compile('foo');
@@ -33,6 +34,16 @@ async function runBenchmarks() {
     })
     .add('Parser#basic_list_projection', () => {
       jmespath.compile('foo[*].bar');
+    })
+    // Additional lexer-heavy benchmarks
+    .add('Lexer#common_identifiers', () => {
+      jmespath.compile('foo.bar.baz.qux.foo.bar.baz.qux');
+    })
+    .add('Lexer#mixed_tokens', () => {
+      jmespath.compile('items[?price > `100`].name');
+    })
+    .add('Lexer#function_calls', () => {
+      jmespath.compile('sort_by(items, &price).name');
     });
 
   await bench.run();
