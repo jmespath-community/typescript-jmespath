@@ -201,26 +201,28 @@ export class Runtime {
     return false;
   }
   private getTypeName(obj: JSONValue | ExpressionNode): InputArgument | undefined {
-    switch (Object.prototype.toString.call(obj)) {
-      case '[object String]':
-        return InputArgument.TYPE_STRING;
-      case '[object Number]':
-        return InputArgument.TYPE_NUMBER;
-      case '[object Array]':
-        return InputArgument.TYPE_ARRAY;
-      case '[object Boolean]':
-        return InputArgument.TYPE_BOOLEAN;
-      case '[object Null]':
-        return InputArgument.TYPE_NULL;
-      case '[object Object]':
-        if ((obj as ObjectDict).expref) {
-          return InputArgument.TYPE_EXPREF;
-        }
-        return InputArgument.TYPE_OBJECT;
-
-      default:
-        return;
+    if (obj === null) {
+      return InputArgument.TYPE_NULL;
     }
+    if (typeof obj === 'string') {
+      return InputArgument.TYPE_STRING;
+    }
+    if (typeof obj === 'number') {
+      return InputArgument.TYPE_NUMBER;
+    }
+    if (typeof obj === 'boolean') {
+      return InputArgument.TYPE_BOOLEAN;
+    }
+    if (Array.isArray(obj)) {
+      return InputArgument.TYPE_ARRAY;
+    }
+    if (typeof obj === 'object') {
+      if ((obj as ObjectDict).expref) {
+        return InputArgument.TYPE_EXPREF;
+      }
+      return InputArgument.TYPE_OBJECT;
+    }
+    return;
   }
 
   createKeyFunction(exprefNode: ExpressionNode, allowedTypes: InputArgument[]): (x: JSONValue) => JSONValue {
