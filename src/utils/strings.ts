@@ -69,7 +69,7 @@ export const trimLeft = (subject: string, chars?: string): string => {
   return trimImpl(subject, list => new RegExp(`^[${list}]*(.*?)`), chars);
 };
 export const trimRight = (subject: string, chars?: string): string => {
-  return trimImpl(subject, list => new RegExp(`(.*?)[${list}]*\$`), chars);
+  return trimImpl(subject, list => new RegExp(`(.*?)[${list}]*$`), chars);
 };
 const trimImpl = (subject: string, regExper: (arg: string) => RegExp, chars?: string): string => {
   const pattern = chars ? chars.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') : '\\s\u0085';
