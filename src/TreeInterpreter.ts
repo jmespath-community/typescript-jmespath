@@ -6,6 +6,8 @@ import { Runtime } from './Runtime';
 import { ScopeChain } from './Scope';
 import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
 
+const emptyScopeChain = new ScopeChain();
+
 export class TreeInterpreter {
   runtime: Runtime;
   private _rootValue: JSONValue | null = null;
@@ -26,7 +28,7 @@ export class TreeInterpreter {
 
   search(node: ExpressionNode, value: JSONValue): JSONValue {
     this._rootValue = value;
-    this._scope = new ScopeChain();
+    this._scope = emptyScopeChain;
     return this.visit(node, value) as JSONValue;
   }
 
