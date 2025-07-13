@@ -91,11 +91,13 @@ TreeInterpreter.search(ast, { foo: { bar: "BAZ" } });
 
 ## EXTENSIONS TO ORIGINAL SPEC
 
-1. ### Register you own custom functions
+1. ### Register your own custom functions
 
-   #### `registerFunction(functionName: string, customFunction: RuntimeFunction, signature: InputSignature[]): void`
+   #### Enhanced Function Registry API
 
-   Extend the list of built in JMESpath expressions with your own functions.
+   The library provides both backward-compatible and enhanced APIs for registering custom functions with improved developer experience, type safety, and flexible override behavior.
+
+   ##### Basic Usage (Backward Compatible)
 
    ```javascript
    import { search, registerFunction, TYPE_NUMBER } from "@jmespath-community/jmespath";
@@ -117,6 +119,76 @@ TreeInterpreter.search(ast, { foo: { bar: "BAZ" } });
    // OUTPUTS: 6
    ```
 
+   ##### Enhanced Registry API with Type Safety
+
+   ```typescript
+   import { register, search, TYPE_NUMBER } from "@jmespath-community/jmespath";
+
+   // TypeScript prevents registering built-in functions at compile time
+   // register('sum', myFunc, signature); // TypeScript error!
+
+   // Enhanced registration with better error handling
+   const result = register('multiply', ([a, b]) => a * b, [
+     { types: [TYPE_NUMBER] },
+     { types: [TYPE_NUMBER] }
+   ]);
+
+   if (result.success) {
+     console.log(result.message); // "Function multiply() registered successfully"
+   } else {
+     console.error(result.message); // Detailed error information
+   }
+   ```
+
+   ##### Override Existing Functions
+
+   ```javascript
+   import { registerFunction, register } from "@jmespath-community/jmespath";
+
+   // Option 1: Using registerFunction with options
+   registerFunction('myFunc', () => 'first', []);
+   registerFunction('myFunc', () => 'second', [], { override: true, warn: true });
+   // Console: "Warning: Overriding existing function: myFunc()"
+
+   // Option 2: Using enhanced register API
+   const result = register('myFunc', () => 'third', [], { override: true });
+   console.log(result.message); // "Function myFunc() overridden successfully"
+   ```
+
+   ##### Registry Management
+
+   ```javascript
+   import {
+     isRegistered,
+     getRegisteredFunctions,
+     getCustomFunctions,
+     unregisterFunction,
+     clearCustomFunctions
+   } from "@jmespath-community/jmespath";
+
+   // Check if function exists
+   console.log(isRegistered('sum')); // true (built-in)
+   console.log(isRegistered('myFunc')); // true (if registered)
+
+   // Get all registered functions
+   const allFunctions = getRegisteredFunctions();
+   console.log(allFunctions); // ['abs', 'avg', 'ceil', ..., 'myFunc']
+
+   // Get only custom functions
+   const customFunctions = getCustomFunctions();
+   console.log(customFunctions); // ['myFunc', 'divide', ...]
+
+   // Unregister custom function (built-ins cannot be unregistered)
+   const removed = unregisterFunction('myFunc');
+   console.log(removed); // true if successful
+
+   // Clear all custom functions
+   clearCustomFunctions();
+   console.log(getCustomFunctions()); // []
+   ```
+
+   ##### Optional Arguments
+
    Optional arguments are supported by setting `{..., optional: true}` in argument signatures
 
    ```javascript
@@ -124,7 +196,7 @@ TreeInterpreter.search(ast, { foo: { bar: "BAZ" } });
      "divide",
      (resolvedArgs) => {
        const [dividend, divisor] = resolvedArgs;
-       return dividend / divisor ?? 1; //OPTIONAL DIVISOR THAT DEFAULTS TO 1
+       return dividend / (divisor ?? 1); //OPTIONAL DIVISOR THAT DEFAULTS TO 1
      },
      [{ types: [TYPE_NUMBER] }, { types: [TYPE_NUMBER], optional: true }], //SIGNATURE
    );
