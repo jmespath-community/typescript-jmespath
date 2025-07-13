@@ -165,18 +165,18 @@ export class TreeInterpreter {
           return null;
         }
 
-        const results: JSONArray = [];
-        for (const elem of base) {
-          const matched = this.visit(condition, elem);
-          if (isFalse(matched)) {
-            continue;
-          }
-          const result = this.visit(right, elem) as JSONValue;
-          if (result !== null) {
-            results.push(result);
-          }
+        const hasArrayElements = base.some(elem => Array.isArray(elem));
+        if (!hasArrayElements) {
+          return this.applyFilterProjection(base, condition, right);
         }
-        return results;
+
+        return base
+          .map(elem =>
+            Array.isArray(elem)
+              ? this.applyFilterProjection(elem, condition, right)
+              : this.applyFilterToElement(elem, condition, right),
+          )
+          .filter(result => result !== null);
       }
       case 'Arithmetic': {
         const first = this.visit(node.left, value) as JSONValue;
@@ -350,6 +350,30 @@ export class TreeInterpreter {
       }
     }
     return result;
+  }
+
+  private applyFilterProjection(elements: JSONArray, condition: ExpressionNode, right: ExpressionNode): JSONArray {
+    const results: JSONArray = [];
+    for (const elem of elements) {
+      const matched = this.visit(condition, elem);
+      if (isFalse(matched)) {
+        continue;
+      }
+      const result = this.visit(right, elem) as JSONValue;
+      if (result !== null) {
+        results.push(result);
+      }
+    }
+    return results;
+  }
+
+  private applyFilterToElement(elem: JSONValue, condition: ExpressionNode, right: ExpressionNode): JSONValue {
+    const matched = this.visit(condition, elem);
+    if (isFalse(matched)) {
+      return null;
+    }
+    const result = this.visit(right, elem) as JSONValue;
+    return result !== null ? result : null;
   }
 }
 
