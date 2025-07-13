@@ -1,18 +1,16 @@
-import Lexer from './Lexer';
-import Parser from './Parser';
-import TreeInterpreterInst from './TreeInterpreter';
-
 import { ExpressionNode } from './AST.type';
 import { JSONValue } from './JSON.type';
+import Lexer from './Lexer';
 import { LexerOptions, LexerToken } from './Lexer.type';
+import Parser from './Parser';
 import { Options } from './Parser.type';
 import { InputArgument, InputSignature, RuntimeFunction } from './Runtime';
 import { ScopeChain } from './Scope';
+import TreeInterpreterInst from './TreeInterpreter';
 
+export type { JSONArray, JSONObject, JSONPrimitive, JSONValue } from './JSON.type';
 export type { Options } from './Parser.type';
-export type { FunctionSignature, RuntimeFunction, InputSignature } from './Runtime';
-
-export type { JSONValue, JSONPrimitive, JSONArray, JSONObject } from './JSON.type';
+export type { FunctionSignature, InputSignature, RuntimeFunction } from './Runtime';
 
 export const TYPE_ANY = InputArgument.TYPE_ANY;
 export const TYPE_ARRAY = InputArgument.TYPE_ARRAY;

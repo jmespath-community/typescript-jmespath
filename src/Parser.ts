@@ -490,7 +490,7 @@ class TokenParser {
     let keyName: string;
     let value: ExpressionNode;
     // tslint:disable-next-line: prettier
-    for (; ;) {
+    for (;;) {
       keyToken = this.lookaheadToken(0);
       if (!identifierTypes.includes(keyToken.type)) {
         throw new Error(`Syntax error: expecting an identifier token, got: ${keyToken.type}`);

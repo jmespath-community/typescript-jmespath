@@ -14,13 +14,22 @@
   "module": "dist/jmespath.esm.js",
   "typings": "dist/types/index.d.ts",
   "types": "dist/types/index.d.ts",
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "homepage": "https://github.com/nanoporetech/jmespath-ts#readme",
   "bugs": {
     "url": "https://github.com/nanoporetech/jmespath-ts/issues",
     "mail": ""
   },
-  "keywords": ["jmespath", "jsonpath", "query", "json", "jq", "xpath"],
+  "keywords": [
+    "jmespath",
+    "jsonpath",
+    "query",
+    "json",
+    "jq",
+    "xpath"
+  ],
   "contributors": [],
   "repository": {
     "type": "git",
@@ -48,7 +57,7 @@
     "prepack": "npx clear-package-json package.json --output ./package.json"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
+    "@biomejs/biome": "2.0.6",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.0.0",
     "@rollup/plugin-terser": "^0.4.0",

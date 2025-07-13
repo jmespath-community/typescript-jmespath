@@ -2,8 +2,8 @@
 
 'use strict';
 
-import * as fs from 'fs';
 import { ParseArgsConfig, parseArgs } from 'node:util';
+import * as fs from 'fs';
 import pkg from '../package.json';
 import jmespath, { JSONValue } from '../src';
 
