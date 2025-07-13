@@ -73,7 +73,7 @@
     "shelljs": "^0.8.4",
     "tinybench": "^2.5.1",
     "ts-node": "^10.9.2",
-    "typescript": "^4.3.2",
+    "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }
 }
