@@ -7,18 +7,33 @@
     "email": "springcomp@users.noreply.github.com",
     "url": "https://jmespath.site"
   },
-  "main": "dist/jmespath.umd.js",
+  "type": "module",
   "bin": {
-    "jp": "dist/lib/bin/jp.js"
+    "jp": "./dist/cli.mjs"
   },
-  "module": "dist/jmespath.esm.js",
-  "typings": "dist/types/index.d.ts",
-  "types": "dist/types/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "browser": "./dist/index.umd.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/jmespath.esm.js",
-      "require": "./dist/jmespath.umd.js"
+      "types": "./dist/index.d.ts",
+      "browser": {
+        "import": "./dist/index.esm.js",
+        "require": "./dist/index.umd.js",
+        "default": "./dist/index.umd.js"
+      },
+      "node": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.cjs"
+      },
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.mjs",
+      "require": "./dist/cli.cjs"
     }
   },
   "files": [
@@ -51,9 +66,10 @@
     "lint:fix": "biome check --write",
     "lint:ci": "biome check --diagnostic-level=error",
     "prebuild": "npx rimraf dist",
-    "build": "npx tsc --outDir dist/lib -d --module commonjs && npx tsc --project tsconfig.bin.json && npx rollup -c rollup.config.ts",
+    "build": "tsup",
+    "dev": "ts-node src/cli.ts",
     "perf": "node --expose-gc scripts/perf.js",
-    "start": "npx rollup -c rollup.config.ts -w",
+    "start": "tsup --watch",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:prod": "npm run lint && npm run test && npm test -- test/build-artifacts.spec.ts",
@@ -66,21 +82,16 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.0.6",
-    "@rollup/plugin-json": "^4.1.0",
-    "@rollup/plugin-node-resolve": "^13.0.0",
-    "@rollup/plugin-terser": "^0.4.0",
-    "@rollup/plugin-typescript": "^8.2.1",
     "@vitest/coverage-v8": "^3.2.4",
     "clean-publish": "^3.4.5",
     "coveralls-next": "^4.2.0",
     "husky": "^6.0.0",
     "lint-staged": "^11.0.0",
     "rimraf": "^3.0.2",
-    "rollup": "^2.50.5",
-    "rollup-plugin-typescript2": "^0.36.0",
     "shelljs": "^0.8.4",
     "tinybench": "^2.5.1",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }
