@@ -1,11 +1,9 @@
-#! /usr/bin/env node
-
 'use strict';
 
 import { ParseArgsConfig, parseArgs } from 'node:util';
 import * as fs from 'fs';
 import pkg from '../package.json';
-import jmespath, { JSONValue } from '../src';
+import jmespath, { JSONValue } from './index';
 
 const args = getArgs();
 

@@ -124,4 +124,6 @@ export const jmespath = {
   TYPE_STRING,
 };
 
-export default jmespath;
+// Export as default for backward compatibility
+// Supports both: import jmespath from '...' and import { jmespath } from '...'
+export { jmespath as default };
