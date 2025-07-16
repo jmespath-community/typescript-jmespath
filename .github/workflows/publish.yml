@@ -18,6 +18,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - run: npm run build
       - run: npm test
 
   publish-npm:
@@ -36,6 +37,16 @@ jobs:
           registry-url: https://registry.npmjs.org/
       - run: npm install
       - run: npm run build
+      - name: 🔍 Validate build artifacts
+        run: |
+          test -f dist/jmespath.umd.js || (echo "Missing UMD bundle" && exit 1)
+          test -f dist/jmespath.esm.js || (echo "Missing ESM bundle" && exit 1)
+          test -f dist/types/index.d.ts || (echo "Missing TypeScript declarations" && exit 1)
+          test -f dist/lib/bin/jp.js || (echo "Missing CLI binary" && exit 1)
+          head -1 dist/lib/bin/jp.js | grep -q "^#!" || (echo "CLI binary missing shebang" && exit 1)
+          echo "✅ All build artifacts validated"
+      - name: 🧪 Test build artifacts
+        run: npm test -- test/build-artifacts.spec.ts
       - name: ✉️ publish
         run: npm publish --verbose --access public --tag latest
         env:

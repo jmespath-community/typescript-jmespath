@@ -14,6 +14,13 @@
   "module": "dist/jmespath.esm.js",
   "typings": "dist/types/index.d.ts",
   "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/jmespath.esm.js",
+      "require": "./dist/jmespath.umd.js"
+    }
+  },
   "files": [
     "dist/"
   ],
@@ -44,12 +51,13 @@
     "lint:fix": "biome check --write",
     "lint:ci": "biome check --diagnostic-level=error",
     "prebuild": "npx rimraf dist",
-    "build": "npx tsc --outDir dist/lib -d --module commonjs && npx rollup -c rollup.config.ts",
+    "build": "npx tsc --outDir dist/lib -d --module commonjs && npx tsc --project tsconfig.bin.json && npx rollup -c rollup.config.ts",
     "perf": "node --expose-gc scripts/perf.js",
     "start": "npx rollup -c rollup.config.ts -w",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:prod": "npm run lint && npm run test",
+    "test:prod": "npm run lint && npm run test && npm test -- test/build-artifacts.spec.ts",
+    "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts",
     "coverage": "vitest run --coverage",
     "deploy-docs": "ts-node scripts/gh-pages-publish",
     "report-coverage": "cat ./coverage/lcov.info | coveralls",
