@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'fs';
 import { basename } from 'path';
 import { describe, expect, test } from 'vitest';
-import { Options, search } from '../src';
+import jmespath, { Options } from '../src';
 import { JSONValue } from '../src/JSON.type';
 import { expectError } from './error.utils';
 
@@ -37,12 +37,12 @@ export function addTestSuitesFromFile(filename: string, options?: Options): void
           if (error !== undefined) {
             expectError(
               () => {
-                return search(given, <string>expression, options);
+                return jmespath.search(given, <string>expression, options);
               },
               <string>error,
             );
           } else {
-            expect(search(given, <string>expression, options)).toEqual(result);
+            expect(jmespath.search(given, <string>expression, options)).toEqual(result);
           }
         });
       });

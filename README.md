@@ -8,23 +8,69 @@ JMESPath is a query language for JSON. It will take a JSON document
 as input and transform it into another JSON document
 given a JMESPath expression.
 
-## INSTALLATION
+## Table of Contents
 
-```
+- [Installation](#installation)
+- [Usage](#usage)
+  - [ESM (Node.js)](#esm-nodejs)
+  - [CommonJS (Node.js)](#commonjs-nodejs)
+  - [Browser (UMD)](#browser-umd)
+- [API](#api)
+  - [`search(data, expression)`](#searchdata-jsonvalue-expression-string-jsonvalue)
+  - [`compile(expression)`](#compileexpression-string-expressionnodetree)
+- [Extensions](#extensions-to-original-spec)
+- [More Resources](#more-resources)
+- [Experimental Features](#experimental-features)
+
+## Installation
+
+```bash
 npm install @jmespath-community/jmespath
 ```
 
-## USAGE
+## Usage
 
-### `search(data: JSONValue, expression: string): JSONValue`
+### ESM (Node.js)
 
 ```javascript
 import { search } from "@jmespath-community/jmespath";
 
-search({ foo: { bar: { baz: [0, 1, 2, 3, 4] } } }, "foo.bar.baz[2]");
+const data = { foo: { bar: { baz: [0, 1, 2, 3, 4] } } };
+const result = search(data, "foo.bar.baz[2]");
 
-// OUTPUTS: 2
+console.log(result);
+// Outputs: 2
 ```
+
+### CommonJS (Node.js)
+
+```javascript
+const { search } = require("@jmespath-community/jmespath");
+
+const data = { foo: { bar: { baz: [0, 1, 2, 3, 4] } } };
+const result = search(data, "foo.bar.baz[2]");
+
+console.log(result);
+// Outputs: 2
+```
+
+### Browser (UMD)
+
+You can include the UMD build directly in your HTML file. The library will be available under the `jmespath` global variable.
+
+```html
+<script src="https://unpkg.com/@jmespath-community/jmespath/dist/index.umd.min.js"></script>
+<script>
+  const data = { foo: { bar: { baz: [0, 1, 2, 3, 4] } } };
+  const result = jmespath.search(data, "foo.bar.baz[2]");
+  console.log(result);
+  // Outputs: 2
+</script>
+```
+
+## API
+
+### `search(data: JSONValue, expression: string): JSONValue`
 
 In the example we gave the `search` function input data of
 `{foo: {bar: {baz: [0, 1, 2, 3, 4]}}}` as well as the JMESPath
@@ -83,7 +129,7 @@ import { compile, TreeInterpreter } from "@jmespath-community/jmespath";
 
 const ast = compile("foo.bar");
 
-TreeInterpreter.search(ast, { foo: { bar: "BAZ" } });
+const result = TreeInterpreter.search(ast, { foo: { bar: "BAZ" } });
 // RETURNS: "BAZ"
 ```
 

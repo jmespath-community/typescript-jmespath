@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { Scope } from '../src';
+import jmespath from '../src';
 
 describe('scopes', () => {
   it('should return null on missing identifier', () => {
-    const scope = Scope();
+    const scope = jmespath.Scope();
     expect(scope.getValue('foo')).toEqual(null);
   });
   it('should return item from scope', () => {
-    const scope = Scope();
+    const scope = jmespath.Scope();
     {
       const outer = scope.withScope({ foo: 'bar' });
       expect(outer.getValue('foo')).toEqual('bar');
     }
   });
   it('should return item from nested scope', () => {
-    const scope = Scope();
+    const scope = jmespath.Scope();
     {
       const outer = scope.withScope({ foo: 'bar', qux: 'quux' });
       {
@@ -26,7 +26,7 @@ describe('scopes', () => {
     }
   });
   it('should not return value for non-existent identifiers', () => {
-    const scope = Scope();
+    const scope = jmespath.Scope();
     {
       const scoped = scope.withScope({ foo: 'bar' });
       expect(scoped.getValue('baz')).toEqual(null);
@@ -34,7 +34,7 @@ describe('scopes', () => {
     }
   });
   it('should return null for identifiers even in nested scopes if absent', () => {
-    const scope = Scope();
+    const scope = jmespath.Scope();
     {
       const outer = scope.withScope({ foo: 'bar' });
       {
@@ -45,7 +45,7 @@ describe('scopes', () => {
     }
   });
   it('should handle values in nested scopes differently from outer scopes', () => {
-    const scope = Scope();
+    const scope = jmespath.Scope();
     {
       const outer = scope.withScope({ foo: 'bar' });
       {
@@ -56,7 +56,7 @@ describe('scopes', () => {
     }
   });
   it('should not fall through to outer scope when key is in current scope with null/undefined', () => {
-    const scope = Scope();
+    const scope = jmespath.Scope();
     {
       const outer = scope.withScope({ foo: 'bar' });
       {
@@ -66,7 +66,7 @@ describe('scopes', () => {
     }
   });
   it('should properly differentiate between keys absent entirely and those in outer scopes', () => {
-    const scope = Scope();
+    const scope = jmespath.Scope();
     {
       const outer = scope.withScope({ foo: 'bar' });
       {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { search } from '../src';
+import jmespath from '../src';
 
 describe('Searches compiled ast', () => {
   it('search a compiled expression', () => {
-    expect(search({ foo: { bar: 'BAZ' } }, 'foo.bar')).toEqual('BAZ');
+    expect(jmespath.search({ foo: { bar: 'BAZ' } }, 'foo.bar')).toEqual('BAZ');
   });
 });

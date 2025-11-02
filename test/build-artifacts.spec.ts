@@ -14,7 +14,7 @@ describe('Build Artifacts', () => {
       const content = readFileSync(indexDtsPath, 'utf-8');
       expect(content).toContain('declare function search');
       expect(content).toContain('declare function compile');
-      expect(content).toContain('declare const registerFunction');
+      expect(content).toContain('registerFunction: (');
     });
 
     it('should generate CLI type declarations', () => {
@@ -38,9 +38,9 @@ describe('Build Artifacts', () => {
       expect(content).toContain('type JSONValue');
 
       // Check for constant exports
-      expect(content).toContain('declare const TYPE_ANY');
-      expect(content).toContain('declare const TYPE_STRING');
-      expect(content).toContain('declare const TYPE_NUMBER');
+      expect(content).toContain('TYPE_ANY: InputArgument;');
+      expect(content).toContain('TYPE_STRING: InputArgument;');
+      expect(content).toContain('TYPE_NUMBER: InputArgument;');
     });
   });
 
@@ -77,7 +77,7 @@ describe('Build Artifacts', () => {
 
       const content = readFileSync(umdPath, 'utf-8');
       // tsup generates IIFE format with global variable
-      expect(content).toContain('var jmespath = (function (exports)');
+      expect(content).toContain('var jmespath = (function ()');
     });
 
     it('should generate minified UMD bundle', () => {

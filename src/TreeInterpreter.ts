@@ -131,7 +131,7 @@ export class TreeInterpreter {
         if (!Array.isArray(base)) {
           return null;
         }
-        const collected: JSONArray = [];
+        const collected: JSONValue[] = [];
         for (const elem of base) {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
@@ -147,7 +147,7 @@ export class TreeInterpreter {
         if (base === null || typeof base !== 'object' || Array.isArray(base)) {
           return null;
         }
-        const collected: JSONArray = [];
+        const collected: JSONValue[] = [];
         const values = Object.values(base);
         for (const elem of values) {
           const current = this.visit(right, elem) as JSONValue;
@@ -165,7 +165,7 @@ export class TreeInterpreter {
           return null;
         }
 
-        const results: JSONArray = [];
+        const results: JSONValue[] = [];
         for (const elem of base) {
           const matched = this.visit(condition, elem);
           if (isFalse(matched)) {
@@ -257,14 +257,14 @@ export class TreeInterpreter {
       case 'Root':
         return this._rootValue;
       case 'MultiSelectList': {
-        const collected: JSONArray = [];
+        const collected: JSONValue[] = [];
         for (const child of node.children) {
           collected.push(this.visit(child, value) as JSONValue);
         }
         return collected;
       }
       case 'MultiSelectHash': {
-        const collected: JSONObject = {};
+        const collected: Record<string, JSONValue> = {};
         for (const child of node.children) {
           collected[child.name] = this.visit(child.value, value) as JSONValue;
         }
@@ -291,7 +291,7 @@ export class TreeInterpreter {
       case 'Pipe':
         return this.visit(node.right, this.visit(node.left, value));
       case 'Function': {
-        const args: JSONArray = [];
+        const args: JSONValue[] = [];
         for (const child of node.children) {
           args.push(this.visit(child, value) as JSONValue);
         }
