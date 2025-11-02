@@ -39,10 +39,9 @@
   "files": [
     "dist/"
   ],
-  "homepage": "https://github.com/nanoporetech/jmespath-ts#readme",
+  "homepage": "https://github.com/jmespath-community/typescript-jmespath",
   "bugs": {
-    "url": "https://github.com/nanoporetech/jmespath-ts/issues",
-    "mail": ""
+    "url": "https://github.com/jmespath-community/typescript-jmespath/issues"
   },
   "keywords": [
     "jmespath",
@@ -52,14 +51,13 @@
     "jq",
     "xpath"
   ],
-  "contributors": [],
   "repository": {
     "type": "git",
     "url": "git://github.com/jmespath-community/typescript-jmespath"
   },
   "license": "MPL-2.0",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=20.19.0"
   },
   "scripts": {
     "lint": "biome check",
@@ -72,16 +70,15 @@
     "start": "tsup --watch",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:prod": "npm run lint && npm run test && npm test -- test/build-artifacts.spec.ts",
+    "test:prod": "npm run lint:ci && npm run test",
     "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts",
     "coverage": "vitest run --coverage",
     "deploy-docs": "ts-node scripts/gh-pages-publish",
     "report-coverage": "cat ./coverage/lcov.info | coveralls",
-    "precommit": "lint-staged",
-    "prepack": "npx clear-package-json package.json --output ./package.json"
+    "prepublishOnly": "npx clean-publish"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.0.6",
+    "@biomejs/biome": "2.3.2",
     "@vitest/coverage-v8": "^3.2.4",
     "clean-publish": "^3.4.5",
     "coveralls-next": "^4.2.0",
@@ -92,7 +89,7 @@
     "tinybench": "^2.5.1",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.0",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
 }
