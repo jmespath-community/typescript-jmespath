@@ -1,114 +1,86 @@
-import { defineConfig } from 'tsup';
+import { defineConfig, Options } from 'tsup';
+
+const baseConfig: Options = {
+  dts: true,
+  sourcemap: true,
+  clean: true,
+  treeshake: true,
+  splitting: false,
+};
+
+const nodeConfig: Options = {
+  ...baseConfig,
+  platform: 'node',
+  target: 'es2022',
+  format: ['cjs', 'esm'],
+  outDir: 'dist',
+  outExtension({ format }) {
+    return {
+      js: format === 'cjs' ? '.cjs' : '.mjs',
+    };
+  },
+};
+
+const browserConfig: Options = {
+  ...baseConfig,
+  platform: 'browser',
+  target: 'es2020',
+  globalName: 'jmespath',
+};
 
 export default defineConfig([
-  // Library build - Node.js
+  // Library builds
   {
+    ...nodeConfig,
     entry: ['src/index.ts'],
-    format: ['cjs', 'esm'],
-    dts: true,
-    sourcemap: true,
-    clean: true,
-    outDir: 'dist',
-    outExtension({ format }) {
-      return {
-        js: format === 'cjs' ? '.cjs' : '.mjs',
-      };
-    },
-    target: 'es2022',
-    platform: 'node',
-    splitting: false,
-    treeshake: true,
   },
-  // Library build - Browser UMD
   {
-    entry: ['src/index.ts'],
-    format: ['iife'],
-    dts: false, // Types already generated above
-    sourcemap: true,
-    outDir: 'dist',
-    outExtension() {
-      return {
-        js: '.umd.js',
-      };
-    },
-    target: 'es2020', // Broader browser compatibility
-    platform: 'browser',
-    globalName: 'jmespath',
-    splitting: false,
-    treeshake: true,
-    minify: false,
-  },
-  // Library build - Browser UMD Minified
-  {
-    entry: ['src/index.ts'],
-    format: ['iife'],
-    dts: false,
-    sourcemap: true,
-    outDir: 'dist',
-    outExtension() {
-      return {
-        js: '.umd.min.js',
-      };
-    },
-    target: 'es2020',
-    platform: 'browser',
-    globalName: 'jmespath',
-    splitting: false,
-    treeshake: true,
-    minify: true,
-  },
-  // Library build - Browser ESM
-  {
+    ...browserConfig,
     entry: ['src/index.ts'],
     format: ['esm'],
-    dts: false,
-    sourcemap: true,
-    outDir: 'dist',
     outExtension() {
       return {
         js: '.esm.js',
       };
     },
-    target: 'es2020',
-    platform: 'browser',
-    splitting: false,
-    treeshake: true,
-    minify: false,
   },
-  // Library build - Browser ESM Minified
   {
+    ...browserConfig,
     entry: ['src/index.ts'],
     format: ['esm'],
-    dts: false,
-    sourcemap: true,
-    outDir: 'dist',
+    minify: true,
     outExtension() {
       return {
         js: '.esm.min.js',
       };
     },
-    target: 'es2020',
-    platform: 'browser',
-    splitting: false,
-    treeshake: true,
-    minify: true,
   },
-  // CLI build - ESM only (since package.json points to .mjs)
   {
-    entry: ['src/cli.ts'],
-    format: ['esm'],
-    dts: true,
-    sourcemap: true,
-    outDir: 'dist',
+    ...browserConfig,
+    entry: ['src/index.ts'],
+    format: ['iife'],
     outExtension() {
       return {
-        js: '.mjs',
+        js: '.umd.js',
       };
     },
-    target: 'es2022',
-    platform: 'node',
-    splitting: false,
-    treeshake: true,
+  },
+  {
+    ...browserConfig,
+    entry: ['src/index.ts'],
+    format: ['iife'],
+    minify: true,
+    outExtension() {
+      return {
+        js: '.umd.min.js',
+      };
+    },
+  },
+  // CLI build
+  {
+    ...nodeConfig,
+    entry: ['src/cli.ts'],
+    dts: true,
     banner: {
       js: '#!/usr/bin/env node',
     },

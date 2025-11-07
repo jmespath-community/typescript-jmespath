@@ -63,7 +63,7 @@
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "lint:ci": "biome check --diagnostic-level=error",
-    "prebuild": "npx rimraf dist",
+    "prebuild": "rimraf dist",
     "build": "tsup",
     "dev": "ts-node src/cli.ts",
     "perf": "node --expose-gc scripts/perf.js",
@@ -75,21 +75,21 @@
     "coverage": "vitest run --coverage",
     "deploy-docs": "ts-node scripts/gh-pages-publish",
     "report-coverage": "cat ./coverage/lcov.info | coveralls",
-    "prepublishOnly": "npx clean-publish"
+    "prepublishOnly": "clean-publish"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.2",
-    "@vitest/coverage-v8": "^3.2.4",
-    "clean-publish": "^3.4.5",
-    "coveralls-next": "^4.2.0",
-    "husky": "^6.0.0",
-    "lint-staged": "^11.0.0",
-    "rimraf": "^3.0.2",
-    "shelljs": "^0.8.4",
-    "tinybench": "^2.5.1",
+    "@vitest/coverage-v8": "^4.0.6",
+    "clean-publish": "^6.0.1",
+    "coveralls-next": "^5.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "rimraf": "^6.1.0",
+    "shelljs": "^0.10.0",
+    "tinybench": "^5.1.0",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.6"
   }
 }

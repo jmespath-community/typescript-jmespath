@@ -45,7 +45,7 @@ export interface InputSignature {
   optional?: boolean;
 }
 
-export type RuntimeFunction<T extends (JSONValue | ExpressionNode)[], U> = (resolvedArgs: T) => U;
+export type RuntimeFunction<T extends ReadonlyArray<JSONValue | ExpressionNode>, U> = (resolvedArgs: T) => U;
 
 export interface FunctionSignature {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -688,12 +688,15 @@ export class Runtime implements FunctionRegistry {
 
   private functionGroupBy: RuntimeFunction<[JSONArrayObject, ExpressionNode], JSONValue> = ([array, exprefNode]) => {
     const keyFunction = this.createKeyFunction(exprefNode, [InputArgument.TYPE_STRING]);
-    return array.reduce((acc, cur) => {
-      const k = keyFunction(cur ?? {});
-      const target = <JSONArray>(acc[<string>k] = acc[<string>k] || []);
-      target.push(cur);
-      return acc;
-    }, {});
+    const groups: Record<string, JSONValue[]> = {};
+    for (const item of array) {
+      const key = keyFunction(item) as string;
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    }
+    return groups;
   };
 
   private functionItems: RuntimeFunction<[JSONObject], JSONArray> = ([inputValue]) => {
@@ -719,7 +722,7 @@ export class Runtime implements FunctionRegistry {
     if (!this._interpreter) {
       return [];
     }
-    const mapped = [];
+    const mapped: JSONValue[] = [];
     const interpreter = this._interpreter;
     for (let i = 0; i < elements.length; i += 1) {
       mapped.push(<JSONValue>interpreter.visit(exprefNode, elements[i]));
@@ -851,7 +854,7 @@ export class Runtime implements FunctionRegistry {
     if (typeName === InputArgument.TYPE_STRING) {
       return new Text(inputValue as string).reverse();
     }
-    const reversedArray = (inputValue as JSONArray).slice(0);
+    const reversedArray = [...(inputValue as JSONArray)];
     reversedArray.reverse();
     return reversedArray;
   };
@@ -867,7 +870,7 @@ export class Runtime implements FunctionRegistry {
   };
 
   private functionSortBy: RuntimeFunction<[number[] | string[], ExpressionNode], JSONValue> = resolvedArgs => {
-    const sortedArray = resolvedArgs[0].slice(0);
+    const sortedArray = [...resolvedArgs[0]];
     if (sortedArray.length === 0) {
       return sortedArray;
     }
@@ -975,6 +978,6 @@ export class Runtime implements FunctionRegistry {
     const result = Array(length)
       .fill(null)
       .map((_, index) => array.map(arr => arr[index]));
-    return result;
+    return result as unknown as JSONArray;
   };
 }

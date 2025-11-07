@@ -27,30 +27,30 @@ export type {
   RuntimeFunction,
 } from './Runtime';
 
-export const TYPE_ANY = InputArgument.TYPE_ANY;
-export const TYPE_ARRAY = InputArgument.TYPE_ARRAY;
-export const TYPE_ARRAY_ARRAY = InputArgument.TYPE_ARRAY_ARRAY;
-export const TYPE_ARRAY_NUMBER = InputArgument.TYPE_ARRAY_NUMBER;
-export const TYPE_ARRAY_OBJECT = InputArgument.TYPE_ARRAY_OBJECT;
-export const TYPE_ARRAY_STRING = InputArgument.TYPE_ARRAY_STRING;
-export const TYPE_BOOLEAN = InputArgument.TYPE_BOOLEAN;
-export const TYPE_EXPREF = InputArgument.TYPE_EXPREF;
-export const TYPE_NULL = InputArgument.TYPE_NULL;
-export const TYPE_NUMBER = InputArgument.TYPE_NUMBER;
-export const TYPE_OBJECT = InputArgument.TYPE_OBJECT;
-export const TYPE_STRING = InputArgument.TYPE_STRING;
+const TYPE_ANY = InputArgument.TYPE_ANY;
+const TYPE_ARRAY = InputArgument.TYPE_ARRAY;
+const TYPE_ARRAY_ARRAY = InputArgument.TYPE_ARRAY_ARRAY;
+const TYPE_ARRAY_NUMBER = InputArgument.TYPE_ARRAY_NUMBER;
+const TYPE_ARRAY_OBJECT = InputArgument.TYPE_ARRAY_OBJECT;
+const TYPE_ARRAY_STRING = InputArgument.TYPE_ARRAY_STRING;
+const TYPE_BOOLEAN = InputArgument.TYPE_BOOLEAN;
+const TYPE_EXPREF = InputArgument.TYPE_EXPREF;
+const TYPE_NULL = InputArgument.TYPE_NULL;
+const TYPE_NUMBER = InputArgument.TYPE_NUMBER;
+const TYPE_OBJECT = InputArgument.TYPE_OBJECT;
+const TYPE_STRING = InputArgument.TYPE_STRING;
 
-export function compile(expression: string, options?: Options): ExpressionNode {
+function compile(expression: string, options?: Options): ExpressionNode {
   const nodeTree = Parser.parse(expression, options);
   return nodeTree;
 }
 
-export function tokenize(expression: string, options?: LexerOptions): LexerToken[] {
+function tokenize(expression: string, options?: LexerOptions): LexerToken[] {
   return Lexer.tokenize(expression, options);
 }
 
 // Enhanced registerFunction with backward compatibility
-export const registerFunction = (
+const registerFunction = (
   functionName: string,
   customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
   signature: InputSignature[],
@@ -60,7 +60,7 @@ export const registerFunction = (
 };
 
 // Enhanced registry functions with type safety
-export const register = <T extends string>(
+const register = <T extends string>(
   name: T extends BuiltInFunctionNames ? never : T,
   customFunction: RuntimeFunction<(JSONValue | ExpressionNode)[], JSONValue>,
   signature: InputSignature[],
@@ -69,38 +69,38 @@ export const register = <T extends string>(
   return TreeInterpreterInst.runtime.register(name, customFunction, signature, options);
 };
 
-export const unregisterFunction = <T extends string>(name: T extends BuiltInFunctionNames ? never : T): boolean => {
+const unregisterFunction = <T extends string>(name: T extends BuiltInFunctionNames ? never : T): boolean => {
   return TreeInterpreterInst.runtime.unregister(name);
 };
 
-export const isRegistered = (name: string): boolean => {
+const isRegistered = (name: string): boolean => {
   return TreeInterpreterInst.runtime.isRegistered(name);
 };
 
-export const getRegisteredFunctions = (): string[] => {
+const getRegisteredFunctions = (): string[] => {
   return TreeInterpreterInst.runtime.getRegistered();
 };
 
-export const getCustomFunctions = (): string[] => {
+const getCustomFunctions = (): string[] => {
   return TreeInterpreterInst.runtime.getCustomFunctions();
 };
 
-export const clearCustomFunctions = (): void => {
+const clearCustomFunctions = (): void => {
   TreeInterpreterInst.runtime.clearCustomFunctions();
 };
 
-export function search(data: JSONValue, expression: string, options?: Options): JSONValue {
+function search(data: JSONValue, expression: string, options?: Options): JSONValue {
   const nodeTree = Parser.parse(expression, options);
   return TreeInterpreterInst.search(nodeTree, data);
 }
 
-export function Scope(): ScopeChain {
+function Scope(): ScopeChain {
   return new ScopeChain();
 }
 
-export const TreeInterpreter = TreeInterpreterInst;
+const TreeInterpreter = TreeInterpreterInst;
 
-export const jmespath = {
+const jmespath = {
   compile,
   registerFunction,
   register,
@@ -122,8 +122,11 @@ export const jmespath = {
   TYPE_NUMBER,
   TYPE_OBJECT,
   TYPE_STRING,
+  TYPE_ARRAY_ARRAY,
+  TYPE_ARRAY_OBJECT,
+  Scope,
 };
 
 // Export as default for backward compatibility
 // Supports both: import jmespath from '...' and import { jmespath } from '...'
-export { jmespath as default };
+export default jmespath;

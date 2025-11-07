@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { compile } from '../src';
+import jmespath from '../src';
 import { expectError } from './error.utils';
 
 describe('parsing', () => {
   it('should parse field node', () => {
-    expect(compile('foo')).toMatchObject({ type: 'Field', name: 'foo' });
+    expect(jmespath.compile('foo')).toMatchObject({ type: 'Field', name: 'foo' });
   });
   it('should fail to parse invalid slice expressions', () => {
     expectError(() => {
-      compile('[:::]');
+      jmespath.compile('[:::]');
       return null;
     }, ['syntax', 'too many colons in slice expression']);
   });
   it('should parse arithmetic addition', () => {
-    expect(compile('foo + bar')).toMatchObject({
+    expect(jmespath.compile('foo + bar')).toMatchObject({
       type: 'Arithmetic',
       operator: 'Plus',
       left: { type: 'Field', name: 'foo' },
@@ -27,8 +27,8 @@ describe('parsing', () => {
       left: { type: 'Field', name: 'foo' },
       right: { type: 'Field', name: 'bar' },
     };
-    expect(compile('foo - bar')).toMatchObject(expected);
-    expect(compile('foo − bar')).toMatchObject(expected);
+    expect(jmespath.compile('foo - bar')).toMatchObject(expected);
+    expect(jmespath.compile('foo − bar')).toMatchObject(expected);
   });
   it('should parse arithmetic unary negation', () => {
     const expected = {
@@ -36,8 +36,8 @@ describe('parsing', () => {
       operator: 'Minus',
       operand: { type: 'Field', name: 'bar' },
     };
-    expect(compile('-bar')).toMatchObject(expected);
-    expect(compile('\u2212bar')).toMatchObject(expected);
+    expect(jmespath.compile('-bar')).toMatchObject(expected);
+    expect(jmespath.compile('\u2212bar')).toMatchObject(expected);
   });
   it('should parse let expression', () => {
     const expected = {
@@ -56,11 +56,11 @@ describe('parsing', () => {
       ],
       expression: { type: 'Current' },
     };
-    expect(compile('let $foo = bar, $baz = qux in @')).toMatchObject(expected);
+    expect(jmespath.compile('let $foo = bar, $baz = qux in @')).toMatchObject(expected);
   });
   it('should fail to parse invalid let expression', () => {
     expectError(() => {
-      compile('let $foo = bar = qux');
+      jmespath.compile('let $foo = bar = qux');
       return null;
     }, 'syntax');
   });
@@ -71,7 +71,7 @@ describe('parsing', () => {
       left: { type: 'Current' },
       right: { type: 'Literal' },
     };
-    expect(compile("  @ && 'truthy' ")).toMatchObject(expected);
-    expect(compile("( @ && 'truthy' )")).toMatchObject(expected);
+    expect(jmespath.compile("  @ && 'truthy' ")).toMatchObject(expected);
+    expect(jmespath.compile("( @ && 'truthy' )")).toMatchObject(expected);
   });
 });
