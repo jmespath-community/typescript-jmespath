@@ -81,7 +81,7 @@
     "@biomejs/biome": "2.3.2",
     "@vitest/coverage-v8": "^4.0.6",
     "clean-publish": "^6.0.1",
-    "coveralls-next": "^5.0.0",
+    "coveralls-next": "^6.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
     "rimraf": "^6.1.0",
