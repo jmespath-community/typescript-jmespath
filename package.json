@@ -51,9 +51,12 @@
     "jq",
     "xpath"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/jmespath-community/typescript-jmespath"
+    "url": "git+https://github.com/jmespath-community/typescript-jmespath.git"
   },
   "license": "MPL-2.0",
   "engines": {
@@ -75,8 +78,7 @@
     "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts",
     "coverage": "vitest run --coverage",
     "deploy-docs": "ts-node scripts/gh-pages-publish",
-    "report-coverage": "cat ./coverage/lcov.info | coveralls",
-    "prepublishOnly": "clean-publish"
+    "report-coverage": "cat ./coverage/lcov.info | coveralls"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.2",
