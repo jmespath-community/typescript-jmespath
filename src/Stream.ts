@@ -3,7 +3,7 @@ import type { JSONValue } from './JSON.type';
 import Parser from './Parser';
 import type { Options } from './Parser.type';
 import { TreeInterpreter, TreeInterpreterInstance } from './TreeInterpreter';
-import { isFalse } from './utils';
+import { findDisallowedFunction, isFalse } from './utils';
 
 export type StreamSource<T = unknown> = AsyncIterable<T> | Iterable<T> | ReadableStream<T> | NodeJS.ReadableStream;
 
@@ -35,6 +35,9 @@ export interface StreamOptions extends Options {
 export async function* toAsyncIterable<T>(source: StreamSource<T>): AsyncGenerator<T, void, unknown> {
   if (source == null) {
     return;
+  }
+  if (typeof source !== 'object' && typeof source !== 'function') {
+    throw new TypeError('Invalid stream source: expected AsyncIterable, Iterable, or ReadableStream');
   }
   // Check for Symbol.asyncIterator (AsyncIterable, Node Readable, modern ReadableStream)
   if (Symbol.asyncIterator in (source as AsyncIterable<T>)) {
@@ -142,6 +145,9 @@ export async function* normalizeSource<T>(
     }
   }
 
+  if (textDecoder && buffer) {
+    buffer += textDecoder.decode();
+  }
   if (buffer.trim()) {
     yield parseItem(buffer.trim(), parseJson);
   }
@@ -419,32 +425,51 @@ export async function* evaluateStreamNode(
   }
 }
 
+function isExpressionNode(val: unknown): val is ExpressionNode {
+  return (
+    typeof val === 'object' &&
+    val !== null &&
+    'type' in val &&
+    typeof (val as { type: unknown }).type === 'string' &&
+    !(Symbol.iterator in val) &&
+    !(Symbol.asyncIterator in val)
+  );
+}
+
 /**
  * Incremental Result Streaming evaluation.
  * Evaluates a JMESPath expression incrementally over an AsyncIterable or ReadableStream source.
  */
 export async function* searchStream<T = JSONValue, D = unknown>(
-  sourceOrExpression: StreamSource<D> | string,
-  expressionOrSource: string | StreamSource<D>,
+  sourceOrExpression: StreamSource<D> | string | ExpressionNode,
+  expressionOrSource: string | ExpressionNode | StreamSource<D>,
   options?: StreamOptions,
 ): AsyncGenerator<T, void, unknown> {
-  let expression: string;
+  let expression: string | ExpressionNode;
   let source: StreamSource<D>;
 
-  if (typeof sourceOrExpression === 'string') {
+  if (typeof sourceOrExpression === 'string' || isExpressionNode(sourceOrExpression)) {
     expression = sourceOrExpression;
     source = expressionOrSource as StreamSource<D>;
   } else {
     source = sourceOrExpression as StreamSource<D>;
-    expression = expressionOrSource as string;
+    expression = expressionOrSource as string | ExpressionNode;
   }
 
-  if (typeof expression !== 'string') {
-    throw new TypeError('Expression must be a string');
+  if (typeof expression !== 'string' && !isExpressionNode(expression)) {
+    throw new TypeError('Expression must be a string or AST ExpressionNode');
   }
 
-  const ast = Parser.parse(expression, options);
-  const interpreter = new TreeInterpreter();
+  const ast: ExpressionNode = typeof expression === 'string' ? Parser.parse(expression, options) : expression;
+
+  if (options) {
+    const fnError = findDisallowedFunction(ast, options);
+    if (fnError) {
+      throw new Error(fnError);
+    }
+  }
+
+  const interpreter = new TreeInterpreter(options);
   interpreter.runtime._functionTable = TreeInterpreterInstance.runtime._functionTable;
 
   const items = normalizeSource(source, options);

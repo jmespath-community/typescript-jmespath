@@ -82,6 +82,17 @@ describe('searchStream', () => {
       expect(results).toEqual(['Alice', 'Bob', 'Charlie', 'Dana']);
     });
 
+    it('supports precompiled AST ExpressionNode in both argument orders', async () => {
+      const ast = jmespath.compile('[*].name');
+      const source1 = createAsyncGenerator(sampleUsers);
+      const results1 = await collectStream(searchStream(source1, ast));
+      expect(results1).toEqual(['Alice', 'Bob', 'Charlie', 'Dana']);
+
+      const source2 = createAsyncGenerator(sampleUsers);
+      const results2 = await collectStream(searchStream(ast, source2));
+      expect(results2).toEqual(['Alice', 'Bob', 'Charlie', 'Dana']);
+    });
+
     it('throws TypeError if expression is missing or not a string', async () => {
       // @ts-expect-error testing invalid signature
       await expect(collectStream(searchStream(123, 456))).rejects.toThrow(TypeError);
@@ -296,6 +307,11 @@ describe('searchStream', () => {
       await expect(
         collectStream(searchStream(source, 'sort_by(@, &score)', { disallowedFunctions: ['sort_by'] })),
       ).rejects.toThrow("Function 'sort_by' is disallowed");
+
+      const source2 = createAsyncGenerator(sampleUsers);
+      await expect(
+        collectStream(searchStream(source2, "[?contains(name, 'A')].name", { disallowedFunctions: ['contains'] })),
+      ).rejects.toThrow("Function 'contains' is disallowed");
     });
 
     it('enforces maxOutputSize on terminal non-streamable pipe stage', async () => {

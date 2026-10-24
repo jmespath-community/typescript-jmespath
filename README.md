@@ -164,6 +164,31 @@ search(data, expression, {
 });
 ```
 
+### `searchStream<T = JSONValue, D = unknown>(source: StreamSource<D>, expression: string | ExpressionNode, options?: StreamOptions): AsyncGenerator<T, void, unknown>`
+
+Evaluates a JMESPath expression incrementally over an `AsyncIterable`, `ReadableStream`, or Node.js `stream.Readable`, yielding matching results without buffering large datasets in memory:
+
+```typescript
+import jmespath from "@jmespath-community/jmespath";
+
+async function* getEvents() {
+  yield { id: 1, level: "info", message: "connected" };
+  yield { id: 2, level: "error", message: "disk full" };
+}
+
+for await (const msg of jmespath.searchStream(getEvents(), "[?level == 'error'].message")) {
+  console.log(msg); // "disk full"
+}
+```
+
+Supports automatic NDJSON / JSON lines chunk decoding (`parseJson: 'auto'`), chunk flattening, precompiled ASTs, and early termination:
+
+```typescript
+for await (const item of jmespath.searchStream(logStream, "[:10]", { limit: 10 })) {
+  console.log(item);
+}
+```
+
 ### `compile(expression: string): ExpressionNodeTree`
 
 You can precompile all your expressions ready for use later on. The `compile`
@@ -204,31 +229,6 @@ const result = validate("foo.bar");
 
 const invalid = validate("foo.", { maxNodes: 10 });
 // { valid: false, error: 'Syntax error: ...' }
-```
-
-### `searchStream<T = JSONValue, D = unknown>(source: StreamSource<D>, expression: string, options?: StreamOptions): AsyncGenerator<T, void, unknown>`
-
-Evaluates a JMESPath expression incrementally over an `AsyncIterable`, `ReadableStream`, or Node.js `stream.Readable`, yielding matching results without buffering large datasets in memory:
-
-```typescript
-import jmespath from "@jmespath-community/jmespath";
-
-async function* getEvents() {
-  yield { id: 1, level: "info", message: "connected" };
-  yield { id: 2, level: "error", message: "disk full" };
-}
-
-for await (const msg of jmespath.searchStream(getEvents(), "[?level == 'error'].message")) {
-  console.log(msg); // "disk full"
-}
-```
-
-Supports automatic NDJSON / JSON lines chunk decoding (`parseJson: 'auto'`), chunk flattening, and early termination:
-
-```typescript
-for await (const item of jmespath.searchStream(logStream, "[:10]", { limit: 10 })) {
-  console.log(item);
-}
 ```
 
 ---

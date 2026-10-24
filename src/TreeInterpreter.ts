@@ -16,17 +16,20 @@ export class TreeInterpreter {
   private _depth = 0;
   private _deadline = 0;
 
-  constructor() {
+  constructor(options?: Options) {
     this.runtime = new Runtime(this);
     this._scope = new ScopeChain();
+    if (options) {
+      this._options = options;
+      this._deadline = options.timeoutMs !== undefined ? Date.now() + options.timeoutMs : 0;
+    }
   }
 
   withScope(scope: ScopeEntry): TreeInterpreter {
-    const interpreter = new TreeInterpreter();
+    const interpreter = new TreeInterpreter(this._options);
     interpreter.runtime._functionTable = this.runtime._functionTable;
     interpreter._rootValue = this._rootValue;
     interpreter._scope = this._scope.withScope(scope);
-    interpreter._options = this._options;
     interpreter._depth = this._depth;
     interpreter._deadline = this._deadline;
     return interpreter;

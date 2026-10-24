@@ -71,7 +71,7 @@ function compileQuery<T = JSONValue, D = unknown>(expression: string, options?: 
   } as CompiledQuery<T, D>;
   fn.search = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
   fn.searchStream = (source: StreamSource<D>, streamOptions?: StreamOptions) =>
-    searchStream<T, D>(source, expression, { ...options, ...streamOptions });
+    searchStream<T, D>(source, nodeTree, { ...options, ...streamOptions });
   fn.ast = nodeTree;
   return fn;
 }
