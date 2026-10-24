@@ -386,6 +386,11 @@ describe('searchStream', () => {
       expect(results).toEqual([sampleUsers[2], sampleUsers[3]]);
     });
 
+    it('does not yield phantom items from an empty negative-step slice', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      expect(await collectStream(searchStream(source, '[1:3:-1]'))).toEqual([]);
+    });
+
     it('ignores field extraction on primitive items', async () => {
       const source = createAsyncGenerator([1, 'string', null]);
       const results = await collectStream(searchStream(source, 'name'));

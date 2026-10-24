@@ -10,6 +10,31 @@ describe('Searches compiled ast', () => {
     expect(jmespath.search([1, null, 2], '[0:3]')).toEqual([1, null, 2]);
   });
 
+  it.each(['[1:4:-1]', '[1:4:-2]', '[4:1:2]', '[4:1:3]', '[-100:100:-2]', '[100:-100:2]'])(
+    'returns an empty array when slice %s cannot advance toward its stop',
+    expression => {
+      const data = [0, 1, 2, 3, 4];
+      expect(jmespath.search(data, expression)).toEqual([]);
+      expect(jmespath.compileQuery(expression)(data)).toEqual([]);
+    },
+  );
+
+  it('uses the actual length and truthiness of an empty strided slice', () => {
+    const data = [0, 1, 2, 3, 4];
+    expect(jmespath.search(data, 'length([1:4:-1])')).toBe(0);
+    expect(jmespath.search(data, '[4:1:2] || `[99]`')).toEqual([99]);
+    expect(jmespath.search(data, '[1:4:-1]', { maxOutputSize: 0 })).toEqual([]);
+  });
+
+  it.each<[string, number[]]>([
+    ['[1:4:2]', [1, 3]],
+    ['[4:1:-2]', [4, 2]],
+    ['[2:2:-1]', []],
+    ['[::-1]', [4, 3, 2, 1, 0]],
+  ])('preserves nonempty and equal-bound slices %s', (expression, expected) => {
+    expect(jmespath.search([0, 1, 2, 3, 4], expression)).toEqual(expected);
+  });
+
   it('evaluates repeated queries correctly with expression cache', () => {
     expect(jmespath.search({ a: 1 }, 'a')).toEqual(1);
     expect(jmespath.search({ a: 2 }, 'a')).toEqual(2);
