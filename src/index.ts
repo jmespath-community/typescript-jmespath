@@ -73,7 +73,7 @@ function validate(expression: string, options?: Options): ValidationResult {
   }
   try {
     const ast = Parser.parse(expression, options);
-    if (options?.allowedFunctions || options?.disallowedFunctions) {
+    if (options) {
       const fnError = findDisallowedFunction(ast, options);
       if (fnError) {
         return { valid: false, error: fnError };

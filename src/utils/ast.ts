@@ -13,10 +13,6 @@ function pushChildren(node: ExpressionNode, stack: ExpressionNode[]): void {
     }
   }
 
-  if (!Array.isArray(n.children) && !Array.isArray(n.bindings)) {
-    return;
-  }
-
   if (Array.isArray(n.children)) {
     for (const item of n.children) {
       if (!item) {
