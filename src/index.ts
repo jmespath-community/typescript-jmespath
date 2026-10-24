@@ -4,6 +4,7 @@ import Lexer from './Lexer';
 import { LexerOptions, LexerToken } from './Lexer.type';
 import Parser from './Parser';
 import { Options } from './Parser.type';
+import type { PathValue } from './Path.type';
 import {
   BuiltInFunctionNames,
   InputArgument,
@@ -18,6 +19,7 @@ import { findDisallowedFunction } from './utils';
 
 export type { JSONArray, JSONObject, JSONPrimitive, JSONValue } from './JSON.type';
 export type { Options } from './Parser.type';
+export type { PathValue } from './Path.type';
 
 export interface ValidationResult {
   valid: boolean;
@@ -135,7 +137,9 @@ const clearCustomFunctions = (): void => {
 const MAX_CACHE_SIZE = 1000;
 const astCache = new Map<string, ExpressionNode>();
 
-function search<T = JSONValue, D = unknown>(data: D, expression: string, options?: Options): T {
+function search<T, P extends string>(data: T, expression: P, options?: Options): PathValue<T, P>;
+function search<T = JSONValue, D = unknown>(data: D, expression: string, options?: Options): T;
+function search(data: unknown, expression: string, options?: Options): unknown {
   let nodeTree: ExpressionNode | undefined;
   if (!options) {
     nodeTree = astCache.get(expression);
@@ -152,7 +156,7 @@ function search<T = JSONValue, D = unknown>(data: D, expression: string, options
   } else {
     nodeTree = Parser.parse(expression, options);
   }
-  return TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+  return TreeInterpreterInst.search(nodeTree, data as JSONValue, options);
 }
 
 function Scope(): ScopeChain {
