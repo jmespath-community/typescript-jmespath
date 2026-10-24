@@ -62,10 +62,14 @@ const bindingPower: Record<string, number> = {
 class TokenParser {
   index = 0;
   tokens: LexerToken[] = [];
+  private depth = 0;
+  private maxDepth?: number;
 
   parse(expression: string, options?: Options): ExpressionNode {
     this.loadTokens(expression, options || { enable_legacy_literals: false });
     this.index = 0;
+    this.depth = 0;
+    this.maxDepth = options?.maxDepth;
 
     const ast = this.expression(0);
     if (this.lookahead(0) !== Token.TOK_EOF) {
@@ -81,16 +85,24 @@ class TokenParser {
   }
 
   expression(rbp: number): ExpressionNode {
-    const leftToken = this.lookaheadToken(0);
-    this.advance();
-    let left = this.nud(leftToken);
-    let currentTokenType = this.lookahead(0);
-    while (rbp < bindingPower[currentTokenType]) {
-      this.advance();
-      left = this.led(currentTokenType, left);
-      currentTokenType = this.lookahead(0);
+    if (this.maxDepth !== undefined && this.depth >= this.maxDepth) {
+      throw new Error(`Expression exceeds maximum allowed depth of ${this.maxDepth}`);
     }
-    return left;
+    this.depth += 1;
+    try {
+      const leftToken = this.lookaheadToken(0);
+      this.advance();
+      let left = this.nud(leftToken);
+      let currentTokenType = this.lookahead(0);
+      while (rbp < bindingPower[currentTokenType]) {
+        this.advance();
+        left = this.led(currentTokenType, left);
+        currentTokenType = this.lookahead(0);
+      }
+      return left;
+    } finally {
+      this.depth -= 1;
+    }
   }
 
   private lookahead(offset: number): Token {
