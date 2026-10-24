@@ -15,8 +15,8 @@ describe('text comparer', () => {
     expect(Text.comparer('hello', 'world')).toEqual(-1);
   });
   it('should order two text objects == ', () => {
-    expect(new Text('goodbye').compareTo('goodbye')).toEqual(-1);
-    expect(Text.comparer('goodbye', 'goodbye')).toEqual(-1);
+    expect(new Text('goodbye').compareTo('goodbye')).toEqual(0);
+    expect(Text.comparer('goodbye', 'goodbye')).toEqual(0);
   });
   it('should order two text objects >= ', () => {
     expect(new Text('world').compareTo('cruel')).toEqual(1);
