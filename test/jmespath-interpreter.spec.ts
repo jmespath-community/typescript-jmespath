@@ -87,8 +87,18 @@ describe('Searches compiled ast', () => {
     expect(jmespath.validate('a.b.c', { maxDepth: 5 }).valid).toBe(true);
     expect(jmespath.validate('a.b.c', { maxNodes: 2 }).valid).toBe(false);
     expect(jmespath.validate('a.b.c', { maxNodes: 10 }).valid).toBe(true);
+    expect(jmespath.validate('{a: b}', { maxNodes: 2 }).valid).toBe(false);
+    expect(jmespath.validate('[a, b]', { maxNodes: 2 }).valid).toBe(false);
+    expect(jmespath.validate('length(a)', { maxNodes: 1 }).valid).toBe(false);
     expect(jmespath.validate('to_string(@)', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
     expect(jmespath.validate('to_string(@)', { allowedFunctions: ['length'] }).valid).toBe(false);
     expect(jmespath.validate('length(@)', { allowedFunctions: ['length'] }).valid).toBe(true);
+    expect(jmespath.validate('[?to_string(a) == `""`]', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
+    expect(jmespath.validate('{k: to_string(a)}', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
+    expect(jmespath.validate('[to_string(a)]', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
+    expect(jmespath.validate('let $a = to_string(x) in $a', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
+    expect(jmespath.validate('a ? to_string(b) : c', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
+    expect(jmespath.validate('a ? b : to_string(c)', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
+    expect(jmespath.validate('let $a = b in $a', { maxNodes: 3 }).valid).toBe(false);
   });
 });
