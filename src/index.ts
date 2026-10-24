@@ -27,9 +27,14 @@ export interface ValidationResult {
   ast?: ExpressionNode;
 }
 
+import { type StreamOptions, type StreamSource, searchStream } from './Stream';
+
+export type { StreamOptions, StreamSource };
+
 export interface CompiledQuery<T = JSONValue, D = unknown> {
   (data: D): T;
   search: (data: D) => T;
+  searchStream: (source: StreamSource<D>, options?: StreamOptions) => AsyncGenerator<T, void, unknown>;
   ast: ExpressionNode;
 }
 export type {
@@ -65,6 +70,8 @@ function compileQuery<T = JSONValue, D = unknown>(expression: string, options?: 
     return TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
   } as CompiledQuery<T, D>;
   fn.search = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+  fn.searchStream = (source: StreamSource<D>, streamOptions?: StreamOptions) =>
+    searchStream<T, D>(source, nodeTree, { ...options, ...streamOptions });
   fn.ast = nodeTree;
   return fn;
 }
@@ -168,6 +175,7 @@ const TreeInterpreter = TreeInterpreterInst;
 const jmespath = {
   compile,
   compileQuery,
+  searchStream,
   validate,
   registerFunction,
   register,

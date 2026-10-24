@@ -17,8 +17,10 @@ given a JMESPath expression.
   - [Browser (UMD)](#browser-umd)
 - [API](#api)
   - [`search(data, expression, options)`](#searchdata-d-expression-string-options-options-t)
+  - [`searchStream(source, expression, options)`](#searchstreamsource-expression-options-asyncgenerator)
   - [`compile(expression)`](#compileexpression-string-expressionnodetree)
   - [`compileQuery(expression, options)`](#compilequeryexpression-string-options-options-compiledquery)
+  - [`validate(expression, options)`](#validateexpression-string-options-options-validationresult)
 - [Extensions](#extensions-to-original-spec)
 - [More Resources](#more-resources)
 - [Experimental Features](#experimental-features)
@@ -160,6 +162,31 @@ search(data, expression, {
   disallowedFunctions: ['custom_heavy'],   // deny-list specific built-ins
   timeoutMs: 100,                          // query execution time limit in ms
 });
+```
+
+### `searchStream<T = JSONValue, D = unknown>(source: StreamSource<D>, expression: string | ExpressionNode, options?: StreamOptions): AsyncGenerator<T, void, unknown>`
+
+Evaluates a JMESPath expression incrementally over an `AsyncIterable`, `ReadableStream`, or Node.js `stream.Readable`, yielding matching results without buffering large datasets in memory:
+
+```typescript
+import jmespath from "@jmespath-community/jmespath";
+
+async function* getEvents() {
+  yield { id: 1, level: "info", message: "connected" };
+  yield { id: 2, level: "error", message: "disk full" };
+}
+
+for await (const msg of jmespath.searchStream(getEvents(), "[?level == 'error'].message")) {
+  console.log(msg); // "disk full"
+}
+```
+
+Supports automatic NDJSON / JSON lines chunk decoding (`parseJson: 'auto'`), chunk flattening, precompiled ASTs, and early termination:
+
+```typescript
+for await (const item of jmespath.searchStream(logStream, "[:10]", { limit: 10 })) {
+  console.log(item);
+}
 ```
 
 ### `compile(expression: string): ExpressionNodeTree`

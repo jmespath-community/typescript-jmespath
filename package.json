@@ -67,6 +67,7 @@
     "build": "tsup",
     "dev": "ts-node src/cli.ts",
     "perf": "node --expose-gc scripts/perf.js",
+    "perf:stream": "node --expose-gc scripts/stream-perf.js",
     "start": "tsup --watch",
     "test": "vitest --run",
     "test:watch": "vitest",
