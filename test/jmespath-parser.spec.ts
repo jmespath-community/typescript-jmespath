@@ -12,6 +12,42 @@ describe('parsing', () => {
       return null;
     }, ['syntax', 'too many colons in slice expression']);
   });
+  it.each([
+    '[1 2:]',
+    '[:1 3]',
+    '[:0 3]',
+    '[:-1 -2]',
+    '[1:2 3:4]',
+    '[::1 2]',
+    '[::0 2]',
+    '[::-1 -2]',
+    '[1:4:2\t3]',
+    '[1:2\n3]',
+  ])('should reject repeated numbers in slice %s', slice => {
+    expect(() => jmespath.compile(`foo${slice}`)).toThrow(/Syntax error/);
+  });
+  it('should reject repeated slice numbers when searching or validating', () => {
+    const expression = 'foo[0:1 3]';
+    expect(() => jmespath.search({ foo: [0, 1, 2, 3, 4] }, expression)).toThrow(/Syntax error/);
+    expect(jmespath.validate(expression)).toMatchObject({
+      valid: false,
+      error: expect.stringMatching(/Syntax error/),
+    });
+  });
+  it.each([
+    ['[0:4:2]', [0, 2]],
+    ['[:0]', []],
+    ['[1:-1]', [1, 2, 3]],
+    ['[::-1]', [4, 3, 2, 1, 0]],
+    ['[4:0:-2]', [4, 2]],
+    ['[ : 4 : 2 ]', [0, 2]],
+    ['[:]', [0, 1, 2, 3, 4]],
+    ['[::]', [0, 1, 2, 3, 4]],
+  ])('should preserve valid slice %s', (slice, expected) => {
+    const expression = `foo${slice}`;
+    expect(jmespath.search({ foo: [0, 1, 2, 3, 4] }, expression)).toEqual(expected);
+    expect(jmespath.validate(expression).valid).toBe(true);
+  });
   it('should parse arithmetic addition', () => {
     expect(jmespath.compile('foo + bar')).toMatchObject({
       type: 'Arithmetic',

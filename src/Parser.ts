@@ -387,7 +387,7 @@ class TokenParser {
           this.errorToken(this.lookaheadToken(0), 'Syntax error, too many colons in slice expression');
         }
         this.advance();
-      } else if (current.type === Token.TOK_NUMBER) {
+      } else if (current.type === Token.TOK_NUMBER && parts[index] === null) {
         const part = this.lookaheadToken(0).value as number;
         parts[index] = part;
         this.advance();
