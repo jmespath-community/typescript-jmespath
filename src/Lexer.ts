@@ -188,7 +188,7 @@ class StreamLexer {
     }
     this._current += 1;
     const literal = stream.slice(start + 1, this._current - 1);
-    return literal.replaceAll('\\\\', '\\').replaceAll("\\'", "'");
+    return literal.replace(/\\(['\\])/g, '$1');
   }
 
   private consumeNumber(stream: string): LexerToken {
