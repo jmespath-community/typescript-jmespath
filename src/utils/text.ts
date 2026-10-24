@@ -9,7 +9,11 @@ export class Text {
   }
 
   public get length(): number {
-    return this.codePoints.length;
+    let count = 0;
+    for (const _ of this._text) {
+      count += 1;
+    }
+    return count;
   }
 
   public compareTo(other: string): number {

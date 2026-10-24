@@ -132,6 +132,28 @@ export class TreeInterpreter {
           return null;
         }
         const collected: JSONValue[] = [];
+        if (right.type === 'Field') {
+          const key = right.name;
+          for (let i = 0; i < base.length; i++) {
+            const elem = base[i];
+            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
+              const val = (elem as JSONObject)[key] ?? null;
+              if (val !== null) {
+                collected.push(val);
+              }
+            }
+          }
+          return collected as JSONValue;
+        }
+        if (right.type === 'Identity') {
+          for (let i = 0; i < base.length; i++) {
+            const elem = base[i];
+            if (elem !== null) {
+              collected.push(elem);
+            }
+          }
+          return collected as JSONValue;
+        }
         for (const elem of base) {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
@@ -149,6 +171,28 @@ export class TreeInterpreter {
         }
         const collected: JSONValue[] = [];
         const values = Object.values(base);
+        if (right.type === 'Field') {
+          const key = right.name;
+          for (let i = 0; i < values.length; i++) {
+            const elem = values[i];
+            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
+              const val = (elem as JSONObject)[key] ?? null;
+              if (val !== null) {
+                collected.push(val);
+              }
+            }
+          }
+          return collected;
+        }
+        if (right.type === 'Identity') {
+          for (let i = 0; i < values.length; i++) {
+            const elem = values[i];
+            if (elem !== null) {
+              collected.push(elem);
+            }
+          }
+          return collected;
+        }
         for (const elem of values) {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
@@ -166,6 +210,36 @@ export class TreeInterpreter {
         }
 
         const results: JSONValue[] = [];
+        if (right.type === 'Field') {
+          const key = right.name;
+          for (let i = 0; i < base.length; i++) {
+            const elem = base[i];
+            const matched = this.visit(condition, elem);
+            if (isFalse(matched)) {
+              continue;
+            }
+            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
+              const val = (elem as JSONObject)[key] ?? null;
+              if (val !== null) {
+                results.push(val);
+              }
+            }
+          }
+          return results;
+        }
+        if (right.type === 'Identity') {
+          for (let i = 0; i < base.length; i++) {
+            const elem = base[i];
+            const matched = this.visit(condition, elem);
+            if (isFalse(matched)) {
+              continue;
+            }
+            if (elem !== null) {
+              results.push(elem);
+            }
+          }
+          return results;
+        }
         for (const elem of base) {
           const matched = this.visit(condition, elem);
           if (isFalse(matched)) {
@@ -339,14 +413,19 @@ export class TreeInterpreter {
   }
 
   slice(collection: JSONArray, start: number, end: number, step: number): JSONArray {
-    const result = [];
+    if (step === 1) {
+      return collection.slice(start, end);
+    }
+    const len = Math.ceil(Math.abs(start - end) / Math.abs(step));
+    const result = new Array(len);
+    let idx = 0;
     if (step > 0) {
       for (let i = start; i < end; i += step) {
-        result.push(collection[i]);
+        result[idx++] = collection[i];
       }
     } else {
       for (let i = start; i > end; i += step) {
-        result.push(collection[i]);
+        result[idx++] = collection[i];
       }
     }
     return result;
