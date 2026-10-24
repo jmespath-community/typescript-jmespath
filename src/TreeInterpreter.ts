@@ -4,7 +4,7 @@ import { Token } from './Lexer.type';
 import { Options, ScopeEntry } from './Parser.type';
 import { Runtime } from './Runtime';
 import { ScopeChain } from './Scope';
-import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
+import { add, countNodes, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
 
 const emptyScopeChain = new ScopeChain();
 
@@ -33,12 +33,42 @@ export class TreeInterpreter {
   }
 
   search(node: ExpressionNode, value: JSONValue, options?: Options): JSONValue {
+    if (options?.maxNodes !== undefined && countNodes(node) > options.maxNodes) {
+      throw new Error(`Expression exceeds maximum allowed node count of ${options.maxNodes}`);
+    }
     this._rootValue = value;
     this._scope = emptyScopeChain;
     this._options = options;
     this._depth = 0;
     this._deadline = options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : 0;
-    return this.visit(node, value) as JSONValue;
+    const result = this.visit(node, value) as JSONValue;
+    this.checkOutputSize(result);
+    return result;
+  }
+
+  private checkOutputSize(val: unknown): void {
+    const max = this._options?.maxOutputSize;
+    if (max === undefined || val == null) {
+      return;
+    }
+
+    const size =
+      Array.isArray(val) || typeof val === 'string'
+        ? val.length
+        : typeof val === 'object'
+          ? Object.keys(val).length
+          : 0;
+
+    if (size > max) {
+      throw new Error(`Output size exceeds maximum allowed size of ${max}`);
+    }
+  }
+
+  private collect(target: JSONValue[], item: JSONValue): void {
+    target.push(item);
+    if (this._options?.maxOutputSize !== undefined && target.length > this._options.maxOutputSize) {
+      throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+    }
   }
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
@@ -128,9 +158,13 @@ export class TreeInterpreter {
           // converting the result back to a string
           const chars = [...value];
           const sliced = this.slice(chars, start, stop, step);
-          return sliced.join('');
+          const res = sliced.join('');
+          this.checkOutputSize(res);
+          return res;
         } else {
-          return this.slice(value, start, stop, step);
+          const res = this.slice(value, start, stop, step);
+          this.checkOutputSize(res);
+          return res;
         }
       }
       case 'Projection': {
@@ -168,11 +202,12 @@ export class TreeInterpreter {
               throw new Error(`Query execution timed out after ${this._options?.timeoutMs}ms`);
             }
             const elem = base[i];
-            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
-              const val = (elem as JSONObject)[key] ?? null;
-              if (val !== null) {
-                collected.push(val);
-              }
+            if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
+              continue;
+            }
+            const val = (elem as JSONObject)[key];
+            if (val !== undefined && val !== null) {
+              this.collect(collected, val);
             }
           }
           return collected as JSONValue;
@@ -181,7 +216,7 @@ export class TreeInterpreter {
           for (let i = 0; i < base.length; i++) {
             const elem = base[i];
             if (elem !== null) {
-              collected.push(elem);
+              this.collect(collected, elem);
             }
           }
           return collected as JSONValue;
@@ -189,7 +224,7 @@ export class TreeInterpreter {
         for (const elem of base) {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
-            collected.push(current);
+            this.collect(collected, current);
           }
         }
         return collected as JSONValue;
@@ -207,11 +242,12 @@ export class TreeInterpreter {
           const key = right.name;
           for (let i = 0; i < values.length; i++) {
             const elem = values[i];
-            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
-              const val = (elem as JSONObject)[key] ?? null;
-              if (val !== null) {
-                collected.push(val);
-              }
+            if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
+              continue;
+            }
+            const val = (elem as JSONObject)[key];
+            if (val !== undefined && val !== null) {
+              this.collect(collected, val);
             }
           }
           return collected;
@@ -220,7 +256,7 @@ export class TreeInterpreter {
           for (let i = 0; i < values.length; i++) {
             const elem = values[i];
             if (elem !== null) {
-              collected.push(elem);
+              this.collect(collected, elem);
             }
           }
           return collected;
@@ -228,7 +264,7 @@ export class TreeInterpreter {
         for (const elem of values) {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
-            collected.push(current);
+            this.collect(collected, current);
           }
         }
         return collected;
@@ -246,15 +282,15 @@ export class TreeInterpreter {
           const key = right.name;
           for (let i = 0; i < base.length; i++) {
             const elem = base[i];
-            const matched = this.visit(condition, elem);
-            if (isFalse(matched)) {
+            if (isFalse(this.visit(condition, elem))) {
               continue;
             }
-            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
-              const val = (elem as JSONObject)[key] ?? null;
-              if (val !== null) {
-                results.push(val);
-              }
+            if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
+              continue;
+            }
+            const val = (elem as JSONObject)[key];
+            if (val !== undefined && val !== null) {
+              this.collect(results, val);
             }
           }
           return results;
@@ -262,24 +298,22 @@ export class TreeInterpreter {
         if (right.type === 'Identity') {
           for (let i = 0; i < base.length; i++) {
             const elem = base[i];
-            const matched = this.visit(condition, elem);
-            if (isFalse(matched)) {
+            if (isFalse(this.visit(condition, elem))) {
               continue;
             }
             if (elem !== null) {
-              results.push(elem);
+              this.collect(results, elem);
             }
           }
           return results;
         }
         for (const elem of base) {
-          const matched = this.visit(condition, elem);
-          if (isFalse(matched)) {
+          if (isFalse(this.visit(condition, elem))) {
             continue;
           }
           const result = this.visit(right, elem) as JSONValue;
           if (result !== null) {
-            results.push(result);
+            this.collect(results, result);
           }
         }
         return results;
@@ -358,7 +392,9 @@ export class TreeInterpreter {
       }
       case 'Flatten': {
         const original = this.visit(node.child, value);
-        return Array.isArray(original) ? original.flat() : null;
+        const res = Array.isArray(original) ? original.flat() : null;
+        this.checkOutputSize(res);
+        return res;
       }
       case 'Root':
         return this._rootValue;
@@ -367,6 +403,7 @@ export class TreeInterpreter {
         for (const child of node.children) {
           collected.push(this.visit(child, value) as JSONValue);
         }
+        this.checkOutputSize(collected);
         return collected;
       }
       case 'MultiSelectHash': {
@@ -374,6 +411,7 @@ export class TreeInterpreter {
         for (const child of node.children) {
           collected[child.name] = this.visit(child.value, value) as JSONValue;
         }
+        this.checkOutputSize(collected);
         return collected;
       }
       case 'OrExpression': {
@@ -407,7 +445,9 @@ export class TreeInterpreter {
         for (const child of node.children) {
           args.push(this.visit(child, value) as JSONValue);
         }
-        return this.runtime.callFunction(node.name, args);
+        const res = this.runtime.callFunction(node.name, args);
+        this.checkOutputSize(res);
+        return res;
       }
       case 'ExpressionReference':
         return {

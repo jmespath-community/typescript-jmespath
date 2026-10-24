@@ -134,3 +134,5 @@ export const mod = (left?: JSONValue, right?: JSONValue): number => {
   const result = (left as number) % (right as number);
   return result;
 };
+
+export * from './ast';
