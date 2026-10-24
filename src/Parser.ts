@@ -18,6 +18,7 @@ import type {
 import Lexer from './Lexer';
 import { LexerToken, Token } from './Lexer.type';
 import { Options } from './Parser.type';
+import { countNodes } from './utils/ast';
 
 const bindingPower: Record<string, number> = {
   [Token.TOK_EOF]: 0,
@@ -64,17 +65,24 @@ class TokenParser {
   tokens: LexerToken[] = [];
   private depth = 0;
   private maxDepth?: number;
+  private nodeCount = 0;
+  private maxNodes?: number;
 
   parse(expression: string, options?: Options): ExpressionNode {
     this.loadTokens(expression, options || { enable_legacy_literals: false });
     this.index = 0;
     this.depth = 0;
+    this.nodeCount = 0;
     this.maxDepth = options?.maxDepth;
+    this.maxNodes = options?.maxNodes;
 
     const ast = this.expression(0);
     if (this.lookahead(0) !== Token.TOK_EOF) {
       const token = this.lookaheadToken(0);
       this.errorToken(token, `Syntax error: unexpected token type: ${token.type}, value: ${token.value}`);
+    }
+    if (this.maxNodes !== undefined && countNodes(ast) > this.maxNodes) {
+      throw new Error(`Expression exceeds maximum allowed node count of ${this.maxNodes}`);
     }
     return ast;
   }
@@ -89,12 +97,20 @@ class TokenParser {
       throw new Error(`Expression exceeds maximum allowed depth of ${this.maxDepth}`);
     }
     this.depth += 1;
+    this.nodeCount += 1;
+    if (this.maxNodes !== undefined && this.nodeCount > this.maxNodes) {
+      throw new Error(`Expression exceeds maximum allowed node count of ${this.maxNodes}`);
+    }
     try {
       const leftToken = this.lookaheadToken(0);
       this.advance();
       let left = this.nud(leftToken);
       let currentTokenType = this.lookahead(0);
       while (rbp < bindingPower[currentTokenType]) {
+        this.nodeCount += 1;
+        if (this.maxNodes !== undefined && this.nodeCount > this.maxNodes) {
+          throw new Error(`Expression exceeds maximum allowed node count of ${this.maxNodes}`);
+        }
         this.advance();
         left = this.led(currentTokenType, left);
         currentTokenType = this.lookahead(0);

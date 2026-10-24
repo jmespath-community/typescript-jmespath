@@ -139,6 +139,8 @@ Pass `options` to restrict execution limits on untrusted queries:
 ```typescript
 search(data, expression, {
   maxDepth: 32,                            // expression and evaluation recursion limit
+  maxNodes: 128,                           // maximum AST node count
+  maxOutputSize: 1000,                     // maximum elements or characters in results
   allowedFunctions: ['length', 'contains'], // allow-list specific built-ins
   disallowedFunctions: ['custom_heavy'],   // deny-list specific built-ins
   timeoutMs: 100,                          // query execution time limit in ms
@@ -171,6 +173,20 @@ const getName = compileQuery<string, { user: { name: string } }>("user.name");
 
 const result = getName({ user: { name: "Alice" } });
 // Outputs: "Alice"
+```
+
+### `validate(expression: string, options?: Options): ValidationResult`
+
+Validates an expression without throwing exceptions, checking syntax and security options:
+
+```typescript
+import { validate } from "@jmespath-community/jmespath";
+
+const result = validate("foo.bar");
+// { valid: true, ast: { type: 'Subexpression', ... } }
+
+const invalid = validate("foo.", { maxNodes: 10 });
+// { valid: false, error: 'Syntax error: ...' }
 ```
 
 ---

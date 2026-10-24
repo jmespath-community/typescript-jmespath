@@ -4,7 +4,7 @@ import { Token } from './Lexer.type';
 import { Options, ScopeEntry } from './Parser.type';
 import { Runtime } from './Runtime';
 import { ScopeChain } from './Scope';
-import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
+import { add, countNodes, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
 
 const emptyScopeChain = new ScopeChain();
 
@@ -33,12 +33,37 @@ export class TreeInterpreter {
   }
 
   search(node: ExpressionNode, value: JSONValue, options?: Options): JSONValue {
+    if (options?.maxNodes !== undefined && countNodes(node) > options.maxNodes) {
+      throw new Error(`Expression exceeds maximum allowed node count of ${options.maxNodes}`);
+    }
     this._rootValue = value;
     this._scope = emptyScopeChain;
     this._options = options;
     this._depth = 0;
     this._deadline = options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : 0;
-    return this.visit(node, value) as JSONValue;
+    const result = this.visit(node, value) as JSONValue;
+    this.checkOutputSize(result);
+    return result;
+  }
+
+  private checkOutputSize(val: unknown): void {
+    if (this._options?.maxOutputSize === undefined || val === null || val === undefined) {
+      return;
+    }
+    const max = this._options.maxOutputSize;
+    if (Array.isArray(val)) {
+      if (val.length > max) {
+        throw new Error(`Output size exceeds maximum allowed size of ${max}`);
+      }
+    } else if (typeof val === 'string') {
+      if (val.length > max) {
+        throw new Error(`Output size exceeds maximum allowed size of ${max}`);
+      }
+    } else if (typeof val === 'object') {
+      if (Object.keys(val).length > max) {
+        throw new Error(`Output size exceeds maximum allowed size of ${max}`);
+      }
+    }
   }
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
@@ -128,9 +153,13 @@ export class TreeInterpreter {
           // converting the result back to a string
           const chars = [...value];
           const sliced = this.slice(chars, start, stop, step);
-          return sliced.join('');
+          const res = sliced.join('');
+          this.checkOutputSize(res);
+          return res;
         } else {
-          return this.slice(value, start, stop, step);
+          const res = this.slice(value, start, stop, step);
+          this.checkOutputSize(res);
+          return res;
         }
       }
       case 'Projection': {
@@ -172,6 +201,9 @@ export class TreeInterpreter {
               const val = (elem as JSONObject)[key] ?? null;
               if (val !== null) {
                 collected.push(val);
+                if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
+                  throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+                }
               }
             }
           }
@@ -182,6 +214,9 @@ export class TreeInterpreter {
             const elem = base[i];
             if (elem !== null) {
               collected.push(elem);
+              if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
+                throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+              }
             }
           }
           return collected as JSONValue;
@@ -190,6 +225,9 @@ export class TreeInterpreter {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
             collected.push(current);
+            if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
+              throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+            }
           }
         }
         return collected as JSONValue;
@@ -211,6 +249,9 @@ export class TreeInterpreter {
               const val = (elem as JSONObject)[key] ?? null;
               if (val !== null) {
                 collected.push(val);
+                if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
+                  throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+                }
               }
             }
           }
@@ -221,6 +262,9 @@ export class TreeInterpreter {
             const elem = values[i];
             if (elem !== null) {
               collected.push(elem);
+              if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
+                throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+              }
             }
           }
           return collected;
@@ -229,6 +273,9 @@ export class TreeInterpreter {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
             collected.push(current);
+            if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
+              throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+            }
           }
         }
         return collected;
@@ -254,6 +301,9 @@ export class TreeInterpreter {
               const val = (elem as JSONObject)[key] ?? null;
               if (val !== null) {
                 results.push(val);
+                if (this._options?.maxOutputSize !== undefined && results.length > this._options.maxOutputSize) {
+                  throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+                }
               }
             }
           }
@@ -268,6 +318,9 @@ export class TreeInterpreter {
             }
             if (elem !== null) {
               results.push(elem);
+              if (this._options?.maxOutputSize !== undefined && results.length > this._options.maxOutputSize) {
+                throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+              }
             }
           }
           return results;
@@ -280,6 +333,9 @@ export class TreeInterpreter {
           const result = this.visit(right, elem) as JSONValue;
           if (result !== null) {
             results.push(result);
+            if (this._options?.maxOutputSize !== undefined && results.length > this._options.maxOutputSize) {
+              throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
+            }
           }
         }
         return results;
@@ -358,7 +414,9 @@ export class TreeInterpreter {
       }
       case 'Flatten': {
         const original = this.visit(node.child, value);
-        return Array.isArray(original) ? original.flat() : null;
+        const res = Array.isArray(original) ? original.flat() : null;
+        this.checkOutputSize(res);
+        return res;
       }
       case 'Root':
         return this._rootValue;
@@ -367,6 +425,7 @@ export class TreeInterpreter {
         for (const child of node.children) {
           collected.push(this.visit(child, value) as JSONValue);
         }
+        this.checkOutputSize(collected);
         return collected;
       }
       case 'MultiSelectHash': {
@@ -374,6 +433,7 @@ export class TreeInterpreter {
         for (const child of node.children) {
           collected[child.name] = this.visit(child.value, value) as JSONValue;
         }
+        this.checkOutputSize(collected);
         return collected;
       }
       case 'OrExpression': {
@@ -407,7 +467,9 @@ export class TreeInterpreter {
         for (const child of node.children) {
           args.push(this.visit(child, value) as JSONValue);
         }
-        return this.runtime.callFunction(node.name, args);
+        const res = this.runtime.callFunction(node.name, args);
+        this.checkOutputSize(res);
+        return res;
       }
       case 'ExpressionReference':
         return {

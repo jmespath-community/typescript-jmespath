@@ -14,9 +14,16 @@ import {
 } from './Runtime';
 import { ScopeChain } from './Scope';
 import TreeInterpreterInst from './TreeInterpreter';
+import { findDisallowedFunction } from './utils';
 
 export type { JSONArray, JSONObject, JSONPrimitive, JSONValue } from './JSON.type';
 export type { Options } from './Parser.type';
+
+export interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  ast?: ExpressionNode;
+}
 
 export interface CompiledQuery<T = JSONValue, D = unknown> {
   (data: D): T;
@@ -58,6 +65,27 @@ function compileQuery<T = JSONValue, D = unknown>(expression: string, options?: 
   fn.search = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
   fn.ast = nodeTree;
   return fn;
+}
+
+function validate(expression: string, options?: Options): ValidationResult {
+  if (typeof expression !== 'string') {
+    return { valid: false, error: 'Expression must be a string' };
+  }
+  try {
+    const ast = Parser.parse(expression, options);
+    if (options?.allowedFunctions || options?.disallowedFunctions) {
+      const fnError = findDisallowedFunction(ast, options);
+      if (fnError) {
+        return { valid: false, error: fnError };
+      }
+    }
+    return { valid: true, ast };
+  } catch (err) {
+    return {
+      valid: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 function tokenize(expression: string, options?: LexerOptions): LexerToken[] {
@@ -136,6 +164,7 @@ const TreeInterpreter = TreeInterpreterInst;
 const jmespath = {
   compile,
   compileQuery,
+  validate,
   registerFunction,
   register,
   unregisterFunction,

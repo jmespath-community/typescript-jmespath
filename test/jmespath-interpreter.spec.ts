@@ -56,4 +56,39 @@ describe('Searches compiled ast', () => {
       ),
     ).toThrow(/timed out/i);
   });
+
+  it('enforces maxNodes option', () => {
+    expect(() => jmespath.search({ a: { b: 1 } }, 'a.b', { maxNodes: 1 })).toThrow(/node count/i);
+    expect(jmespath.search({ a: { b: 1 } }, 'a.b', { maxNodes: 10 })).toEqual(1);
+    expect(() => jmespath.compile('a.b.c', { maxNodes: 2 })).toThrow(/node count/i);
+  });
+
+  it('enforces maxOutputSize option', () => {
+    const list = [{ a: 1 }, { a: 2 }, { a: 3 }];
+    expect(() => jmespath.search(list, '[*].a', { maxOutputSize: 2 })).toThrow(/output size/i);
+    expect(jmespath.search(list, '[*].a', { maxOutputSize: 5 })).toEqual([1, 2, 3]);
+
+    expect(() => jmespath.search(list, '[?a > `1`].a', { maxOutputSize: 1 })).toThrow(/output size/i);
+    expect(() => jmespath.search({ x: 1, y: 2, z: 3 }, '*', { maxOutputSize: 2 })).toThrow(/output size/i);
+    expect(() => jmespath.search([1, 2, 3, 4], '[0:4]', { maxOutputSize: 3 })).toThrow(/output size/i);
+    expect(() => jmespath.search('abcdef', '[0:5]', { maxOutputSize: 3 })).toThrow(/output size/i);
+  });
+
+  it('validates expressions without throwing', () => {
+    expect(jmespath.validate('foo.bar').valid).toBe(true);
+    expect(jmespath.validate('foo.bar').ast?.type).toBe('Subexpression');
+    expect(jmespath.validate('foo.').valid).toBe(false);
+    expect(jmespath.validate('foo.').error).toBeDefined();
+    expect(jmespath.validate(123 as unknown as string).valid).toBe(false);
+  });
+
+  it('validates expressions against security options', () => {
+    expect(jmespath.validate('a.b.c', { maxDepth: 1 }).valid).toBe(false);
+    expect(jmespath.validate('a.b.c', { maxDepth: 5 }).valid).toBe(true);
+    expect(jmespath.validate('a.b.c', { maxNodes: 2 }).valid).toBe(false);
+    expect(jmespath.validate('a.b.c', { maxNodes: 10 }).valid).toBe(true);
+    expect(jmespath.validate('to_string(@)', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
+    expect(jmespath.validate('to_string(@)', { allowedFunctions: ['length'] }).valid).toBe(false);
+    expect(jmespath.validate('length(@)', { allowedFunctions: ['length'] }).valid).toBe(true);
+  });
 });
