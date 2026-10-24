@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
@@ -128,7 +128,8 @@ describe('Build Artifacts', () => {
       const query = 'foo.bar';
 
       // Test basic functionality
-      const result = execSync(`echo '${testData}' | node ${binPath} '${query}'`, {
+      const result = execFileSync(process.execPath, [binPath, query], {
+        input: testData,
         encoding: 'utf-8',
         cwd: process.cwd(),
       });
@@ -139,7 +140,7 @@ describe('Build Artifacts', () => {
     it('should show help when --help flag is used', () => {
       const binPath = join(DIST_DIR, 'cli.mjs');
 
-      const result = execSync(`node ${binPath} --help`, {
+      const result = execFileSync(process.execPath, [binPath, '--help'], {
         encoding: 'utf-8',
         cwd: process.cwd(),
       });
