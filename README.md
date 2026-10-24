@@ -16,8 +16,9 @@ given a JMESPath expression.
   - [CommonJS (Node.js)](#commonjs-nodejs)
   - [Browser (UMD)](#browser-umd)
 - [API](#api)
-  - [`search(data, expression)`](#searchdata-jsonvalue-expression-string-jsonvalue)
+  - [`search(data, expression, options)`](#searchdata-d-expression-string-options-options-t)
   - [`compile(expression)`](#compileexpression-string-expressionnodetree)
+  - [`compileQuery(expression, options)`](#compilequeryexpression-string-options-options-compiledquery)
 - [Extensions](#extensions-to-original-spec)
 - [More Resources](#more-resources)
 - [Experimental Features](#experimental-features)
@@ -70,12 +71,25 @@ You can include the UMD build directly in your HTML file. The library will be av
 
 ## API
 
-### `search(data: JSONValue, expression: string): JSONValue`
+### `search<T = JSONValue, D = unknown>(data: D, expression: string, options?: Options): T`
 
 In the example we gave the `search` function input data of
 `{foo: {bar: {baz: [0, 1, 2, 3, 4]}}}` as well as the JMESPath
 expression `foo.bar.baz[2]`, and the `search` function evaluated
 the expression against the input data to produce the result `2`.
+
+Accepts custom TypeScript interfaces directly without casting:
+
+```typescript
+interface User {
+  name: string;
+  age: number;
+}
+
+const user: User = { name: "Alice", age: 30 };
+const name = search<string>(user, "name");
+// name is typed as string
+```
 
 The JMESPath language can do _a lot_ more than select an element
 from a list. Here are a few more examples:
@@ -118,6 +132,19 @@ search(JSON_DOCUMENT, "foo[?age > `30`]");
 // OUTPUTS: [ { age: 35 }, { age: 40 } ]
 ```
 
+#### Runtime Security Options
+
+Pass `options` to restrict execution limits on untrusted queries:
+
+```typescript
+search(data, expression, {
+  maxDepth: 32,                            // expression and evaluation recursion limit
+  allowedFunctions: ['length', 'contains'], // allow-list specific built-ins
+  disallowedFunctions: ['custom_heavy'],   // deny-list specific built-ins
+  timeoutMs: 100,                          // query execution time limit in ms
+});
+```
+
 ### `compile(expression: string): ExpressionNodeTree`
 
 You can precompile all your expressions ready for use later on. The `compile`
@@ -131,6 +158,19 @@ const ast = compile("foo.bar");
 
 const result = TreeInterpreter.search(ast, { foo: { bar: "BAZ" } });
 // RETURNS: "BAZ"
+```
+
+### `compileQuery<T = JSONValue, D = unknown>(expression: string, options?: Options): CompiledQuery<T, D>`
+
+Precompiles an expression into a reusable, callable function:
+
+```typescript
+import { compileQuery } from "@jmespath-community/jmespath";
+
+const getName = compileQuery<string, { user: { name: string } }>("user.name");
+
+const result = getName({ user: { name: "Alice" } });
+// Outputs: "Alice"
 ```
 
 ---

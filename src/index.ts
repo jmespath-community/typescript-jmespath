@@ -17,6 +17,12 @@ import TreeInterpreterInst from './TreeInterpreter';
 
 export type { JSONArray, JSONObject, JSONPrimitive, JSONValue } from './JSON.type';
 export type { Options } from './Parser.type';
+
+export interface CompiledQuery<T = JSONValue, D = unknown> {
+  (data: D): T;
+  search: (data: D) => T;
+  ast: ExpressionNode;
+}
 export type {
   BuiltInFunctionNames,
   FunctionRegistry,
@@ -41,8 +47,17 @@ const TYPE_OBJECT = InputArgument.TYPE_OBJECT;
 const TYPE_STRING = InputArgument.TYPE_STRING;
 
 function compile(expression: string, options?: Options): ExpressionNode {
+  return Parser.parse(expression, options);
+}
+
+function compileQuery<T = JSONValue, D = unknown>(expression: string, options?: Options): CompiledQuery<T, D> {
   const nodeTree = Parser.parse(expression, options);
-  return nodeTree;
+  const fn = function (data: D): T {
+    return TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+  } as CompiledQuery<T, D>;
+  fn.search = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+  fn.ast = nodeTree;
+  return fn;
 }
 
 function tokenize(expression: string, options?: LexerOptions): LexerToken[] {
@@ -92,7 +107,7 @@ const clearCustomFunctions = (): void => {
 const MAX_CACHE_SIZE = 1000;
 const astCache = new Map<string, ExpressionNode>();
 
-function search(data: JSONValue, expression: string, options?: Options): JSONValue {
+function search<T = JSONValue, D = unknown>(data: D, expression: string, options?: Options): T {
   let nodeTree: ExpressionNode | undefined;
   if (!options) {
     nodeTree = astCache.get(expression);
@@ -109,7 +124,7 @@ function search(data: JSONValue, expression: string, options?: Options): JSONVal
   } else {
     nodeTree = Parser.parse(expression, options);
   }
-  return TreeInterpreterInst.search(nodeTree, data);
+  return TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
 }
 
 function Scope(): ScopeChain {
@@ -120,6 +135,7 @@ const TreeInterpreter = TreeInterpreterInst;
 
 const jmespath = {
   compile,
+  compileQuery,
   registerFunction,
   register,
   unregisterFunction,

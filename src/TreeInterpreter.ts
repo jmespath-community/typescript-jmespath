@@ -1,7 +1,7 @@
 import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
 import { Token } from './Lexer.type';
-import { ScopeEntry } from './Parser.type';
+import { Options, ScopeEntry } from './Parser.type';
 import { Runtime } from './Runtime';
 import { ScopeChain } from './Scope';
 import { add, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
@@ -12,6 +12,9 @@ export class TreeInterpreter {
   runtime: Runtime;
   private _rootValue: JSONValue | null = null;
   private _scope: ScopeChain;
+  private _options?: Options;
+  private _depth = 0;
+  private _deadline = 0;
 
   constructor() {
     this.runtime = new Runtime(this);
@@ -23,16 +26,42 @@ export class TreeInterpreter {
     interpreter.runtime._functionTable = this.runtime._functionTable;
     interpreter._rootValue = this._rootValue;
     interpreter._scope = this._scope.withScope(scope);
+    interpreter._options = this._options;
+    interpreter._depth = this._depth;
+    interpreter._deadline = this._deadline;
     return interpreter;
   }
 
-  search(node: ExpressionNode, value: JSONValue): JSONValue {
+  search(node: ExpressionNode, value: JSONValue, options?: Options): JSONValue {
     this._rootValue = value;
     this._scope = emptyScopeChain;
+    this._options = options;
+    this._depth = 0;
+    this._deadline = options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : 0;
     return this.visit(node, value) as JSONValue;
   }
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
+    if (this._options) {
+      if (this._options.maxDepth !== undefined && this._depth >= this._options.maxDepth) {
+        throw new Error(`Evaluation exceeds maximum allowed depth of ${this._options.maxDepth}`);
+      }
+      if (this._deadline > 0 && Date.now() >= this._deadline) {
+        throw new Error(`Query execution timed out after ${this._options.timeoutMs}ms`);
+      }
+    }
+    this._depth += 1;
+    try {
+      return this.evaluateNode(node, value);
+    } finally {
+      this._depth -= 1;
+    }
+  }
+
+  private evaluateNode(
+    node: ExpressionNode,
+    value: JSONValue | ExpressionNode,
+  ): JSONValue | ExpressionNode | ExpressionReference {
     switch (node.type) {
       case 'Ternary': {
         const condition = this.visit(node.condition, value);
@@ -135,6 +164,9 @@ export class TreeInterpreter {
         if (right.type === 'Field') {
           const key = right.name;
           for (let i = 0; i < base.length; i++) {
+            if (this._deadline > 0 && Date.now() >= this._deadline) {
+              throw new Error(`Query execution timed out after ${this._options?.timeoutMs}ms`);
+            }
             const elem = base[i];
             if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
               const val = (elem as JSONObject)[key] ?? null;
@@ -365,6 +397,12 @@ export class TreeInterpreter {
       case 'Pipe':
         return this.visit(node.right, this.visit(node.left, value));
       case 'Function': {
+        if (this._options?.allowedFunctions && !this._options.allowedFunctions.includes(node.name)) {
+          throw new Error(`Function '${node.name}' is not allowed`);
+        }
+        if (this._options?.disallowedFunctions && this._options.disallowedFunctions.includes(node.name)) {
+          throw new Error(`Function '${node.name}' is disallowed`);
+        }
         const args: JSONValue[] = [];
         for (const child of node.children) {
           args.push(this.visit(child, value) as JSONValue);
