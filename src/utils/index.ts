@@ -51,9 +51,6 @@ export const isFalse = (obj: unknown): boolean => {
     if (Array.isArray(obj)) {
       return obj.length === 0;
     }
-    if (obj === null) {
-      return true;
-    }
     // check if object is empty
     return Object.keys(obj).length === 0;
   }
@@ -106,33 +103,27 @@ const notZero = (n: number): number => {
 
 export const add = (left?: JSONValue, right?: JSONValue): number => {
   ensureNumbers(left, right);
-  const result = (left as number) + (right as number);
-  return result;
+  return (left as number) + (right as number);
 };
 export const sub = (left?: JSONValue, right?: JSONValue): number => {
   ensureNumbers(left, right);
-  const result = (left as number) - (right as number);
-  return result;
+  return (left as number) - (right as number);
 };
 export const mul = (left?: JSONValue, right?: JSONValue): number => {
   ensureNumbers(left, right);
-  const result = (left as number) * (right as number);
-  return result;
+  return (left as number) * (right as number);
 };
 export const divide = (left?: JSONValue, right?: JSONValue): number => {
   ensureNumbers(left, right);
-  const result = (left as number) / notZero(right as number);
-  return result;
+  return (left as number) / notZero(right as number);
 };
 export const div = (left?: JSONValue, right?: JSONValue): number => {
   ensureNumbers(left, right);
-  const result = Math.floor((left as number) / notZero(right as number));
-  return result;
+  return Math.floor((left as number) / notZero(right as number));
 };
 export const mod = (left?: JSONValue, right?: JSONValue): number => {
   ensureNumbers(left, right);
-  const result = (left as number) % (right as number);
-  return result;
+  return (left as number) % (right as number);
 };
 
 export * from './ast';

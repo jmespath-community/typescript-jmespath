@@ -520,7 +520,6 @@ class TokenParser {
     let keyToken;
     let keyName: string;
     let value: ExpressionNode;
-    // tslint:disable-next-line: prettier
     for (;;) {
       keyToken = this.lookaheadToken(0);
       if (!identifierTypes.includes(keyToken.type)) {
