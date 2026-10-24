@@ -860,7 +860,7 @@ export class Runtime implements FunctionRegistry {
   };
 
   private functionSort: RuntimeFunction<[(string | number)[]], (string | number)[]> = ([inputValue]) => {
-    if (inputValue.length == 0) {
+    if (inputValue.length <= 1) {
       return inputValue;
     }
     if (typeof inputValue[0] === 'string') {
@@ -871,7 +871,7 @@ export class Runtime implements FunctionRegistry {
 
   private functionSortBy: RuntimeFunction<[number[] | string[], ExpressionNode], JSONValue> = resolvedArgs => {
     const sortedArray = [...resolvedArgs[0]];
-    if (sortedArray.length === 0) {
+    if (sortedArray.length <= 1) {
       return sortedArray;
     }
     const interpreter = this._interpreter;

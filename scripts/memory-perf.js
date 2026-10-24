@@ -1,4 +1,4 @@
-const jmespath = require('../dist/lib/src');
+import jmespath from '../dist/index.mjs';
 
 // Memory allocation analysis script
 function analyzeMemoryUsage() {

@@ -1,5 +1,5 @@
-const jmespath = require('../dist/lib/src');
-const { Bench } = require('tinybench');
+import { Bench } from 'tinybench';
+import jmespath from '../dist/index.mjs';
 
 async function runBenchmarks() {
   const bench = new Bench({

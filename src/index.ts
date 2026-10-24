@@ -89,8 +89,26 @@ const clearCustomFunctions = (): void => {
   TreeInterpreterInst.runtime.clearCustomFunctions();
 };
 
+const MAX_CACHE_SIZE = 1000;
+const astCache = new Map<string, ExpressionNode>();
+
 function search(data: JSONValue, expression: string, options?: Options): JSONValue {
-  const nodeTree = Parser.parse(expression, options);
+  let nodeTree: ExpressionNode | undefined;
+  if (!options) {
+    nodeTree = astCache.get(expression);
+    if (!nodeTree) {
+      nodeTree = Parser.parse(expression);
+      if (astCache.size >= MAX_CACHE_SIZE) {
+        const firstKey = astCache.keys().next().value;
+        if (firstKey !== undefined) {
+          astCache.delete(firstKey);
+        }
+      }
+      astCache.set(expression, nodeTree);
+    }
+  } else {
+    nodeTree = Parser.parse(expression, options);
+  }
   return TreeInterpreterInst.search(nodeTree, data);
 }
 
