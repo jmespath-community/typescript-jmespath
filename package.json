@@ -9,7 +9,7 @@
   },
   "type": "module",
   "bin": {
-    "jp": "dist/cli.mjs"
+    "jp": "./dist/cli.mjs"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
