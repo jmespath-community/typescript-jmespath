@@ -36,6 +36,49 @@ describe('Searches compiled ast', () => {
     expect(id).toEqual('x1');
   });
 
+  it('automatically infers types from literal path expressions', () => {
+    interface Account {
+      id: number;
+      profile: {
+        name: string;
+        roles: string[];
+      };
+      members: {
+        userId: string;
+        active: boolean;
+      }[];
+      meta?: {
+        version: number;
+      };
+    }
+
+    const account: Account = {
+      id: 42,
+      profile: { name: 'Admin', roles: ['admin', 'owner'] },
+      members: [{ userId: 'u1', active: true }],
+    };
+
+    const id = jmespath.search(account, 'id');
+    const _tId: number = id;
+    expect(_tId).toBe(42);
+
+    const name = jmespath.search(account, 'profile.name');
+    const _tName: string = name;
+    expect(_tName).toBe('Admin');
+
+    const firstRole = jmespath.search(account, 'profile.roles[0]');
+    const _tRole: string = firstRole;
+    expect(_tRole).toBe('admin');
+
+    const activeList = jmespath.search(account, 'members[*].active');
+    const _tActive: boolean[] = activeList;
+    expect(_tActive).toEqual([true]);
+
+    const meta = jmespath.search(account, 'meta.version');
+    const _tMeta: number | null = meta;
+    expect(_tMeta).toBeNull();
+  });
+
   it('enforces maxDepth option', () => {
     expect(() => jmespath.search({ a: { b: 1 } }, 'a.b', { maxDepth: 1 })).toThrow(/depth/i);
     expect(jmespath.search({ a: { b: 1 } }, 'a.b', { maxDepth: 5 })).toEqual(1);

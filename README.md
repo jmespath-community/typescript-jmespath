@@ -132,6 +132,21 @@ search(JSON_DOCUMENT, "foo[?age > `30`]");
 // OUTPUTS: [ { age: 35 }, { age: 40 } ]
 ```
 
+#### Automatic Type Inference
+
+Literal path queries automatically infer property types without requiring manual type parameters or type assertions:
+
+```typescript
+const user = {
+  profile: { name: "Alice", email: "alice@example.com" },
+  tags: ["admin", "dev"],
+};
+
+const name = search(user, "profile.name"); // inferred as string
+const tag = search(user, "tags[0]");       // inferred as string
+const tags = search(user, "tags[*]");      // inferred as string[]
+```
+
 #### Runtime Security Options
 
 Pass `options` to restrict execution limits on untrusted queries:
