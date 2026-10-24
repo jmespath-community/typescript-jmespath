@@ -97,20 +97,14 @@ class TokenParser {
       throw new Error(`Expression exceeds maximum allowed depth of ${this.maxDepth}`);
     }
     this.depth += 1;
-    this.nodeCount += 1;
-    if (this.maxNodes !== undefined && this.nodeCount > this.maxNodes) {
-      throw new Error(`Expression exceeds maximum allowed node count of ${this.maxNodes}`);
-    }
+    this.trackNode();
     try {
       const leftToken = this.lookaheadToken(0);
       this.advance();
       let left = this.nud(leftToken);
       let currentTokenType = this.lookahead(0);
       while (rbp < bindingPower[currentTokenType]) {
-        this.nodeCount += 1;
-        if (this.maxNodes !== undefined && this.nodeCount > this.maxNodes) {
-          throw new Error(`Expression exceeds maximum allowed node count of ${this.maxNodes}`);
-        }
+        this.trackNode();
         this.advance();
         left = this.led(currentTokenType, left);
         currentTokenType = this.lookahead(0);
@@ -118,6 +112,13 @@ class TokenParser {
       return left;
     } finally {
       this.depth -= 1;
+    }
+  }
+
+  private trackNode(): void {
+    this.nodeCount += 1;
+    if (this.maxNodes !== undefined && this.nodeCount > this.maxNodes) {
+      throw new Error(`Expression exceeds maximum allowed node count of ${this.maxNodes}`);
     }
   }
 

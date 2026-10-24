@@ -47,22 +47,27 @@ export class TreeInterpreter {
   }
 
   private checkOutputSize(val: unknown): void {
-    if (this._options?.maxOutputSize === undefined || val === null || val === undefined) {
+    const max = this._options?.maxOutputSize;
+    if (max === undefined || val == null) {
       return;
     }
-    const max = this._options.maxOutputSize;
-    if (Array.isArray(val)) {
-      if (val.length > max) {
-        throw new Error(`Output size exceeds maximum allowed size of ${max}`);
-      }
-    } else if (typeof val === 'string') {
-      if (val.length > max) {
-        throw new Error(`Output size exceeds maximum allowed size of ${max}`);
-      }
-    } else if (typeof val === 'object') {
-      if (Object.keys(val).length > max) {
-        throw new Error(`Output size exceeds maximum allowed size of ${max}`);
-      }
+
+    const size =
+      Array.isArray(val) || typeof val === 'string'
+        ? val.length
+        : typeof val === 'object'
+          ? Object.keys(val).length
+          : 0;
+
+    if (size > max) {
+      throw new Error(`Output size exceeds maximum allowed size of ${max}`);
+    }
+  }
+
+  private collect(target: JSONValue[], item: JSONValue): void {
+    target.push(item);
+    if (this._options?.maxOutputSize !== undefined && target.length > this._options.maxOutputSize) {
+      throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
     }
   }
 
@@ -197,14 +202,12 @@ export class TreeInterpreter {
               throw new Error(`Query execution timed out after ${this._options?.timeoutMs}ms`);
             }
             const elem = base[i];
-            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
-              const val = (elem as JSONObject)[key] ?? null;
-              if (val !== null) {
-                collected.push(val);
-                if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
-                  throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-                }
-              }
+            if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
+              continue;
+            }
+            const val = (elem as JSONObject)[key];
+            if (val !== undefined && val !== null) {
+              this.collect(collected, val);
             }
           }
           return collected as JSONValue;
@@ -213,10 +216,7 @@ export class TreeInterpreter {
           for (let i = 0; i < base.length; i++) {
             const elem = base[i];
             if (elem !== null) {
-              collected.push(elem);
-              if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
-                throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-              }
+              this.collect(collected, elem);
             }
           }
           return collected as JSONValue;
@@ -224,10 +224,7 @@ export class TreeInterpreter {
         for (const elem of base) {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
-            collected.push(current);
-            if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
-              throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-            }
+            this.collect(collected, current);
           }
         }
         return collected as JSONValue;
@@ -245,14 +242,12 @@ export class TreeInterpreter {
           const key = right.name;
           for (let i = 0; i < values.length; i++) {
             const elem = values[i];
-            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
-              const val = (elem as JSONObject)[key] ?? null;
-              if (val !== null) {
-                collected.push(val);
-                if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
-                  throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-                }
-              }
+            if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
+              continue;
+            }
+            const val = (elem as JSONObject)[key];
+            if (val !== undefined && val !== null) {
+              this.collect(collected, val);
             }
           }
           return collected;
@@ -261,10 +256,7 @@ export class TreeInterpreter {
           for (let i = 0; i < values.length; i++) {
             const elem = values[i];
             if (elem !== null) {
-              collected.push(elem);
-              if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
-                throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-              }
+              this.collect(collected, elem);
             }
           }
           return collected;
@@ -272,10 +264,7 @@ export class TreeInterpreter {
         for (const elem of values) {
           const current = this.visit(right, elem) as JSONValue;
           if (current !== null) {
-            collected.push(current);
-            if (this._options?.maxOutputSize !== undefined && collected.length > this._options.maxOutputSize) {
-              throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-            }
+            this.collect(collected, current);
           }
         }
         return collected;
@@ -293,18 +282,15 @@ export class TreeInterpreter {
           const key = right.name;
           for (let i = 0; i < base.length; i++) {
             const elem = base[i];
-            const matched = this.visit(condition, elem);
-            if (isFalse(matched)) {
+            if (isFalse(this.visit(condition, elem))) {
               continue;
             }
-            if (elem !== null && typeof elem === 'object' && !Array.isArray(elem)) {
-              const val = (elem as JSONObject)[key] ?? null;
-              if (val !== null) {
-                results.push(val);
-                if (this._options?.maxOutputSize !== undefined && results.length > this._options.maxOutputSize) {
-                  throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-                }
-              }
+            if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
+              continue;
+            }
+            const val = (elem as JSONObject)[key];
+            if (val !== undefined && val !== null) {
+              this.collect(results, val);
             }
           }
           return results;
@@ -312,30 +298,22 @@ export class TreeInterpreter {
         if (right.type === 'Identity') {
           for (let i = 0; i < base.length; i++) {
             const elem = base[i];
-            const matched = this.visit(condition, elem);
-            if (isFalse(matched)) {
+            if (isFalse(this.visit(condition, elem))) {
               continue;
             }
             if (elem !== null) {
-              results.push(elem);
-              if (this._options?.maxOutputSize !== undefined && results.length > this._options.maxOutputSize) {
-                throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-              }
+              this.collect(results, elem);
             }
           }
           return results;
         }
         for (const elem of base) {
-          const matched = this.visit(condition, elem);
-          if (isFalse(matched)) {
+          if (isFalse(this.visit(condition, elem))) {
             continue;
           }
           const result = this.visit(right, elem) as JSONValue;
           if (result !== null) {
-            results.push(result);
-            if (this._options?.maxOutputSize !== undefined && results.length > this._options.maxOutputSize) {
-              throw new Error(`Output size exceeds maximum allowed size of ${this._options.maxOutputSize}`);
-            }
+            this.collect(results, result);
           }
         }
         return results;
