@@ -4,8 +4,8 @@ export const findFirst = (subject: string, sub: string, start?: number, end?: nu
   if (!subject || !sub) {
     return null;
   }
-  const s = Math.max(ensureInteger(start || 0), 0);
-  const e = Math.min(ensureInteger(end || subject.length), subject.length);
+  const s = Math.max(ensureInteger(start ?? 0), 0);
+  const e = Math.min(ensureInteger(end ?? subject.length), subject.length);
   const offset = subject.slice(s, e).indexOf(sub);
   return offset === -1 ? null : offset + s;
 };
@@ -13,8 +13,8 @@ export const findLast = (subject: string, sub: string, start?: number, end?: num
   if (!subject || !sub) {
     return null;
   }
-  const s = Math.max(ensureInteger(start || 0), 0);
-  const e = Math.min(ensureInteger(end || subject.length), subject.length);
+  const s = Math.max(ensureInteger(start ?? 0), 0);
+  const e = Math.min(ensureInteger(end ?? subject.length), subject.length);
   const offset = subject.slice(s, e).lastIndexOf(sub);
   return offset === -1 ? null : offset + s;
 };
