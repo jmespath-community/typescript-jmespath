@@ -434,7 +434,7 @@ export class TreeInterpreter {
     if (step === 1) {
       return collection.slice(start, end);
     }
-    const len = Math.ceil(Math.abs(start - end) / Math.abs(step));
+    const len = Math.max(0, Math.ceil((end - start) / step));
     const result = new Array(len);
     let idx = 0;
     if (step > 0) {
