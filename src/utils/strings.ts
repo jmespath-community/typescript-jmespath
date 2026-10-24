@@ -4,24 +4,22 @@ export const findFirst = (subject: string, sub: string, start?: number, end?: nu
   if (!subject || !sub) {
     return null;
   }
-  start = Math.max(ensureInteger((start = start || 0)), 0);
-  end = Math.min(ensureInteger((end = end || subject.length)), subject.length);
-  const offset = subject.slice(start, end).indexOf(sub);
-  return offset === -1 ? null : offset + start;
+  const s = Math.max(ensureInteger(start || 0), 0);
+  const e = Math.min(ensureInteger(end || subject.length), subject.length);
+  const offset = subject.slice(s, e).indexOf(sub);
+  return offset === -1 ? null : offset + s;
 };
 export const findLast = (subject: string, sub: string, start?: number, end?: number): number | null => {
   if (!subject || !sub) {
     return null;
   }
-  start = Math.max(ensureInteger((start = start || 0)), 0);
-  end = Math.min(ensureInteger((end = end || subject.length)), subject.length);
-  const offset = subject.slice(start, end).lastIndexOf(sub);
-  const result = offset === -1 ? null : offset + start;
-  return result;
+  const s = Math.max(ensureInteger(start || 0), 0);
+  const e = Math.min(ensureInteger(end || subject.length), subject.length);
+  const offset = subject.slice(s, e).lastIndexOf(sub);
+  return offset === -1 ? null : offset + s;
 };
 export const lower = (subject: string): string => subject.toLowerCase();
-const ensurePadFuncParams = (name: string, width: number, padding?: string): string => {
-  padding = padding || ' ';
+const ensurePadFuncParams = (name: string, width: number, padding = ' '): string => {
   if (padding.length > 1) {
     throw new Error(`invalid value, ${name} expects its 'pad' parameter to be a valid string with a single codepoint`);
   }
@@ -41,11 +39,12 @@ export const replace = (subject: string, string: string, by: string, count?: num
     return subject;
   }
   if (!count) {
-    // emulating es2021: String.prototype.replaceAll()
     return subject.split(string).join(by);
   }
   ensurePositiveInteger(count);
-  [...Array(count).keys()].map(() => (subject = subject.replace(string, by)));
+  while (count-- > 0 && subject.includes(string)) {
+    subject = subject.replace(string, by);
+  }
   return subject;
 };
 export const split = (subject: string, search: string, count?: number): string[] => {

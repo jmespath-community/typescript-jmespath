@@ -71,6 +71,43 @@ export class TreeInterpreter {
     }
   }
 
+  private evaluateProjectionItems(items: JSONArray, right: ExpressionNode): JSONValue {
+    const collected: JSONValue[] = [];
+    if (right.type === 'Field') {
+      const key = right.name;
+      for (let i = 0; i < items.length; i++) {
+        if (this._deadline > 0 && Date.now() >= this._deadline) {
+          throw new Error(`Query execution timed out after ${this._options?.timeoutMs}ms`);
+        }
+        const elem = items[i];
+        if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
+          continue;
+        }
+        const val = (elem as JSONObject)[key];
+        if (val !== undefined && val !== null) {
+          this.collect(collected, val);
+        }
+      }
+      return collected;
+    }
+    if (right.type === 'Identity') {
+      for (let i = 0; i < items.length; i++) {
+        const elem = items[i];
+        if (elem !== null) {
+          this.collect(collected, elem);
+        }
+      }
+      return collected;
+    }
+    for (const elem of items) {
+      const current = this.visit(right, elem) as JSONValue;
+      if (current !== null) {
+        this.collect(collected, current);
+      }
+    }
+    return collected;
+  }
+
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
     if (this._options) {
       if (this._options.maxDepth !== undefined && this._depth >= this._options.maxDepth) {
@@ -108,16 +145,11 @@ export class TreeInterpreter {
         // return the value of the field
         return (value as JSONObject)[identifier] ?? null;
       case 'LetExpression': {
-        const { bindings, expression } = node;
-        let scope = {};
-        bindings.forEach(binding => {
-          const reference = this.visit(binding, value) as JSONObject;
-          scope = {
-            ...scope,
-            ...reference,
-          };
-        });
-        return this.withScope(scope).visit(expression, value);
+        const scope: JSONObject = {};
+        for (const binding of node.bindings) {
+          Object.assign(scope, this.visit(binding, value));
+        }
+        return this.withScope(scope).visit(node.expression, value);
       }
       case 'Binding': {
         const { variable, reference } = node;
@@ -152,122 +184,27 @@ export class TreeInterpreter {
           return null;
         }
         const { start, stop, step } = this.computeSliceParams(value.length, node);
-        if (typeof value === 'string') {
-          // string slices is implemented by slicing
-          // the corresponding array of codepoints and
-          // converting the result back to a string
-          const chars = [...value];
-          const sliced = this.slice(chars, start, stop, step);
-          const res = sliced.join('');
-          this.checkOutputSize(res);
-          return res;
-        } else {
-          const res = this.slice(value, start, stop, step);
-          this.checkOutputSize(res);
-          return res;
-        }
+        const target = typeof value === 'string' ? [...value] : value;
+        const sliced = this.slice(target, start, stop, step);
+        const res = typeof value === 'string' ? (sliced as string[]).join('') : sliced;
+        this.checkOutputSize(res);
+        return res;
       }
       case 'Projection': {
         const { left, right } = node;
-
-        // projections typically operate on arrays
-        // string slicing produces a 'Projection' whose
-        // first child is an 'IndexExpression' whose
-        // second child is an 'Slice'
-
-        // we allow execution of the left index-expression
-        // to return a string only if the AST has this
-        // specific shape
-
-        let allowString = false;
-        if (left.type === 'IndexExpression' && left.right.type === 'Slice') {
-          allowString = true;
-        }
-
+        const allowString = left.type === 'IndexExpression' && left.right.type === 'Slice';
         const base = this.visit(left, value);
         if (allowString && typeof base === 'string') {
-          // a projection is really a sub-expression in disguise
-          // we must evaluate the right hand expression
           return this.visit(right, base) as JSONValue;
         }
-
-        if (!Array.isArray(base)) {
-          return null;
-        }
-        const collected: JSONValue[] = [];
-        if (right.type === 'Field') {
-          const key = right.name;
-          for (let i = 0; i < base.length; i++) {
-            if (this._deadline > 0 && Date.now() >= this._deadline) {
-              throw new Error(`Query execution timed out after ${this._options?.timeoutMs}ms`);
-            }
-            const elem = base[i];
-            if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
-              continue;
-            }
-            const val = (elem as JSONObject)[key];
-            if (val !== undefined && val !== null) {
-              this.collect(collected, val);
-            }
-          }
-          return collected as JSONValue;
-        }
-        if (right.type === 'Identity') {
-          for (let i = 0; i < base.length; i++) {
-            const elem = base[i];
-            if (elem !== null) {
-              this.collect(collected, elem);
-            }
-          }
-          return collected as JSONValue;
-        }
-        for (const elem of base) {
-          const current = this.visit(right, elem) as JSONValue;
-          if (current !== null) {
-            this.collect(collected, current);
-          }
-        }
-        return collected as JSONValue;
+        return Array.isArray(base) ? this.evaluateProjectionItems(base, right) : null;
       }
       case 'ValueProjection': {
-        const { left, right } = node;
-
-        const base = this.visit(left, value);
+        const base = this.visit(node.left, value);
         if (base === null || typeof base !== 'object' || Array.isArray(base)) {
           return null;
         }
-        const collected: JSONValue[] = [];
-        const values = Object.values(base);
-        if (right.type === 'Field') {
-          const key = right.name;
-          for (let i = 0; i < values.length; i++) {
-            const elem = values[i];
-            if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
-              continue;
-            }
-            const val = (elem as JSONObject)[key];
-            if (val !== undefined && val !== null) {
-              this.collect(collected, val);
-            }
-          }
-          return collected;
-        }
-        if (right.type === 'Identity') {
-          for (let i = 0; i < values.length; i++) {
-            const elem = values[i];
-            if (elem !== null) {
-              this.collect(collected, elem);
-            }
-          }
-          return collected;
-        }
-        for (const elem of values) {
-          const current = this.visit(right, elem) as JSONValue;
-          if (current !== null) {
-            this.collect(collected, current);
-          }
-        }
-        return collected;
+        return this.evaluateProjectionItems(Object.values(base), node.right);
       }
       case 'FilterProjection': {
         const { left, right, condition } = node;

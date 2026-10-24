@@ -173,6 +173,13 @@ const createObjectFunction =
   ([obj]) =>
     objFn(obj);
 
+const ARRAY_SUBTYPES: Partial<Record<InputArgument, InputArgument>> = {
+  [InputArgument.TYPE_ARRAY_NUMBER]: InputArgument.TYPE_NUMBER,
+  [InputArgument.TYPE_ARRAY_OBJECT]: InputArgument.TYPE_OBJECT,
+  [InputArgument.TYPE_ARRAY_STRING]: InputArgument.TYPE_STRING,
+  [InputArgument.TYPE_ARRAY_ARRAY]: InputArgument.TYPE_ARRAY,
+};
+
 export class Runtime implements FunctionRegistry {
   _interpreter: TreeInterpreter;
   _functionTable: FunctionTable;
@@ -551,40 +558,18 @@ export class Runtime implements FunctionRegistry {
     if (expected === InputArgument.TYPE_ANY) {
       return true;
     }
-    if (
-      expected === InputArgument.TYPE_ARRAY_STRING ||
-      expected === InputArgument.TYPE_ARRAY_NUMBER ||
-      expected === InputArgument.TYPE_ARRAY_OBJECT ||
-      expected === InputArgument.TYPE_ARRAY_ARRAY ||
-      expected === InputArgument.TYPE_ARRAY
-    ) {
-      if (expected === InputArgument.TYPE_ARRAY) {
-        return actual === InputArgument.TYPE_ARRAY;
+    const subtype = ARRAY_SUBTYPES[expected];
+    if (subtype !== undefined) {
+      if (actual !== InputArgument.TYPE_ARRAY) {
+        return false;
       }
-      if (actual === InputArgument.TYPE_ARRAY) {
-        let subtype;
-        if (expected === InputArgument.TYPE_ARRAY_NUMBER) {
-          subtype = InputArgument.TYPE_NUMBER;
-        } else if (expected === InputArgument.TYPE_ARRAY_OBJECT) {
-          subtype = InputArgument.TYPE_OBJECT;
-        } else if (expected === InputArgument.TYPE_ARRAY_STRING) {
-          subtype = InputArgument.TYPE_STRING;
-        } else if (expected === InputArgument.TYPE_ARRAY_ARRAY) {
-          subtype = InputArgument.TYPE_ARRAY;
-        }
-        const array = <JSONValue[]>argValue;
-        for (let i = 0; i < array.length; i += 1) {
-          const typeName = this.getTypeName(array[i]);
-          if (typeName !== undefined && subtype !== undefined && !this.typeMatches(typeName, subtype, array[i])) {
-            return false;
-          }
-        }
-        return true;
-      }
-    } else {
-      return actual === expected;
+      const array = argValue as JSONValue[];
+      return array.every(item => {
+        const typeName = this.getTypeName(item);
+        return typeName === undefined || this.typeMatches(typeName, subtype, item);
+      });
     }
-    return false;
+    return actual === expected;
   }
   private getTypeName(obj: JSONValue | ExpressionNode): InputArgument | undefined {
     if (obj === null) {
@@ -657,9 +642,8 @@ export class Runtime implements FunctionRegistry {
     return null;
   };
 
-  private functionEndsWith: RuntimeFunction<[string, string], boolean> = resolvedArgs => {
-    const [searchStr, suffix] = resolvedArgs;
-    return searchStr.includes(suffix, searchStr.length - suffix.length);
+  private functionEndsWith: RuntimeFunction<[string, string], boolean> = ([searchStr, suffix]) => {
+    return searchStr.endsWith(suffix);
   };
 
   private functionFindFirst = this.createFindFunction(findFirst);
@@ -678,11 +662,11 @@ export class Runtime implements FunctionRegistry {
   }
 
   private functionFromItems: RuntimeFunction<[JSONArrayKeyValuePairs], JSONObject> = ([array]) => {
-    array.map((pair: [string, JSONValue]) => {
-      if (pair.length != 2 || typeof pair[0] !== 'string') {
+    for (const pair of array) {
+      if (pair.length !== 2 || typeof pair[0] !== 'string') {
         throw new Error('invalid value, each array must contain two elements, a pair of string and value');
       }
-    });
+    }
     return Object.fromEntries(array);
   };
 
@@ -768,12 +752,7 @@ export class Runtime implements FunctionRegistry {
   };
 
   private functionMerge: RuntimeFunction<JSONObject[], JSONObject> = resolvedArgs => {
-    let merged = {};
-    for (let i = 0; i < resolvedArgs.length; i += 1) {
-      const current = resolvedArgs[i];
-      merged = Object.assign(merged, current);
-    }
-    return merged;
+    return Object.assign({}, ...resolvedArgs);
   };
 
   private functionMin: RuntimeFunction<[(string | number)[]], string | number | null> = ([inputValue]) => {
@@ -814,12 +793,7 @@ export class Runtime implements FunctionRegistry {
   };
 
   private functionNotNull: RuntimeFunction<JSONArray, JSONValue> = resolvedArgs => {
-    for (let i = 0; i < resolvedArgs.length; i += 1) {
-      if (this.getTypeName(resolvedArgs[i]) !== InputArgument.TYPE_NULL) {
-        return resolvedArgs[i];
-      }
-    }
-    return null;
+    return resolvedArgs.find(arg => arg !== null) ?? null;
   };
 
   private functionPadLeft = this.createPadFunction(padLeft);
@@ -912,10 +886,7 @@ export class Runtime implements FunctionRegistry {
   };
 
   private functionToArray: RuntimeFunction<[JSONValue], JSONArray> = ([inputValue]) => {
-    if (this.getTypeName(inputValue) === InputArgument.TYPE_ARRAY) {
-      return inputValue as JSONArray;
-    }
-    return [inputValue];
+    return Array.isArray(inputValue) ? inputValue : [inputValue];
   };
 
   private functionToNumber: RuntimeFunction<[JSONValue], number | null> = ([inputValue]) => {
@@ -934,10 +905,7 @@ export class Runtime implements FunctionRegistry {
   };
 
   private functionToString: RuntimeFunction<[JSONValue], string> = ([inputValue]) => {
-    if (this.getTypeName(inputValue) === InputArgument.TYPE_STRING) {
-      return inputValue as string;
-    }
-    return JSON.stringify(inputValue);
+    return typeof inputValue === 'string' ? inputValue : JSON.stringify(inputValue);
   };
 
   private functionTrim = this.createTrimFunction(trim);
@@ -955,29 +923,16 @@ export class Runtime implements FunctionRegistry {
   }
 
   private functionType: RuntimeFunction<[JSONValue], string> = ([inputValue]) => {
-    switch (this.getTypeName(inputValue)) {
-      case InputArgument.TYPE_NUMBER:
-        return 'number';
-      case InputArgument.TYPE_STRING:
-        return 'string';
-      case InputArgument.TYPE_ARRAY:
-        return 'array';
-      case InputArgument.TYPE_OBJECT:
-        return 'object';
-      case InputArgument.TYPE_BOOLEAN:
-        return 'boolean';
-      case InputArgument.TYPE_NULL:
-        return 'null';
-      default:
-        throw new Error('invalid-type');
+    const type = this.getTypeName(inputValue);
+    const name = type !== undefined ? this.TYPE_NAME_TABLE[type] : undefined;
+    if (!name) {
+      throw new Error('invalid-type');
     }
+    return name;
   };
 
   private functionZip: RuntimeFunction<JSONArrayArray, JSONArray> = array => {
     const length = Math.min(...array.map(arr => arr.length));
-    const result = Array(length)
-      .fill(null)
-      .map((_, index) => array.map(arr => arr[index]));
-    return result as unknown as JSONArray;
+    return Array.from({ length }, (_, index) => array.map(arr => arr[index])) as unknown as JSONArray;
   };
 }
