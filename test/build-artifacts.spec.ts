@@ -45,20 +45,32 @@ describe('Build Artifacts', () => {
   });
 
   describe('Node.js Bundles', () => {
-    it('should generate CommonJS bundle', () => {
+    it('should generate CommonJS bundle that supports both default and named imports', () => {
       const cjsPath = join(DIST_DIR, 'index.cjs');
       expect(existsSync(cjsPath), `Expected ${cjsPath} to exist`).toBe(true);
 
       const content = readFileSync(cjsPath, 'utf-8');
       expect(content).toContain('exports');
+
+      // Test functional execution of CJS require
+      const cjsModule = require(cjsPath);
+      expect(typeof cjsModule.search).toBe('function');
+      expect(cjsModule.search({ a: 1 }, 'a')).toBe(1);
     });
 
-    it('should generate ESM bundle', () => {
+    it('should generate ESM bundle that supports both default and named imports', async () => {
       const esmPath = join(DIST_DIR, 'index.mjs');
       expect(existsSync(esmPath), `Expected ${esmPath} to exist`).toBe(true);
 
       const content = readFileSync(esmPath, 'utf-8');
       expect(content).toContain('export');
+
+      // Test functional execution of ESM import
+      const esmModule = await import(esmPath);
+      expect(typeof esmModule.search).toBe('function');
+      expect(esmModule.search({ a: 1 }, 'a')).toBe(1);
+      expect(typeof esmModule.default?.search).toBe('function');
+      expect(esmModule.default.search({ a: 1 }, 'a')).toBe(1);
     });
 
     it('should generate source maps', () => {
@@ -77,7 +89,7 @@ describe('Build Artifacts', () => {
 
       const content = readFileSync(umdPath, 'utf-8');
       // tsup generates IIFE format with global variable
-      expect(content).toContain('var jmespath = (function ()');
+      expect(content).toMatch(/var jmespath = \(function\s*\(/);
     });
 
     it('should generate minified UMD bundle', () => {
