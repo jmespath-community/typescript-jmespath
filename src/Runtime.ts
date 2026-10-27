@@ -172,24 +172,43 @@ const ARRAY_SUBTYPES: Partial<Record<InputArgument, InputArgument>> = {
   [InputArgument.TYPE_ARRAY_ARRAY]: InputArgument.TYPE_ARRAY,
 };
 
+const s = (...types: (InputArgument | InputArgument[])[]): InputSignature[] =>
+  types.map(t => ({ types: Array.isArray(t) ? t : [t] }));
+const opt = (...types: (InputArgument | InputArgument[])[]): InputSignature[] =>
+  types.map(t => ({ types: Array.isArray(t) ? t : [t], optional: true }));
+const variadic = (...types: (InputArgument | InputArgument[])[]): InputSignature[] =>
+  types.map(t => ({ types: Array.isArray(t) ? t : [t], variadic: true }));
+
+const {
+  TYPE_NUMBER: NUM,
+  TYPE_ANY: ANY,
+  TYPE_STRING: STR,
+  TYPE_ARRAY: ARR,
+  TYPE_OBJECT: OBJ,
+  TYPE_EXPREF: EXP,
+  TYPE_ARRAY_NUMBER: ARR_NUM,
+  TYPE_ARRAY_STRING: ARR_STR,
+  TYPE_ARRAY_ARRAY: ARR_ARR,
+} = InputArgument;
+
 export class Runtime implements FunctionRegistry {
   _interpreter: TreeInterpreter;
   _functionTable: FunctionTable;
   private _customFunctions: Set<string> = new Set();
-  TYPE_NAME_TABLE = Object.freeze({
-    [InputArgument.TYPE_NUMBER]: 'number',
-    [InputArgument.TYPE_ANY]: 'any',
-    [InputArgument.TYPE_STRING]: 'string',
-    [InputArgument.TYPE_ARRAY]: 'array',
-    [InputArgument.TYPE_OBJECT]: 'object',
-    [InputArgument.TYPE_BOOLEAN]: 'boolean',
-    [InputArgument.TYPE_EXPREF]: 'expression',
-    [InputArgument.TYPE_NULL]: 'null',
-    [InputArgument.TYPE_ARRAY_NUMBER]: 'Array<number>',
-    [InputArgument.TYPE_ARRAY_OBJECT]: 'Array<object>',
-    [InputArgument.TYPE_ARRAY_STRING]: 'Array<string>',
-    [InputArgument.TYPE_ARRAY_ARRAY]: 'Array<Array<any>>',
-  } as const);
+  TYPE_NAME_TABLE = Object.freeze([
+    'number',
+    'any',
+    'string',
+    'array',
+    'object',
+    'boolean',
+    'expression',
+    'null',
+    'Array<number>',
+    'Array<string>',
+    'Array<object>',
+    'Array<Array<any>>',
+  ] as const);
 
   constructor(interpreter: TreeInterpreter) {
     this._interpreter = interpreter;
@@ -198,153 +217,47 @@ export class Runtime implements FunctionRegistry {
 
   private buildFunctionTable(): FunctionTable {
     return {
-      // Math functions
-      abs: { _func: createMathFunction(Math.abs), _signature: [{ types: [InputArgument.TYPE_NUMBER] }] },
-      ceil: { _func: createMathFunction(Math.ceil), _signature: [{ types: [InputArgument.TYPE_NUMBER] }] },
-      floor: { _func: createMathFunction(Math.floor), _signature: [{ types: [InputArgument.TYPE_NUMBER] }] },
-
-      // String functions
-      lower: { _func: createStringFunction(lower), _signature: [{ types: [InputArgument.TYPE_STRING] }] },
-      upper: { _func: createStringFunction(upper), _signature: [{ types: [InputArgument.TYPE_STRING] }] },
-
-      // Object functions
-      keys: { _func: createObjectFunction(Object.keys), _signature: [{ types: [InputArgument.TYPE_OBJECT] }] },
-      values: { _func: createObjectFunction(Object.values), _signature: [{ types: [InputArgument.TYPE_OBJECT] }] },
-
-      // Complex functions that need custom implementations
-      avg: { _func: this.functionAvg, _signature: [{ types: [InputArgument.TYPE_ARRAY_NUMBER] }] },
-      contains: {
-        _func: this.functionContains,
-        _signature: [
-          { types: [InputArgument.TYPE_STRING, InputArgument.TYPE_ARRAY] },
-          { types: [InputArgument.TYPE_ANY] },
-        ],
-      },
-      ends_with: {
-        _func: this.functionEndsWith,
-        _signature: [{ types: [InputArgument.TYPE_STRING] }, { types: [InputArgument.TYPE_STRING] }],
-      },
-      find_first: {
-        _func: this.functionFindFirst,
-        _signature: [
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_NUMBER], optional: true },
-          { types: [InputArgument.TYPE_NUMBER], optional: true },
-        ],
-      },
-      find_last: {
-        _func: this.functionFindLast,
-        _signature: [
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_NUMBER], optional: true },
-          { types: [InputArgument.TYPE_NUMBER], optional: true },
-        ],
-      },
-      from_items: { _func: this.functionFromItems, _signature: [{ types: [InputArgument.TYPE_ARRAY_ARRAY] }] },
-      group_by: {
-        _func: this.functionGroupBy,
-        _signature: [{ types: [InputArgument.TYPE_ARRAY] }, { types: [InputArgument.TYPE_EXPREF] }],
-      },
-      items: { _func: this.functionItems, _signature: [{ types: [InputArgument.TYPE_OBJECT] }] },
-      join: {
-        _func: this.functionJoin,
-        _signature: [{ types: [InputArgument.TYPE_STRING] }, { types: [InputArgument.TYPE_ARRAY_STRING] }],
-      },
-      length: {
-        _func: this.functionLength,
-        _signature: [{ types: [InputArgument.TYPE_STRING, InputArgument.TYPE_ARRAY, InputArgument.TYPE_OBJECT] }],
-      },
-      map: {
-        _func: this.functionMap,
-        _signature: [{ types: [InputArgument.TYPE_EXPREF] }, { types: [InputArgument.TYPE_ARRAY] }],
-      },
-      max: {
-        _func: this.functionMax,
-        _signature: [{ types: [InputArgument.TYPE_ARRAY_NUMBER, InputArgument.TYPE_ARRAY_STRING] }],
-      },
-      max_by: {
-        _func: this.functionMaxBy,
-        _signature: [{ types: [InputArgument.TYPE_ARRAY] }, { types: [InputArgument.TYPE_EXPREF] }],
-      },
-      merge: { _func: this.functionMerge, _signature: [{ types: [InputArgument.TYPE_OBJECT], variadic: true }] },
-      min: {
-        _func: this.functionMin,
-        _signature: [{ types: [InputArgument.TYPE_ARRAY_NUMBER, InputArgument.TYPE_ARRAY_STRING] }],
-      },
-      min_by: {
-        _func: this.functionMinBy,
-        _signature: [{ types: [InputArgument.TYPE_ARRAY] }, { types: [InputArgument.TYPE_EXPREF] }],
-      },
-      not_null: { _func: this.functionNotNull, _signature: [{ types: [InputArgument.TYPE_ANY], variadic: true }] },
-      pad_left: {
-        _func: this.functionPadLeft,
-        _signature: [
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_NUMBER] },
-          { types: [InputArgument.TYPE_STRING], optional: true },
-        ],
-      },
-      pad_right: {
-        _func: this.functionPadRight,
-        _signature: [
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_NUMBER] },
-          { types: [InputArgument.TYPE_STRING], optional: true },
-        ],
-      },
-      replace: {
-        _func: this.functionReplace,
-        _signature: [
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_NUMBER], optional: true },
-        ],
-      },
-      reverse: {
-        _func: this.functionReverse,
-        _signature: [{ types: [InputArgument.TYPE_STRING, InputArgument.TYPE_ARRAY] }],
-      },
-      sort: {
-        _func: this.functionSort,
-        _signature: [{ types: [InputArgument.TYPE_ARRAY_STRING, InputArgument.TYPE_ARRAY_NUMBER] }],
-      },
-      sort_by: {
-        _func: this.functionSortBy,
-        _signature: [{ types: [InputArgument.TYPE_ARRAY] }, { types: [InputArgument.TYPE_EXPREF] }],
-      },
-      split: {
-        _func: this.functionSplit,
-        _signature: [
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_STRING] },
-          { types: [InputArgument.TYPE_NUMBER], optional: true },
-        ],
-      },
-      starts_with: {
-        _func: this.functionStartsWith,
-        _signature: [{ types: [InputArgument.TYPE_STRING] }, { types: [InputArgument.TYPE_STRING] }],
-      },
-      sum: { _func: this.functionSum, _signature: [{ types: [InputArgument.TYPE_ARRAY_NUMBER] }] },
-      to_array: { _func: this.functionToArray, _signature: [{ types: [InputArgument.TYPE_ANY] }] },
-      to_number: { _func: this.functionToNumber, _signature: [{ types: [InputArgument.TYPE_ANY] }] },
-      to_string: { _func: this.functionToString, _signature: [{ types: [InputArgument.TYPE_ANY] }] },
-      trim: {
-        _func: this.functionTrim,
-        _signature: [{ types: [InputArgument.TYPE_STRING] }, { types: [InputArgument.TYPE_STRING], optional: true }],
-      },
-      trim_left: {
-        _func: this.functionTrimLeft,
-        _signature: [{ types: [InputArgument.TYPE_STRING] }, { types: [InputArgument.TYPE_STRING], optional: true }],
-      },
-      trim_right: {
-        _func: this.functionTrimRight,
-        _signature: [{ types: [InputArgument.TYPE_STRING] }, { types: [InputArgument.TYPE_STRING], optional: true }],
-      },
-      type: { _func: this.functionType, _signature: [{ types: [InputArgument.TYPE_ANY] }] },
-      zip: { _func: this.functionZip, _signature: [{ types: [InputArgument.TYPE_ARRAY], variadic: true }] },
+      abs: { _func: createMathFunction(Math.abs), _signature: s(NUM) },
+      ceil: { _func: createMathFunction(Math.ceil), _signature: s(NUM) },
+      floor: { _func: createMathFunction(Math.floor), _signature: s(NUM) },
+      lower: { _func: createStringFunction(lower), _signature: s(STR) },
+      upper: { _func: createStringFunction(upper), _signature: s(STR) },
+      keys: { _func: createObjectFunction(Object.keys), _signature: s(OBJ) },
+      values: { _func: createObjectFunction(Object.values), _signature: s(OBJ) },
+      avg: { _func: this.functionAvg, _signature: s(ARR_NUM) },
+      contains: { _func: this.functionContains, _signature: s([STR, ARR], ANY) },
+      ends_with: { _func: this.functionEndsWith, _signature: s(STR, STR) },
+      find_first: { _func: this.functionFindFirst, _signature: [...s(STR, STR), ...opt(NUM, NUM)] },
+      find_last: { _func: this.functionFindLast, _signature: [...s(STR, STR), ...opt(NUM, NUM)] },
+      from_items: { _func: this.functionFromItems, _signature: s(ARR_ARR) },
+      group_by: { _func: this.functionGroupBy, _signature: s(ARR, EXP) },
+      items: { _func: this.functionItems, _signature: s(OBJ) },
+      join: { _func: this.functionJoin, _signature: s(STR, ARR_STR) },
+      length: { _func: this.functionLength, _signature: s([STR, ARR, OBJ]) },
+      map: { _func: this.functionMap, _signature: s(EXP, ARR) },
+      max: { _func: this.functionMax, _signature: s([ARR_NUM, ARR_STR]) },
+      max_by: { _func: this.functionMaxBy, _signature: s(ARR, EXP) },
+      merge: { _func: this.functionMerge, _signature: variadic(OBJ) },
+      min: { _func: this.functionMin, _signature: s([ARR_NUM, ARR_STR]) },
+      min_by: { _func: this.functionMinBy, _signature: s(ARR, EXP) },
+      not_null: { _func: this.functionNotNull, _signature: variadic(ANY) },
+      pad_left: { _func: this.functionPadLeft, _signature: [...s(STR, NUM), ...opt(STR)] },
+      pad_right: { _func: this.functionPadRight, _signature: [...s(STR, NUM), ...opt(STR)] },
+      replace: { _func: this.functionReplace, _signature: [...s(STR, STR, STR), ...opt(NUM)] },
+      reverse: { _func: this.functionReverse, _signature: s([STR, ARR]) },
+      sort: { _func: this.functionSort, _signature: s([ARR_STR, ARR_NUM]) },
+      sort_by: { _func: this.functionSortBy, _signature: s(ARR, EXP) },
+      split: { _func: this.functionSplit, _signature: [...s(STR, STR), ...opt(NUM)] },
+      starts_with: { _func: this.functionStartsWith, _signature: s(STR, STR) },
+      sum: { _func: this.functionSum, _signature: s(ARR_NUM) },
+      to_array: { _func: this.functionToArray, _signature: s(ANY) },
+      to_number: { _func: this.functionToNumber, _signature: s(ANY) },
+      to_string: { _func: this.functionToString, _signature: s(ANY) },
+      trim: { _func: this.functionTrim, _signature: [...s(STR), ...opt(STR)] },
+      trim_left: { _func: this.functionTrimLeft, _signature: [...s(STR), ...opt(STR)] },
+      trim_right: { _func: this.functionTrimRight, _signature: [...s(STR), ...opt(STR)] },
+      type: { _func: this.functionType, _signature: s(ANY) },
+      zip: { _func: this.functionZip, _signature: variadic(ARR) },
     };
   }
 

@@ -73,6 +73,32 @@ describe('Build Artifacts', () => {
       expect(esmModule.default.search({ a: 1 }, 'a')).toBe(1);
     });
 
+    it('should generate CommonJS and ESM stream bundles', async () => {
+      const cjsPath = join(DIST_DIR, 'stream.cjs');
+      const esmPath = join(DIST_DIR, 'stream.mjs');
+      const dtsPath = join(DIST_DIR, 'stream.d.ts');
+
+      expect(existsSync(cjsPath), `Expected ${cjsPath} to exist`).toBe(true);
+      expect(existsSync(esmPath), `Expected ${esmPath} to exist`).toBe(true);
+      expect(existsSync(dtsPath), `Expected ${dtsPath} to exist`).toBe(true);
+
+      const cjsModule = require(cjsPath);
+      expect(typeof cjsModule.searchStream).toBe('function');
+      const cjsResults: unknown[] = [];
+      for await (const item of cjsModule.searchStream([{ a: 1 }, { a: 2 }], 'a')) {
+        cjsResults.push(item);
+      }
+      expect(cjsResults).toEqual([1, 2]);
+
+      const esmModule = await import(esmPath);
+      expect(typeof esmModule.searchStream).toBe('function');
+      const esmResults: unknown[] = [];
+      for await (const item of esmModule.searchStream([{ a: 1 }, { a: 2 }], 'a')) {
+        esmResults.push(item);
+      }
+      expect(esmResults).toEqual([1, 2]);
+    });
+
     it('should generate source maps', () => {
       const cjsMapPath = join(DIST_DIR, 'index.cjs.map');
       const esmMapPath = join(DIST_DIR, 'index.mjs.map');
@@ -189,6 +215,15 @@ describe('Build Artifacts', () => {
       expect(pkg.files).toContain('dist/');
     });
 
+    it('should configure sideEffects, unpkg, and jsdelivr', () => {
+      const pkgPath = join(process.cwd(), 'package.json');
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+
+      expect(pkg.sideEffects).toBe(false);
+      expect(pkg.unpkg).toBe('./dist/index.umd.min.js');
+      expect(pkg.jsdelivr).toBe('./dist/index.umd.min.js');
+    });
+
     it('should have modern exports field', () => {
       const pkgPath = join(process.cwd(), 'package.json');
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
@@ -209,6 +244,12 @@ describe('Build Artifacts', () => {
       expect(pkg.exports['.'].node).toBeDefined();
       expect(pkg.exports['.'].node.import).toBe('./dist/index.mjs');
       expect(pkg.exports['.'].node.require).toBe('./dist/index.cjs');
+
+      // Check stream export
+      expect(pkg.exports['./stream']).toBeDefined();
+      expect(pkg.exports['./stream'].types).toBe('./dist/stream.d.ts');
+      expect(pkg.exports['./stream'].import).toBe('./dist/stream.mjs');
+      expect(pkg.exports['./stream'].require).toBe('./dist/stream.cjs');
 
       // Check CLI export
       expect(pkg.exports['./cli']).toBeDefined();

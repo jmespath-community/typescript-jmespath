@@ -3,7 +3,7 @@ import { defineConfig, Options } from 'tsup';
 const baseConfig: Options = {
   dts: true,
   sourcemap: true,
-  clean: true,
+  clean: false,
   treeshake: true,
   splitting: false,
 };
@@ -33,6 +33,12 @@ export default defineConfig([
   {
     ...nodeConfig,
     entry: ['src/index.ts'],
+  },
+  {
+    ...nodeConfig,
+    entry: {
+      stream: 'src/Stream.ts',
+    },
   },
   {
     ...browserConfig,
