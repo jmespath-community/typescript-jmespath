@@ -20,7 +20,7 @@ export const findLast = (subject: string, sub: string, start?: number, end?: num
 };
 export const lower = (subject: string): string => subject.toLowerCase();
 const ensurePadFuncParams = (name: string, width: number, padding = ' '): string => {
-  if (padding.length > 1) {
+  if ([...padding].length !== 1) {
     throw new Error(`invalid value, ${name} expects its 'pad' parameter to be a valid string with a single codepoint`);
   }
   ensurePositiveInteger(width);
@@ -28,11 +28,25 @@ const ensurePadFuncParams = (name: string, width: number, padding = ' '): string
 };
 export const padLeft = (subject: string, width: number, padding?: string): string => {
   padding = ensurePadFuncParams('pad_left', width, padding);
-  return (subject && subject.padStart(width, padding)) || '';
+  if (!subject) {
+    return '';
+  }
+  const subjectLen = [...subject].length;
+  if (subjectLen >= width) {
+    return subject;
+  }
+  return padding.repeat(width - subjectLen) + subject;
 };
 export const padRight = (subject: string, width: number, padding?: string): string => {
   padding = ensurePadFuncParams('pad_right', width, padding);
-  return (subject && subject.padEnd(width, padding)) || '';
+  if (!subject) {
+    return '';
+  }
+  const subjectLen = [...subject].length;
+  if (subjectLen >= width) {
+    return subject;
+  }
+  return subject + padding.repeat(width - subjectLen);
 };
 export const replace = (subject: string, string: string, by: string, count?: number): string => {
   if (count === 0) {
