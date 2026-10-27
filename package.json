@@ -14,7 +14,10 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "browser": "./dist/index.umd.js",
+  "unpkg": "./dist/index.umd.min.js",
+  "jsdelivr": "./dist/index.umd.min.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -29,6 +32,11 @@
       },
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./stream": {
+      "types": "./dist/stream.d.ts",
+      "import": "./dist/stream.mjs",
+      "require": "./dist/stream.cjs"
     },
     "./cli": {
       "types": "./dist/cli.d.ts",

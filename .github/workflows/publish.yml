@@ -59,6 +59,9 @@ jobs:
           test -f dist/index.cjs || (echo "Missing Node.js CommonJS bundle" && exit 1)
           test -f dist/index.mjs || (echo "Missing Node.js ESM bundle" && exit 1)
           test -f dist/index.d.ts || (echo "Missing TypeScript declarations" && exit 1)
+          test -f dist/stream.cjs || (echo "Missing stream CommonJS bundle" && exit 1)
+          test -f dist/stream.mjs || (echo "Missing stream ESM bundle" && exit 1)
+          test -f dist/stream.d.ts || (echo "Missing stream TypeScript declarations" && exit 1)
           test -f dist/cli.mjs || (echo "Missing CLI binary" && exit 1)
           head -1 dist/cli.mjs | grep -q "^#!" || (echo "CLI binary missing shebang" && exit 1)
           echo "✅ All build artifacts validated"

@@ -1,5 +1,6 @@
 export class Text {
   private _text: string;
+
   constructor(text: string) {
     this._text = text;
   }
@@ -21,35 +22,29 @@ export class Text {
   }
 
   public static get comparer(): (lhs: string, rhs: string) => number {
-    const stringComparer = (left: string, right: string): number => {
+    return (left: string, right: string): number => {
       return new Text(left).compareTo(right);
     };
-    return stringComparer;
   }
 
   public static compare(left: Text, right: Text): number {
-    const leftCp = left.codePoints;
-    const rightCp = right.codePoints;
-    for (let index = 0; index < Math.min(leftCp.length, rightCp.length); index++) {
-      if (leftCp[index] === rightCp[index]) {
+    const leftChars = [...left._text];
+    const rightChars = [...right._text];
+    const len = Math.min(leftChars.length, rightChars.length);
+    for (let index = 0; index < len; index++) {
+      if (leftChars[index] === rightChars[index]) {
         continue;
       }
-      return leftCp[index] - rightCp[index] > 0 ? 1 : -1;
+      // biome-ignore lint/style/noNonNullAssertion: Character from non-empty string always has code point
+      return leftChars[index].codePointAt(0)! > rightChars[index].codePointAt(0)! ? 1 : -1;
     }
-    if (leftCp.length === rightCp.length) {
+    if (leftChars.length === rightChars.length) {
       return 0;
     }
-    return leftCp.length > rightCp.length ? 1 : -1;
+    return leftChars.length > rightChars.length ? 1 : -1;
   }
 
   public reverse(): string {
-    return String.fromCodePoint(...this.codePoints.reverse());
-  }
-
-  private get codePoints(): number[] {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    // biome-ignore lint: lint/style/noNonNullAssertion
-    const array = [...this._text].map(s => s.codePointAt(0)!);
-    return array;
+    return [...this._text].reverse().join('');
   }
 }
