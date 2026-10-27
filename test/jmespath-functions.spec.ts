@@ -105,10 +105,48 @@ describe('Evaluates functions', () => {
   it('pad_left()', () => {
     // this should be included in the compliance test suite
     expect(jmespath.search('', 'pad_left(@, `10`)')).toEqual('');
+    expect(jmespath.search('hi', "pad_left(@, `5`, '😀')")).toEqual('😀😀😀hi');
+    expect(jmespath.search('😀', "pad_left(@, `3`, '-')")).toEqual('--😀');
+    expect(jmespath.search('hello', "pad_left(@, `5`, '-')")).toEqual('hello');
+    expect(jmespath.search('hello', "pad_left(@, `3`, '-')")).toEqual('hello');
   });
   it('pad_right()', () => {
     // this should be included in the compliance test suite
     expect(jmespath.search('', 'pad_right(@, `10`)')).toEqual('');
+    expect(jmespath.search('hi', "pad_right(@, `5`, '😀')")).toEqual('hi😀😀😀');
+    expect(jmespath.search('😀', "pad_right(@, `3`, '-')")).toEqual('😀--');
+    expect(jmespath.search('hello', "pad_right(@, `5`, '-')")).toEqual('hello');
+    expect(jmespath.search('hello', "pad_right(@, `3`, '-')")).toEqual('hello');
+  });
+  it('to_number() conforms strictly to JSON number grammar', () => {
+    // Non-JSON numbers return null
+    expect(jmespath.search('', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('   ', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('0x1f', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('0b10', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('0o10', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('+1', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('01', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('00', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('1.', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('.5', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('1e', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('Infinity', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('-Infinity', 'to_number(@)')).toBeNull();
+    expect(jmespath.search('NaN', 'to_number(@)')).toBeNull();
+
+    // Valid JSON numbers are converted
+    expect(jmespath.search('0', 'to_number(@)')).toBe(0);
+    expect(jmespath.search('-0', 'to_number(@)')).toBe(-0);
+    expect(jmespath.search('123', 'to_number(@)')).toBe(123);
+    expect(jmespath.search('-123', 'to_number(@)')).toBe(-123);
+    expect(jmespath.search('12.34', 'to_number(@)')).toBe(12.34);
+    expect(jmespath.search('-0.5', 'to_number(@)')).toBe(-0.5);
+    expect(jmespath.search('1e5', 'to_number(@)')).toBe(100000);
+    expect(jmespath.search('2.5E-2', 'to_number(@)')).toBe(0.025);
+    expect(jmespath.search(42, 'to_number(@)')).toBe(42);
+    expect(jmespath.search(null, 'to_number(@)')).toBeNull();
+    expect(jmespath.search([1], 'to_number(@)')).toBeNull();
   });
   it('zip()', () => {
     expect(jmespath.search([], 'zip(@)')).toEqual([]);
@@ -197,6 +235,22 @@ describe('Type-checks function arguments', () => {
     // this should be included in the compliance test suite
     expectError(() => {
       return jmespath.search('subject string', "pad_right(@, `1`, '--')");
+    }, 'invalid-value');
+  });
+  it('pad_left() rejects empty string and multi-codepoint padding', () => {
+    expectError(() => {
+      return jmespath.search('subject string', "pad_left(@, `10`, '')");
+    }, 'invalid-value');
+    expectError(() => {
+      return jmespath.search('subject string', "pad_left(@, `10`, '😀😀')");
+    }, 'invalid-value');
+  });
+  it('pad_right() rejects empty string and multi-codepoint padding', () => {
+    expectError(() => {
+      return jmespath.search('subject string', "pad_right(@, `10`, '')");
+    }, 'invalid-value');
+    expectError(() => {
+      return jmespath.search('subject string', "pad_right(@, `10`, '😀😀')");
     }, 'invalid-value');
   });
 });

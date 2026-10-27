@@ -172,6 +172,8 @@ const ARRAY_SUBTYPES: Partial<Record<InputArgument, InputArgument>> = {
   [InputArgument.TYPE_ARRAY_ARRAY]: InputArgument.TYPE_ARRAY,
 };
 
+const JSON_NUMBER_REGEX = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+
 const s = (...types: (InputArgument | InputArgument[])[]): InputSignature[] =>
   types.map(t => ({ types: Array.isArray(t) ? t : [t] }));
 const opt = (...types: (InputArgument | InputArgument[])[]): InputSignature[] =>
@@ -877,14 +879,16 @@ export class Runtime implements FunctionRegistry {
 
   private functionToNumber: RuntimeFunction<[JSONValue], number | null> = ([inputValue]) => {
     const typeName = this.getTypeName(inputValue);
-    let convertedValue: number;
     if (typeName === InputArgument.TYPE_NUMBER) {
       return inputValue as number;
     }
     if (typeName === InputArgument.TYPE_STRING) {
-      convertedValue = +(inputValue as string);
-      if (!isNaN(convertedValue)) {
-        return convertedValue;
+      const str = inputValue as string;
+      if (JSON_NUMBER_REGEX.test(str)) {
+        const convertedValue = Number(str);
+        if (!isNaN(convertedValue)) {
+          return convertedValue;
+        }
       }
     }
     return null;
