@@ -174,19 +174,24 @@ export function isStreamableNode(node: ExpressionNode): boolean {
     case 'FilterProjection':
       return node.left.type === 'Identity' || node.left.type === 'Current';
     case 'IndexExpression':
-      if (node.right.type === 'Slice' && (node.left.type === 'Identity' || node.left.type === 'Current')) {
-        const slice = node.right;
-        return (
-          (slice.start === null || slice.start >= 0) &&
-          (slice.stop === null || slice.stop >= 0) &&
-          (slice.step === null || slice.step > 0)
-        );
+      if (node.left.type === 'Identity' || node.left.type === 'Current') {
+        if (node.right.type === 'Slice') {
+          const slice = node.right;
+          return (
+            (slice.start === null || slice.start >= 0) &&
+            (slice.stop === null || slice.stop >= 0) &&
+            (slice.step === null || slice.step > 0)
+          );
+        }
+        return false;
       }
-      return true;
+      return isStreamableNode(node.left);
     case 'Field':
     case 'Identity':
     case 'Current':
+      return true;
     case 'Subexpression':
+      return isStreamableNode(node.left) && isStreamableNode(node.right);
     case 'MultiSelectHash':
     case 'MultiSelectList':
     case 'Ternary':
@@ -258,31 +263,33 @@ export async function* evaluateStreamNode(
     }
 
     case 'IndexExpression': {
-      if (node.right.type === 'Slice' && (node.left.type === 'Identity' || node.left.type === 'Current')) {
-        const slice = node.right;
-        const start = slice.start ?? 0;
-        const stop = slice.stop ?? Infinity;
-        const step = slice.step ?? 1;
+      if (node.left.type === 'Identity' || node.left.type === 'Current') {
+        if (node.right.type === 'Slice') {
+          const slice = node.right;
+          const start = slice.start ?? 0;
+          const stop = slice.stop ?? Infinity;
+          const step = slice.step ?? 1;
 
-        if (start >= 0 && stop >= 0 && step > 0) {
-          let index = 0;
-          for await (const item of source) {
-            checkDeadline();
-            if (index >= stop) {
-              break;
+          if (start >= 0 && stop >= 0 && step > 0) {
+            let index = 0;
+            for await (const item of source) {
+              checkDeadline();
+              if (index >= stop) {
+                break;
+              }
+              if (index >= start && (index - start) % step === 0) {
+                yield item as JSONValue;
+              }
+              index++;
+              if (index >= stop) {
+                break;
+              }
             }
-            if (index >= start && (index - start) % step === 0) {
-              yield item as JSONValue;
-            }
-            index++;
-            if (index >= stop) {
-              break;
-            }
+            return;
           }
-          return;
         }
 
-        // Slices with negative indices require accumulating the stream
+        // Slices with negative indices or scalar indices require accumulating the stream
         const collected: JSONValue[] = [];
         for await (const item of source) {
           checkDeadline();
@@ -292,10 +299,12 @@ export async function* evaluateStreamNode(
           }
         }
         const result = interpreter.search(node, collected, options);
-        if (Array.isArray(result)) {
+        if (node.right.type === 'Slice' && Array.isArray(result)) {
           for (const item of result) {
             yield item;
           }
+        } else if (result !== null && result !== undefined) {
+          yield result;
         }
         return;
       }
@@ -478,6 +487,10 @@ export async function* searchStream<T = JSONValue, D = unknown>(
   const limit = options?.limit;
   const maxOutputSize = options?.maxOutputSize;
   let count = 0;
+
+  if (limit !== undefined && limit <= 0) {
+    return;
+  }
 
   for await (const result of results) {
     yield result as T;
