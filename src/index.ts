@@ -203,5 +203,35 @@ const jmespath = {
 };
 
 // Export as default for backward compatibility
-// Supports both: import jmespath from '...' and import { jmespath } from '...'
+// Supports both: import jmespath from '...' and import { search } from '...'
+export {
+  compile,
+  compileQuery,
+  searchStream,
+  validate,
+  registerFunction,
+  register,
+  unregisterFunction,
+  isRegistered,
+  getRegisteredFunctions,
+  getCustomFunctions,
+  clearCustomFunctions,
+  search,
+  tokenize,
+  TreeInterpreter,
+  TYPE_ANY,
+  TYPE_ARRAY_NUMBER,
+  TYPE_ARRAY_STRING,
+  TYPE_ARRAY,
+  TYPE_BOOLEAN,
+  TYPE_EXPREF,
+  TYPE_NULL,
+  TYPE_NUMBER,
+  TYPE_OBJECT,
+  TYPE_STRING,
+  TYPE_ARRAY_ARRAY,
+  TYPE_ARRAY_OBJECT,
+  Scope,
+  jmespath,
+};
 export default jmespath;

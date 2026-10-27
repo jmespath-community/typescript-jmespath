@@ -1,25 +1,33 @@
-permissions:
-  id-token: write  # Required for OIDC
-  contents: read
-
 name: 🚀 release
 
 on:
   release:
     types: [published]
 
+# Top-level permissions locked down to read-only
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   test:
     name: ⚠ tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: 📚 checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
         with:
           submodules: 'true'
-      - uses: actions/setup-node@v4
+      - name: 🟢 node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.2.0
         with:
           node-version: 24
-      - run: npm install
+      - run: npm ci
       - run: npm run build
       - run: npm test
 
@@ -27,17 +35,20 @@ jobs:
     name: 🚀 release
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Scoped exclusively to the publish job
     steps:
       - name: 📚 checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
         with:
           submodules: 'true'
       - name: 🟢 node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.2.0
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
-      - run: npm install
+      - run: npm ci
       - run: npm run build
       - name: 🔍 Validate build artifacts
         run: |
@@ -54,6 +65,4 @@ jobs:
       - name: 🧪 Test build artifacts
         run: npm test -- test/build-artifacts.spec.ts
       - name: ✉️ publish
-        run: npm publish --verbose --access public --tag latest
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NPM_AUTH_TOKEN }}
+        run: npm publish --verbose --access public --tag latest --provenance
