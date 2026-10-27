@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-10-26
+
+### Fixed
+- Restored named ESM exports (`import { search } from "@jmespath-community/jmespath"`) and TypeScript named declarations ([#112](https://github.com/jmespath-community/typescript-jmespath/pull/112)).
+- Enforced rejection of repeated numbers in slice components ([#104](https://github.com/jmespath-community/typescript-jmespath/pull/104)).
+- Preserved empty slices when striding over empty arrays ([#110](https://github.com/jmespath-community/typescript-jmespath/pull/110)).
+- Hardened CI/CD release and test workflows with least-privilege OIDC tokens, pinned GitHub Action commit SHAs, reproducible `npm ci`, and enforced `--provenance` ([#112](https://github.com/jmespath-community/typescript-jmespath/pull/112)).
+
 ## [1.4.0] - 2026-10-24
 
 ### Added
@@ -39,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Migrated linter and formatter to Biome ([#49](https://github.com/jmespath-community/typescript-jmespath/pull/49)).
 
+[1.4.1]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.1.5...v1.2.0
