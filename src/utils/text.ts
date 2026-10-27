@@ -36,7 +36,10 @@ export class Text {
       }
       return leftCp[index] - rightCp[index] > 0 ? 1 : -1;
     }
-    return leftCp.length - rightCp.length > 0 ? 1 : -1;
+    if (leftCp.length === rightCp.length) {
+      return 0;
+    }
+    return leftCp.length > rightCp.length ? 1 : -1;
   }
 
   public reverse(): string {

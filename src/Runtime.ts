@@ -1,13 +1,5 @@
 import type { ExpressionNode } from './AST.type';
-import type {
-  JSONArray,
-  JSONArrayArray,
-  JSONArrayKeyValuePairs,
-  JSONArrayObject,
-  JSONObject,
-  JSONValue,
-  ObjectDict,
-} from './JSON.type';
+import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue, ObjectDict } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
 import {
   findFirst,
@@ -637,6 +629,7 @@ export class Runtime implements FunctionRegistry {
       if (typeof searchValue === 'string') {
         return text.includes(searchValue);
       }
+      return false;
     }
 
     return null;
@@ -670,17 +663,33 @@ export class Runtime implements FunctionRegistry {
     return Object.fromEntries(array);
   };
 
-  private functionGroupBy: RuntimeFunction<[JSONArrayObject, ExpressionNode], JSONValue> = ([array, exprefNode]) => {
-    const keyFunction = this.createKeyFunction(exprefNode, [InputArgument.TYPE_STRING]);
-    const groups: Record<string, JSONValue[]> = {};
-    for (const item of array) {
-      const key = keyFunction(item) as string;
-      if (!groups[key]) {
-        groups[key] = [];
-      }
-      groups[key].push(item);
+  private functionGroupBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = ([array, exprefNode]) => {
+    const interpreter = this._interpreter;
+    if (!interpreter) {
+      return {};
     }
-    return groups;
+    const groups = new Map<string, JSONValue[]>();
+    for (const item of array) {
+      const raw = interpreter.visit(exprefNode, item) as JSONValue;
+      if (raw === null || raw === undefined) {
+        continue;
+      }
+      if (typeof raw !== 'string') {
+        const type = this.getTypeName(raw) as InputArgument;
+        throw new Error(
+          `Invalid type: expected one of (${this.TYPE_NAME_TABLE[InputArgument.TYPE_STRING]}), received ${
+            this.TYPE_NAME_TABLE[type]
+          }`,
+        );
+      }
+      let group = groups.get(raw);
+      if (!group) {
+        group = [];
+        groups.set(raw, group);
+      }
+      group.push(item);
+    }
+    return Object.fromEntries(groups);
   };
 
   private functionItems: RuntimeFunction<[JSONObject], JSONArray> = ([inputValue]) => {
@@ -727,28 +736,60 @@ export class Runtime implements FunctionRegistry {
     const elements = inputValue as string[];
     let maxElement = elements[0];
     for (let i = 1; i < elements.length; i += 1) {
-      if (maxElement.localeCompare(elements[i]) < 0) {
+      if (Text.comparer(elements[i], maxElement) > 0) {
         maxElement = elements[i];
       }
     }
     return maxElement;
   };
 
-  private functionMaxBy: RuntimeFunction<[number[] | string[], ExpressionNode], JSONValue> = resolvedArgs => {
-    const exprefNode = resolvedArgs[1];
+  private functionMaxBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = resolvedArgs => {
     const resolvedArray = resolvedArgs[0];
-    const keyFunction = this.createKeyFunction(exprefNode, [InputArgument.TYPE_NUMBER, InputArgument.TYPE_STRING]);
-    let maxNumber = -Infinity;
-    let maxRecord!: JSONValue;
-    let current: number | undefined;
-    for (let i = 0; i < resolvedArray.length; i += 1) {
-      current = keyFunction && (keyFunction(resolvedArray[i]) as number);
-      if (current !== undefined && current > maxNumber) {
-        maxNumber = current;
-        maxRecord = resolvedArray[i];
+    if (!resolvedArray.length) {
+      return null;
+    }
+    const exprefNode = resolvedArgs[1];
+    const interpreter = this._interpreter;
+    if (!interpreter) {
+      return null;
+    }
+
+    const firstKey = interpreter.visit(exprefNode, resolvedArray[0]) as JSONValue;
+    const firstType = this.getTypeName(firstKey) as InputArgument;
+    if (firstType !== InputArgument.TYPE_NUMBER && firstType !== InputArgument.TYPE_STRING) {
+      throw new Error(
+        `Invalid type: expected one of (${this.TYPE_NAME_TABLE[InputArgument.TYPE_NUMBER]} | ${
+          this.TYPE_NAME_TABLE[InputArgument.TYPE_STRING]
+        }), received ${this.TYPE_NAME_TABLE[firstType]}`,
+      );
+    }
+
+    let maxRecord: JSONValue = resolvedArray[0];
+    let maxKey = firstKey;
+
+    for (let i = 1; i < resolvedArray.length; i += 1) {
+      const currentKey = interpreter.visit(exprefNode, resolvedArray[i]) as JSONValue;
+      const currentType = this.getTypeName(currentKey) as InputArgument;
+      if (currentType !== firstType) {
+        throw new Error(
+          `Invalid type: expected (${this.TYPE_NAME_TABLE[firstType]}), received ${this.TYPE_NAME_TABLE[currentType]}`,
+        );
+      }
+
+      if (firstType === InputArgument.TYPE_NUMBER) {
+        if ((currentKey as number) > (maxKey as number)) {
+          maxKey = currentKey;
+          maxRecord = resolvedArray[i];
+        }
+      } else {
+        if (Text.comparer(currentKey as string, maxKey as string) > 0) {
+          maxKey = currentKey;
+          maxRecord = resolvedArray[i];
+        }
       }
     }
-    return maxRecord || null;
+
+    return maxRecord;
   };
 
   private functionMerge: RuntimeFunction<JSONObject[], JSONObject> = resolvedArgs => {
@@ -768,28 +809,60 @@ export class Runtime implements FunctionRegistry {
     const elements = inputValue as string[];
     let minElement = elements[0];
     for (let i = 1; i < elements.length; i += 1) {
-      if (elements[i].localeCompare(minElement) < 0) {
+      if (Text.comparer(elements[i], minElement) < 0) {
         minElement = elements[i];
       }
     }
     return minElement;
   };
 
-  private functionMinBy: RuntimeFunction<[number[] | string[], ExpressionNode], JSONValue> = resolvedArgs => {
-    const exprefNode = resolvedArgs[1];
+  private functionMinBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = resolvedArgs => {
     const resolvedArray = resolvedArgs[0];
-    const keyFunction = this.createKeyFunction(exprefNode, [InputArgument.TYPE_NUMBER, InputArgument.TYPE_STRING]);
-    let minNumber = Infinity;
-    let minRecord!: JSONValue;
-    let current: number | undefined;
-    for (let i = 0; i < resolvedArray.length; i += 1) {
-      current = keyFunction && (keyFunction(resolvedArray[i]) as number);
-      if (current !== undefined && current < minNumber) {
-        minNumber = current;
-        minRecord = resolvedArray[i];
+    if (!resolvedArray.length) {
+      return null;
+    }
+    const exprefNode = resolvedArgs[1];
+    const interpreter = this._interpreter;
+    if (!interpreter) {
+      return null;
+    }
+
+    const firstKey = interpreter.visit(exprefNode, resolvedArray[0]) as JSONValue;
+    const firstType = this.getTypeName(firstKey) as InputArgument;
+    if (firstType !== InputArgument.TYPE_NUMBER && firstType !== InputArgument.TYPE_STRING) {
+      throw new Error(
+        `Invalid type: expected one of (${this.TYPE_NAME_TABLE[InputArgument.TYPE_NUMBER]} | ${
+          this.TYPE_NAME_TABLE[InputArgument.TYPE_STRING]
+        }), received ${this.TYPE_NAME_TABLE[firstType]}`,
+      );
+    }
+
+    let minRecord: JSONValue = resolvedArray[0];
+    let minKey = firstKey;
+
+    for (let i = 1; i < resolvedArray.length; i += 1) {
+      const currentKey = interpreter.visit(exprefNode, resolvedArray[i]) as JSONValue;
+      const currentType = this.getTypeName(currentKey) as InputArgument;
+      if (currentType !== firstType) {
+        throw new Error(
+          `Invalid type: expected (${this.TYPE_NAME_TABLE[firstType]}), received ${this.TYPE_NAME_TABLE[currentType]}`,
+        );
+      }
+
+      if (firstType === InputArgument.TYPE_NUMBER) {
+        if ((currentKey as number) < (minKey as number)) {
+          minKey = currentKey;
+          minRecord = resolvedArray[i];
+        }
+      } else {
+        if (Text.comparer(currentKey as string, minKey as string) < 0) {
+          minKey = currentKey;
+          minRecord = resolvedArray[i];
+        }
       }
     }
-    return minRecord || null;
+
+    return minRecord;
   };
 
   private functionNotNull: RuntimeFunction<JSONArray, JSONValue> = resolvedArgs => {

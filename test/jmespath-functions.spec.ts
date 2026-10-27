@@ -38,6 +38,64 @@ describe('Evaluates functions', () => {
       node_03: [{ spec: { nodeName: 'node_03', other: 'values_03' } }],
     });
   });
+  it('group_by() prototype keys collision', () => {
+    const items = [
+      { k: 'constructor', val: 1 },
+      { k: 'toString', val: 2 },
+      { k: '__proto__', val: 3 },
+      { k: 'hasOwnProperty', val: 4 },
+      { k: 'a', val: 5 },
+    ];
+    expect(jmespath.search(items, 'group_by(@, &k)')).toEqual({
+      constructor: [{ k: 'constructor', val: 1 }],
+      toString: [{ k: 'toString', val: 2 }],
+      ['__proto__']: [{ k: '__proto__', val: 3 }],
+      hasOwnProperty: [{ k: 'hasOwnProperty', val: 4 }],
+      a: [{ k: 'a', val: 5 }],
+    });
+  });
+  it('group_by() discards null or missing keys per spec', () => {
+    const items = [{ b: true, name: 'one' }, { b: false, name: 'two' }, { b: false, name: null }, { b: false }];
+    expect(jmespath.search(items, 'group_by(@, &name)')).toEqual({
+      one: [{ b: true, name: 'one' }],
+      two: [{ b: false, name: 'two' }],
+    });
+  });
+  it('contains() returns false for non-string search in string', () => {
+    expect(jmespath.search('abc', 'contains(@, `1`)')).toBe(false);
+    expect(jmespath.search('abc', 'contains(@, `null`)')).toBe(false);
+    expect(jmespath.search('abc', 'contains(@, `true`)')).toBe(false);
+    expect(jmespath.search('abc', 'contains(@, `{"a": 1}`)')).toBe(false);
+    expect(jmespath.search('abc', 'contains(@, `[1]`)')).toBe(false);
+    expect(jmespath.search('abc', "contains(@, 'b')")).toBe(true);
+    expect(jmespath.search('abc', "contains(@, 'z')")).toBe(false);
+  });
+  it('min() and max() use code-point ordering for strings', () => {
+    expect(jmespath.search(['b', 'A', 'B', 'a'], 'min(@)')).toEqual('A');
+    expect(jmespath.search(['b', 'A', 'B', 'a'], 'max(@)')).toEqual('b');
+    expect(jmespath.search(['é', 'z', 'Z'], 'min(@)')).toEqual('Z');
+    expect(jmespath.search(['é', 'z', 'Z'], 'max(@)')).toEqual('é');
+    expect(jmespath.search(['\u{10000}', '\uE000'], 'min(@)')).toEqual('\uE000');
+    expect(jmespath.search(['\u{10000}', '\uE000'], 'max(@)')).toEqual('\u{10000}');
+    expect(jmespath.search([], 'min(@)')).toBeNull();
+    expect(jmespath.search([], 'max(@)')).toBeNull();
+  });
+  it('max_by() and min_by() support string keys', () => {
+    const items = [{ k: 'apple' }, { k: 'banana' }, { k: 'cherry' }];
+    expect(jmespath.search(items, 'max_by(@, &k)')).toEqual({ k: 'cherry' });
+    expect(jmespath.search(items, 'min_by(@, &k)')).toEqual({ k: 'apple' });
+
+    const mixedCase = [{ k: 'b' }, { k: 'A' }, { k: 'B' }, { k: 'a' }];
+    expect(jmespath.search(mixedCase, 'max_by(@, &k)')).toEqual({ k: 'b' });
+    expect(jmespath.search(mixedCase, 'min_by(@, &k)')).toEqual({ k: 'A' });
+  });
+  it('max_by() and min_by() preserve scalar 0 and empty string', () => {
+    expect(jmespath.search([0, -1, -2], 'max_by(@, &@)')).toEqual(0);
+    expect(jmespath.search([0, 1, 2], 'min_by(@, &@)')).toEqual(0);
+    expect(jmespath.search(['', 'a', 'b'], 'min_by(@, &@)')).toEqual('');
+    expect(jmespath.search([], 'max_by(@, &@)')).toBeNull();
+    expect(jmespath.search([], 'min_by(@, &@)')).toBeNull();
+  });
   it('items()', () => {
     expect(jmespath.search({ foo: 'bar', baz: 'qux' }, 'items(@)')).toEqual([
       ['foo', 'bar'],
@@ -107,6 +165,22 @@ describe('Type-checks function arguments', () => {
   it('group_by()', () => {
     expectError(() => {
       return jmespath.search([{ a: 42 }, { a: 42 }], 'group_by(@, &a)');
+    }, 'invalid-type');
+  });
+  it('max_by() and min_by() error on non-number non-string keys', () => {
+    expectError(() => {
+      return jmespath.search([{ k: true }], 'max_by(@, &k)');
+    }, 'invalid-type');
+    expectError(() => {
+      return jmespath.search([{ k: true }], 'min_by(@, &k)');
+    }, 'invalid-type');
+  });
+  it('max_by() and min_by() error on mixed key types', () => {
+    expectError(() => {
+      return jmespath.search([{ k: 1 }, { k: 'foo' }], 'max_by(@, &k)');
+    }, 'invalid-type');
+    expectError(() => {
+      return jmespath.search([{ k: 'foo' }, { k: 1 }], 'min_by(@, &k)');
     }, 'invalid-type');
   });
   it('length()', () => {

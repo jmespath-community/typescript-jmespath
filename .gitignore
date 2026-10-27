@@ -10,6 +10,9 @@ compiled
 .awcache
 .rpt2_cache
 docs
+.agent
+reports
+
 
 src/**/*.js
 src/**/*.map
