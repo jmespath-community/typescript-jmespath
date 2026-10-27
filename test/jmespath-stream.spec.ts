@@ -214,6 +214,18 @@ describe('searchStream', () => {
       expect(results).toEqual([sampleUsers[0], sampleUsers[2]]);
     });
 
+    it('supports slice with stop 0 [:0]', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[:0]'));
+      expect(results).toEqual([]);
+    });
+
+    it('returns raw string chunks without JSON parsing when parseJson is false', async () => {
+      const source = createAsyncGenerator(['{"a": 1}\n']);
+      const results = await collectStream(searchStream(source, '@', { parseJson: false }));
+      expect(results).toEqual(['{"a": 1}\n']);
+    });
+
     it('supports limit option for early termination', async () => {
       let count = 0;
       async function* countGenerator() {
@@ -226,6 +238,26 @@ describe('searchStream', () => {
       const results = await collectStream(searchStream(countGenerator(), '[*].num', { limit: 3 }));
       expect(results).toEqual([0, 1, 2]);
       expect(count).toBe(3);
+    });
+
+    it('yields zero results when limit is 0', async () => {
+      let count = 0;
+      async function* countGenerator() {
+        for (let i = 0; i < 10; i++) {
+          count++;
+          yield { num: i };
+        }
+      }
+
+      const results = await collectStream(searchStream(countGenerator(), '[*].num', { limit: 0 }));
+      expect(results).toEqual([]);
+      expect(count).toBe(0);
+    });
+
+    it('yields zero results when limit is negative', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[*].name', { limit: -1 }));
+      expect(results).toEqual([]);
     });
 
     it('calls iterator return() when consumer breaks early', async () => {
@@ -417,6 +449,83 @@ describe('searchStream', () => {
         { userName: 'Alice', userScore: 95 },
         { userName: 'Bob', userScore: 70 },
       ]);
+    });
+  });
+
+  describe('Scalar indexing on stream', () => {
+    it('evaluates root scalar index [0]', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[0]'));
+      expect(results).toEqual([sampleUsers[0]]);
+    });
+
+    it('evaluates root scalar negative index [-1]', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[-1]'));
+      expect(results).toEqual([sampleUsers[3]]);
+    });
+
+    it('returns empty when scalar index is out of bounds', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[10]'));
+      expect(results).toEqual([]);
+    });
+
+    it('evaluates piped scalar index [*].name | [0]', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[*].name | [0]'));
+      expect(results).toEqual(['Alice']);
+    });
+
+    it('evaluates piped scalar negative index [*].name | [-1]', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[*].name | [-1]'));
+      expect(results).toEqual(['Dana']);
+    });
+
+    it('evaluates subexpression with scalar index [0].name', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[0].name'));
+      expect(results).toEqual(['Alice']);
+    });
+
+    it('evaluates subexpression with negative scalar index [-1].name', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(searchStream(source, '[-1].name'));
+      expect(results).toEqual(['Dana']);
+    });
+
+    it('throws when maxOutputSize is exceeded during scalar index collection', async () => {
+      const source = createAsyncGenerator(sampleUsers);
+      await expect(collectStream(searchStream(source, '[0]', { maxOutputSize: 2 }))).rejects.toThrow(
+        'Output size exceeds maximum allowed size of 2',
+      );
+    });
+
+    it('supports scalar indexing through compiledQuery.searchStream', async () => {
+      const query = compileQuery('[0].role');
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(query.searchStream(source));
+      expect(results).toEqual(['admin']);
+    });
+
+    it('supports limit: 0 through compiledQuery.searchStream', async () => {
+      const query = compileQuery('[*].name');
+      const source = createAsyncGenerator(sampleUsers);
+      const results = await collectStream(query.searchStream(source, { limit: 0 }));
+      expect(results).toEqual([]);
+    });
+
+    it('evaluates pipe with non-streamable left stage sum(@) | to_string(@)', async () => {
+      const source = createAsyncGenerator([1, 2, 3]);
+      const results = await collectStream(searchStream(source, 'sum(@) | to_string(@)'));
+      expect(results).toEqual(['[6]']);
+    });
+
+    it('evaluates non-streamable root index expression sum(items)[0]', async () => {
+      const source = createAsyncGenerator([{ items: [1, 2] }]);
+      const results = await collectStream(searchStream(source, 'sum(items)[0]'));
+      expect(results).toEqual([]);
     });
   });
 });
