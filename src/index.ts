@@ -2,7 +2,7 @@ import { ExpressionNode } from './AST.type';
 import { JSONValue } from './JSON.type';
 import Lexer from './Lexer';
 import { LexerOptions, LexerToken } from './Lexer.type';
-import Parser from './Parser';
+import Parser, { DEFAULT_MAX_DEPTH } from './Parser';
 import { Options } from './Parser.type';
 import type { PathValue } from './Path.type';
 import {
@@ -187,6 +187,7 @@ const jmespath = {
   search,
   tokenize,
   TreeInterpreter,
+  DEFAULT_MAX_DEPTH,
   TYPE_ANY,
   TYPE_ARRAY_NUMBER,
   TYPE_ARRAY_STRING,
@@ -219,6 +220,7 @@ export {
   search,
   tokenize,
   TreeInterpreter,
+  DEFAULT_MAX_DEPTH,
   TYPE_ANY,
   TYPE_ARRAY_NUMBER,
   TYPE_ARRAY_STRING,

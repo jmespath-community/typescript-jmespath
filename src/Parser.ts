@@ -60,11 +60,13 @@ const bindingPower: Record<string, number> = {
   [Token.TOK_LPAREN]: 60,
 };
 
+export const DEFAULT_MAX_DEPTH = 1000;
+
 class TokenParser {
   index = 0;
   tokens: LexerToken[] = [];
   private depth = 0;
-  private maxDepth?: number;
+  private maxDepth: number = DEFAULT_MAX_DEPTH;
   private nodeCount = 0;
   private maxNodes?: number;
 
@@ -73,7 +75,7 @@ class TokenParser {
     this.index = 0;
     this.depth = 0;
     this.nodeCount = 0;
-    this.maxDepth = options?.maxDepth;
+    this.maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
     this.maxNodes = options?.maxNodes;
 
     const ast = this.expression(0);
@@ -93,7 +95,7 @@ class TokenParser {
   }
 
   expression(rbp: number): ExpressionNode {
-    if (this.maxDepth !== undefined && this.depth >= this.maxDepth) {
+    if (this.depth >= this.maxDepth) {
       throw new Error(`Expression exceeds maximum allowed depth of ${this.maxDepth}`);
     }
     this.depth += 1;
@@ -508,6 +510,9 @@ class TokenParser {
         if (this.lookahead(0) === Token.TOK_RBRACKET) {
           throw new Error('Syntax error: unexpected token Rbracket');
         }
+      } else if (this.lookahead(0) !== Token.TOK_RBRACKET) {
+        const token = this.lookaheadToken(0);
+        this.errorToken(token, `Syntax error: unexpected token: ${token.value}(${token.type})`);
       }
     }
     this.match(Token.TOK_RBRACKET);
@@ -535,6 +540,9 @@ class TokenParser {
       } else if (this.lookahead(0) === Token.TOK_RBRACE) {
         this.match(Token.TOK_RBRACE);
         break;
+      } else {
+        const token = this.lookaheadToken(0);
+        this.errorToken(token, `Syntax error: unexpected token: ${token.value}(${token.type})`);
       }
     }
     return { type: 'MultiSelectHash', children: pairs };

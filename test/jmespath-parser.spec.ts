@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import jmespath from '../src';
+import jmespath, { DEFAULT_MAX_DEPTH } from '../src';
 import { expectError } from './error.utils';
 
 describe('parsing', () => {
@@ -109,5 +109,74 @@ describe('parsing', () => {
     };
     expect(jmespath.compile("  @ && 'truthy' ")).toMatchObject(expected);
     expect(jmespath.compile("( @ && 'truthy' )")).toMatchObject(expected);
+  });
+  describe('multi-select comma validation', () => {
+    it('should parse valid multi-select list', () => {
+      expect(jmespath.compile('[a, b, c]')).toMatchObject({
+        type: 'MultiSelectList',
+        children: [
+          { type: 'Field', name: 'a' },
+          { type: 'Field', name: 'b' },
+          { type: 'Field', name: 'c' },
+        ],
+      });
+      expect(jmespath.search({ a: 1, b: 2, c: 3 }, '[a, b, c]')).toEqual([1, 2, 3]);
+    });
+    it.each(['[a b]', '[a b c]', 'foo.[a b]', '[foo bar baz]', 'foo.[a, b c]'])(
+      'should reject multi-select list without commas %s',
+      expr => {
+        expect(() => jmespath.compile(expr)).toThrow(/Syntax error/);
+        expect(jmespath.validate(expr).valid).toBe(false);
+      },
+    );
+    it.each(['[a, b,]', 'foo.[a, ]'])('should reject multi-select list with trailing comma %s', expr => {
+      expect(() => jmespath.compile(expr)).toThrow(/Syntax error: unexpected token Rbracket/);
+    });
+    it('should parse valid multi-select hash', () => {
+      expect(jmespath.compile('{a: b, c: d}')).toMatchObject({
+        type: 'MultiSelectHash',
+        children: [
+          { type: 'KeyValuePair', name: 'a', value: { type: 'Field', name: 'b' } },
+          { type: 'KeyValuePair', name: 'c', value: { type: 'Field', name: 'd' } },
+        ],
+      });
+      expect(jmespath.search({ b: 1, d: 2 }, '{a: b, c: d}')).toEqual({ a: 1, c: 2 });
+    });
+    it.each(['{a: b c: d}', 'foo.{a: b c: d}'])('should reject multi-select hash without commas %s', expr => {
+      expect(() => jmespath.compile(expr)).toThrow(/Syntax error/);
+      expect(jmespath.validate(expr).valid).toBe(false);
+    });
+  });
+  describe('parser recursion depth limit', () => {
+    it('should enforce default recursion depth limit and fail gracefully', () => {
+      const deepExpr = '('.repeat(DEFAULT_MAX_DEPTH + 1) + 'a' + ')'.repeat(DEFAULT_MAX_DEPTH + 1);
+      expect(() => jmespath.compile(deepExpr)).toThrow(
+        new RegExp(`Expression exceeds maximum allowed depth of ${DEFAULT_MAX_DEPTH}`),
+      );
+      expect(jmespath.validate(deepExpr)).toMatchObject({
+        valid: false,
+        error: expect.stringMatching(new RegExp(`Expression exceeds maximum allowed depth of ${DEFAULT_MAX_DEPTH}`)),
+      });
+    });
+    it('should respect custom options.maxDepth', () => {
+      const expr = '('.repeat(10) + 'a' + ')'.repeat(10);
+      expect(() => jmespath.compile(expr, { maxDepth: 5 })).toThrow(/Expression exceeds maximum allowed depth of 5/);
+      expect(jmespath.validate(expr, { maxDepth: 5 })).toMatchObject({
+        valid: false,
+        error: expect.stringContaining('depth of 5'),
+      });
+      expect(jmespath.compile(expr, { maxDepth: 20 })).toBeDefined();
+    });
+    it('should throw Error instead of unhandled RangeError on deeply nested expressions', () => {
+      const deepExpr = '('.repeat(2000) + 'a' + ')'.repeat(2000);
+      let thrownError: unknown;
+      try {
+        jmespath.compile(deepExpr);
+      } catch (err) {
+        thrownError = err;
+      }
+      expect(thrownError).toBeInstanceOf(Error);
+      expect(thrownError).not.toBeInstanceOf(RangeError);
+    });
   });
 });
