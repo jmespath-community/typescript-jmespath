@@ -11,10 +11,6 @@ export interface FastExecutionContext {
 
 export type FastEvaluatorFn = (current: JSONValue, context: FastExecutionContext) => JSONValue;
 
-/**
- * Compiles subexpression field chains into a flattened key array when possible.
- * E.g., `a.b.c.d` -> `['a', 'b', 'c', 'd']`
- */
 function tryFlattenFieldChain(node: ExpressionNode): string[] | null {
   const fields: string[] = [];
   let cur: ExpressionNode = node;
@@ -33,60 +29,15 @@ function tryFlattenFieldChain(node: ExpressionNode): string[] | null {
   return null;
 }
 
-function compareOrdering(operator: 'GT' | 'GTE' | 'LT' | 'LTE', first: unknown, second: unknown): boolean | null {
-  if (typeof first !== 'number' || typeof second !== 'number') {
-    return null;
-  }
-  switch (operator) {
-    case 'GT':
-      return first > second;
-    case 'GTE':
-      return first >= second;
-    case 'LT':
-      return first < second;
-    case 'LTE':
-      return first <= second;
-  }
-}
-
 function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
+  if (!node) {
+    return () => null;
+  }
+
   if (node.type === 'Subexpression') {
     const chain = tryFlattenFieldChain(node);
     if (chain) {
       const len = chain.length;
-      if (len === 2) {
-        const k0 = chain[0];
-        const k1 = chain[1];
-        return cur => {
-          if (cur === null || typeof cur !== 'object' || Array.isArray(cur)) {
-            return null;
-          }
-          const v0 = (cur as Record<string, JSONValue>)[k0];
-          if (v0 === null || typeof v0 !== 'object' || Array.isArray(v0)) {
-            return null;
-          }
-          return (v0 as Record<string, JSONValue>)[k1] ?? null;
-        };
-      }
-      if (len === 3) {
-        const k0 = chain[0];
-        const k1 = chain[1];
-        const k2 = chain[2];
-        return cur => {
-          if (cur === null || typeof cur !== 'object' || Array.isArray(cur)) {
-            return null;
-          }
-          const v0 = (cur as Record<string, JSONValue>)[k0];
-          if (v0 === null || typeof v0 !== 'object' || Array.isArray(v0)) {
-            return null;
-          }
-          const v1 = (v0 as Record<string, JSONValue>)[k1];
-          if (v1 === null || typeof v1 !== 'object' || Array.isArray(v1)) {
-            return null;
-          }
-          return (v1 as Record<string, JSONValue>)[k2] ?? null;
-        };
-      }
       return cur => {
         let val: unknown = cur;
         for (let i = 0; i < len; i++) {
@@ -106,14 +57,14 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
   switch (node.type) {
     case 'Field': {
       const name = node.name;
-      return cur => {
-        if (cur === null || typeof cur !== 'object' || Array.isArray(cur)) {
-          return null;
-        }
-        return (cur as Record<string, JSONValue>)[name] ?? null;
-      };
+      return cur =>
+        cur !== null && typeof cur === 'object' && !Array.isArray(cur)
+          ? ((cur as Record<string, JSONValue>)[name] ?? null)
+          : null;
     }
-    case 'Subexpression': {
+    case 'Subexpression':
+    case 'Pipe':
+    case 'IndexExpression': {
       const left = compileNode(node.left);
       const right = compileNode(node.right);
       if (!left || !right) {
@@ -123,14 +74,6 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
         const v = left(cur, ctx);
         return v != null ? right(v, ctx) : null;
       };
-    }
-    case 'Pipe': {
-      const left = compileNode(node.left);
-      const right = compileNode(node.right);
-      if (!left || !right) {
-        return null;
-      }
-      return (cur, ctx) => right(left(cur, ctx), ctx);
     }
     case 'Index': {
       const idx = node.value;
@@ -142,39 +85,11 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
         return cur[pos] ?? null;
       };
     }
-    case 'IndexExpression': {
-      const left = compileNode(node.left);
-      const right = compileNode(node.right);
-      if (!left || !right) {
-        return null;
-      }
-      return (cur, ctx) => right(left(cur, ctx), ctx);
-    }
     case 'Projection': {
       const left = compileNode(node.left);
       const right = compileNode(node.right);
       if (!left || !right) {
         return null;
-      }
-      if (node.right.type === 'Field') {
-        const key = node.right.name;
-        return (cur, ctx) => {
-          const items = left(cur, ctx);
-          if (!Array.isArray(items)) {
-            return null;
-          }
-          const out: JSONValue[] = [];
-          for (let i = 0; i < items.length; i++) {
-            const el = items[i];
-            if (el !== null && typeof el === 'object' && !Array.isArray(el)) {
-              const val = (el as Record<string, JSONValue>)[key];
-              if (val !== undefined && val !== null) {
-                out.push(val);
-              }
-            }
-          }
-          return out;
-        };
       }
       return (cur, ctx) => {
         const items = left(cur, ctx);
@@ -183,9 +98,9 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
         }
         const out: JSONValue[] = [];
         for (let i = 0; i < items.length; i++) {
-          const v = right(items[i], ctx);
-          if (v !== null) {
-            out.push(v);
+          const res = right(items[i], ctx);
+          if (res !== null) {
+            out.push(res);
           }
         }
         return out;
@@ -205,9 +120,9 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
         const items = Object.values(base);
         const out: JSONValue[] = [];
         for (let i = 0; i < items.length; i++) {
-          const v = right(items[i], ctx);
-          if (v !== null) {
-            out.push(v);
+          const res = right(items[i], ctx);
+          if (res !== null) {
+            out.push(res);
           }
         }
         return out;
@@ -220,28 +135,6 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
       if (!left || !cond || !right) {
         return null;
       }
-      if (node.right.type === 'Field') {
-        const key = node.right.name;
-        return (cur, ctx) => {
-          const items = left(cur, ctx);
-          if (!Array.isArray(items)) {
-            return null;
-          }
-          const out: JSONValue[] = [];
-          for (let i = 0; i < items.length; i++) {
-            const el = items[i];
-            if (!isFalse(cond(el, ctx))) {
-              if (el !== null && typeof el === 'object' && !Array.isArray(el)) {
-                const val = (el as Record<string, JSONValue>)[key];
-                if (val !== undefined && val !== null) {
-                  out.push(val);
-                }
-              }
-            }
-          }
-          return out;
-        };
-      }
       return (cur, ctx) => {
         const items = left(cur, ctx);
         if (!Array.isArray(items)) {
@@ -251,9 +144,9 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
         for (let i = 0; i < items.length; i++) {
           const el = items[i];
           if (!isFalse(cond(el, ctx))) {
-            const v = right(el, ctx);
-            if (v !== null) {
-              out.push(v);
+            const res = right(el, ctx);
+            if (res !== null) {
+              out.push(res);
             }
           }
         }
@@ -301,17 +194,24 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
     case 'Comparator': {
       const left = compileNode(node.left);
       const right = compileNode(node.right);
+      const op = node.name;
       if (!left || !right) {
         return null;
       }
-      const name = node.name;
-      if (name === 'EQ') {
+      if (op === 'EQ') {
         return (cur, ctx) => strictDeepEqual(left(cur, ctx), right(cur, ctx));
       }
-      if (name === 'NE') {
+      if (op === 'NE') {
         return (cur, ctx) => !strictDeepEqual(left(cur, ctx), right(cur, ctx));
       }
-      return (cur, ctx) => compareOrdering(name, left(cur, ctx), right(cur, ctx));
+      return (cur, ctx) => {
+        const a = left(cur, ctx);
+        const b = right(cur, ctx);
+        if (typeof a !== 'number' || typeof b !== 'number') {
+          return null;
+        }
+        return op === 'GT' ? a > b : op === 'GTE' ? a >= b : op === 'LT' ? a < b : a <= b;
+      };
     }
     case 'Literal': {
       const val = node.value;
@@ -328,8 +228,8 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
         return null;
       }
       return (cur, ctx) => {
-        const original = child(cur, ctx);
-        return Array.isArray(original) ? (original.flat() as JSONValue) : null;
+        const res = child(cur, ctx);
+        return Array.isArray(res) ? (res.flat() as JSONValue) : null;
       };
     }
     case 'MultiSelectHash': {
@@ -371,7 +271,7 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
       const argFns: FastEvaluatorFn[] = [];
       for (const child of node.children) {
         if (child.type === 'ExpressionReference') {
-          return null; // Expression references (&expref) delegate to TreeInterpreter
+          return null;
         }
         const afn = compileNode(child);
         if (!afn) {
@@ -392,17 +292,11 @@ function compileNode(node: ExpressionNode): FastEvaluatorFn | null {
   }
 }
 
-/**
- * Attempts to compile an AST node into a high-performance non-eval closure evaluator.
- * Returns `null` if the expression contains node types not specialized by the fast path
- * or if safety options (timeout, recursion depth ceiling, output limits) are configured.
- */
 export function compileFastEvaluator(
   node: ExpressionNode,
   options: Options | undefined,
   runtime: Runtime,
 ): ((data: JSONValue) => JSONValue) | null {
-  // If safety limits or custom options are passed, delegate to TreeInterpreter
   if (
     options &&
     (options.timeoutMs !== undefined ||
@@ -418,10 +312,9 @@ export function compileFastEvaluator(
     return null;
   }
 
-  return (data: JSONValue): JSONValue => {
-    return compiled(data, {
+  return (data: JSONValue): JSONValue =>
+    compiled(data, {
       root: data,
       runtime,
     });
-  };
 }
