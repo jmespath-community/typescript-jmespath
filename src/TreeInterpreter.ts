@@ -113,19 +113,22 @@ export class TreeInterpreter {
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
     if (this._options) {
-      if (this._options.maxDepth !== undefined && this._depth >= this._options.maxDepth) {
-        throw new Error(`Evaluation exceeds maximum allowed depth of ${this._options.maxDepth}`);
-      }
       if (this._deadline > 0 && Date.now() >= this._deadline) {
         throw new Error(`Query execution timed out after ${this._options.timeoutMs}ms`);
       }
+      if (this._options.maxDepth !== undefined) {
+        if (this._depth >= this._options.maxDepth) {
+          throw new Error(`Evaluation exceeds maximum allowed depth of ${this._options.maxDepth}`);
+        }
+        this._depth += 1;
+        try {
+          return this.evaluateNode(node, value);
+        } finally {
+          this._depth -= 1;
+        }
+      }
     }
-    this._depth += 1;
-    try {
-      return this.evaluateNode(node, value);
-    } finally {
-      this._depth -= 1;
-    }
+    return this.evaluateNode(node, value);
   }
 
   private evaluateNode(
