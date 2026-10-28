@@ -3,7 +3,7 @@
 import * as fs from 'node:fs';
 import { ParseArgsConfig, parseArgs } from 'node:util';
 import pkg from '../package.json';
-import jmespath, { JSONValue } from './index';
+import jmespath from './index';
 
 const args = getArgs();
 
@@ -90,17 +90,6 @@ function printHelp(): void {
 }
 
 function printResult(inputJSON: string, expression: string, compact = false) {
-  let parsedInput: JSONValue | null = null;
-
-  try {
-    parsedInput = JSON.parse(inputJSON);
-  } catch (e) {
-    throw e;
-  }
-
-  try {
-    console.log(JSON.stringify(jmespath.search(parsedInput, expression, undefined), null, compact ? 0 : 2));
-  } catch (e) {
-    throw e;
-  }
+  const parsedInput = JSON.parse(inputJSON);
+  console.log(JSON.stringify(jmespath.search(parsedInput, expression, undefined), null, compact ? 0 : 2));
 }
