@@ -1,4 +1,5 @@
 import { ExpressionNode } from './AST.type';
+import { compileFastEvaluator } from './FastEvaluator';
 import { JSONValue } from './JSON.type';
 import Lexer from './Lexer';
 import { LexerOptions, LexerToken } from './Lexer.type';
@@ -66,10 +67,15 @@ function compile(expression: string, options?: Options): ExpressionNode {
 
 function compileQuery<T = JSONValue, D = unknown>(expression: string, options?: Options): CompiledQuery<T, D> {
   const nodeTree = Parser.parse(expression, options);
+  const fastFn = compileFastEvaluator(nodeTree, options, TreeInterpreterInst.runtime);
+  const evaluate = fastFn
+    ? (data: D): T => fastFn(data as JSONValue) as T
+    : (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+
   const fn = function (data: D): T {
-    return TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+    return evaluate(data);
   } as CompiledQuery<T, D>;
-  fn.search = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+  fn.search = (data: D): T => evaluate(data);
   fn.searchStream = (source: StreamSource<D>, streamOptions?: StreamOptions) =>
     searchStream<T, D>(source, nodeTree, { ...options, ...streamOptions });
   fn.ast = nodeTree;
@@ -141,28 +147,37 @@ const clearCustomFunctions = (): void => {
   TreeInterpreterInst.runtime.clearCustomFunctions();
 };
 
+interface AstCacheEntry {
+  nodeTree: ExpressionNode;
+  fastFn?: ((data: JSONValue) => JSONValue) | null;
+}
+
 const MAX_CACHE_SIZE = 1000;
-const astCache = new Map<string, ExpressionNode>();
+const astCache = new Map<string, AstCacheEntry>();
 
 function search<T, P extends string>(data: T, expression: P, options?: Options): PathValue<T, P>;
 function search<T = JSONValue, D = unknown>(data: D, expression: string, options?: Options): T;
 function search(data: unknown, expression: string, options?: Options): unknown {
-  let nodeTree: ExpressionNode | undefined;
   if (!options) {
-    nodeTree = astCache.get(expression);
-    if (!nodeTree) {
-      nodeTree = Parser.parse(expression);
+    let entry = astCache.get(expression);
+    if (!entry) {
+      const nodeTree = Parser.parse(expression);
+      const fastFn = compileFastEvaluator(nodeTree, undefined, TreeInterpreterInst.runtime);
+      entry = { nodeTree, fastFn };
       if (astCache.size >= MAX_CACHE_SIZE) {
         const firstKey = astCache.keys().next().value;
         if (firstKey !== undefined) {
           astCache.delete(firstKey);
         }
       }
-      astCache.set(expression, nodeTree);
+      astCache.set(expression, entry);
     }
-  } else {
-    nodeTree = Parser.parse(expression, options);
+    if (entry.fastFn) {
+      return entry.fastFn(data as JSONValue);
+    }
+    return TreeInterpreterInst.search(entry.nodeTree, data as JSONValue);
   }
+  const nodeTree = Parser.parse(expression, options);
   return TreeInterpreterInst.search(nodeTree, data as JSONValue, options);
 }
 
