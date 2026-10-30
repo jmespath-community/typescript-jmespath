@@ -66,10 +66,9 @@ function compile(expression: string, options?: Options): ExpressionNode {
 
 function compileQuery<T = JSONValue, D = unknown>(expression: string, options?: Options): CompiledQuery<T, D> {
   const nodeTree = Parser.parse(expression, options);
-  const fn = function (data: D): T {
-    return TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
-  } as CompiledQuery<T, D>;
-  fn.search = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+  const searchFn = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
+  const fn = searchFn as CompiledQuery<T, D>;
+  fn.search = searchFn;
   fn.searchStream = (source: StreamSource<D>, streamOptions?: StreamOptions) =>
     searchStream<T, D>(source, nodeTree, { ...options, ...streamOptions });
   fn.ast = nodeTree;

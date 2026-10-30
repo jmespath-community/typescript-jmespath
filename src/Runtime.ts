@@ -638,27 +638,31 @@ export class Runtime implements FunctionRegistry {
     return mapped;
   };
 
-  private functionMax: RuntimeFunction<[(string | number)[]], string | number | null> = ([inputValue]) => {
+  private findExtreme(
+    inputValue: (string | number)[],
+    isBetter: (cmp: number) => boolean,
+    mathFn: (...values: number[]) => number,
+  ): string | number | null {
     if (!inputValue.length) {
       return null;
     }
-
-    const typeName = this.getTypeName(inputValue[0]);
-    if (typeName === InputArgument.TYPE_NUMBER) {
-      return Math.max(...(inputValue as number[]));
+    if (this.getTypeName(inputValue[0]) === InputArgument.TYPE_NUMBER) {
+      return mathFn(...(inputValue as number[]));
     }
-
     const elements = inputValue as string[];
-    let maxElement = elements[0];
+    let extreme = elements[0];
     for (let i = 1; i < elements.length; i += 1) {
-      if (Text.comparer(elements[i], maxElement) > 0) {
-        maxElement = elements[i];
+      if (isBetter(Text.comparer(elements[i], extreme))) {
+        extreme = elements[i];
       }
     }
-    return maxElement;
-  };
+    return extreme;
+  }
 
-  private functionMaxBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = resolvedArgs => {
+  private functionMax: RuntimeFunction<[(string | number)[]], string | number | null> = ([inputValue]) =>
+    this.findExtreme(inputValue, cmp => cmp > 0, Math.max);
+
+  private findExtremeBy(resolvedArgs: [JSONArray, ExpressionNode], isBetter: (cmp: number) => boolean): JSONValue {
     const resolvedArray = resolvedArgs[0];
     if (!resolvedArray.length) {
       return null;
@@ -679,8 +683,8 @@ export class Runtime implements FunctionRegistry {
       );
     }
 
-    let maxRecord: JSONValue = resolvedArray[0];
-    let maxKey = firstKey;
+    let extremeRecord: JSONValue = resolvedArray[0];
+    let extremeKey = firstKey;
 
     for (let i = 1; i < resolvedArray.length; i += 1) {
       const currentKey = interpreter.visit(exprefNode, resolvedArray[i]) as JSONValue;
@@ -691,94 +695,32 @@ export class Runtime implements FunctionRegistry {
         );
       }
 
-      if (firstType === InputArgument.TYPE_NUMBER) {
-        if ((currentKey as number) > (maxKey as number)) {
-          maxKey = currentKey;
-          maxRecord = resolvedArray[i];
-        }
-      } else {
-        if (Text.comparer(currentKey as string, maxKey as string) > 0) {
-          maxKey = currentKey;
-          maxRecord = resolvedArray[i];
-        }
+      const cmp =
+        firstType === InputArgument.TYPE_NUMBER
+          ? (currentKey as number) - (extremeKey as number)
+          : Text.comparer(currentKey as string, extremeKey as string);
+
+      if (isBetter(cmp)) {
+        extremeKey = currentKey;
+        extremeRecord = resolvedArray[i];
       }
     }
 
-    return maxRecord;
-  };
+    return extremeRecord;
+  }
+
+  private functionMaxBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = resolvedArgs =>
+    this.findExtremeBy(resolvedArgs, cmp => cmp > 0);
 
   private functionMerge: RuntimeFunction<JSONObject[], JSONObject> = resolvedArgs => {
     return Object.assign({}, ...resolvedArgs);
   };
 
-  private functionMin: RuntimeFunction<[(string | number)[]], string | number | null> = ([inputValue]) => {
-    if (!inputValue.length) {
-      return null;
-    }
+  private functionMin: RuntimeFunction<[(string | number)[]], string | number | null> = ([inputValue]) =>
+    this.findExtreme(inputValue, cmp => cmp < 0, Math.min);
 
-    const typeName = this.getTypeName(inputValue[0]);
-    if (typeName === InputArgument.TYPE_NUMBER) {
-      return Math.min(...(inputValue as number[]));
-    }
-
-    const elements = inputValue as string[];
-    let minElement = elements[0];
-    for (let i = 1; i < elements.length; i += 1) {
-      if (Text.comparer(elements[i], minElement) < 0) {
-        minElement = elements[i];
-      }
-    }
-    return minElement;
-  };
-
-  private functionMinBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = resolvedArgs => {
-    const resolvedArray = resolvedArgs[0];
-    if (!resolvedArray.length) {
-      return null;
-    }
-    const exprefNode = resolvedArgs[1];
-    const interpreter = this._interpreter;
-    if (!interpreter) {
-      return null;
-    }
-
-    const firstKey = interpreter.visit(exprefNode, resolvedArray[0]) as JSONValue;
-    const firstType = this.getTypeName(firstKey) as InputArgument;
-    if (firstType !== InputArgument.TYPE_NUMBER && firstType !== InputArgument.TYPE_STRING) {
-      throw new Error(
-        `Invalid type: expected one of (${this.TYPE_NAME_TABLE[InputArgument.TYPE_NUMBER]} | ${
-          this.TYPE_NAME_TABLE[InputArgument.TYPE_STRING]
-        }), received ${this.TYPE_NAME_TABLE[firstType]}`,
-      );
-    }
-
-    let minRecord: JSONValue = resolvedArray[0];
-    let minKey = firstKey;
-
-    for (let i = 1; i < resolvedArray.length; i += 1) {
-      const currentKey = interpreter.visit(exprefNode, resolvedArray[i]) as JSONValue;
-      const currentType = this.getTypeName(currentKey) as InputArgument;
-      if (currentType !== firstType) {
-        throw new Error(
-          `Invalid type: expected (${this.TYPE_NAME_TABLE[firstType]}), received ${this.TYPE_NAME_TABLE[currentType]}`,
-        );
-      }
-
-      if (firstType === InputArgument.TYPE_NUMBER) {
-        if ((currentKey as number) < (minKey as number)) {
-          minKey = currentKey;
-          minRecord = resolvedArray[i];
-        }
-      } else {
-        if (Text.comparer(currentKey as string, minKey as string) < 0) {
-          minKey = currentKey;
-          minRecord = resolvedArray[i];
-        }
-      }
-    }
-
-    return minRecord;
-  };
+  private functionMinBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = resolvedArgs =>
+    this.findExtremeBy(resolvedArgs, cmp => cmp < 0);
 
   private functionNotNull: RuntimeFunction<JSONArray, JSONValue> = resolvedArgs => {
     return resolvedArgs.find(arg => arg !== null) ?? null;
