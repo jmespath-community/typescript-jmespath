@@ -183,7 +183,12 @@ class StreamLexer {
 
   private consumeRawStringLiteral(stream: string): string {
     const raw = this.consumeUntil(stream, "'");
-    const content = raw.endsWith("'") && raw.length > 1 ? raw.slice(1, -1) : raw.slice(1);
+    if (!raw.endsWith("'") || raw.length < 2) {
+      const error = new Error('Syntax error: unclosed single quote');
+      error.name = 'LexerError';
+      throw error;
+    }
+    const content = raw.slice(1, -1);
     return content.replace(/\\(['\\])/g, '$1');
   }
 

@@ -149,4 +149,8 @@ describe('tokenize', () => {
       { type: 'Rparen', value: ')', start: 5 },
     ]);
   });
+  it('should throw LexerError on unclosed single quote raw string', () => {
+    expect(() => jmespath.tokenize("'unterminated")).toThrow('Syntax error: unclosed single quote');
+    expect(() => jmespath.tokenize("'")).toThrow('Syntax error: unclosed single quote');
+  });
 });

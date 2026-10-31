@@ -158,14 +158,29 @@ export class TreeInterpreter {
       case 'LetExpression': {
         const scope: JSONObject = {};
         for (const binding of node.bindings) {
-          Object.assign(scope, this.visit(binding, value));
+          const bound = this.visit(binding, value) as JSONObject;
+          for (const key of Object.keys(bound)) {
+            Object.defineProperty(scope, key, {
+              value: bound[key],
+              enumerable: true,
+              writable: true,
+              configurable: true,
+            });
+          }
         }
         return this.withScope(scope).visit(node.expression, value);
       }
       case 'Binding': {
         const { variable, reference } = node;
         const result = this.visit(reference, value);
-        return { [variable]: result } as JSONObject;
+        const binding: JSONObject = {};
+        Object.defineProperty(binding, variable, {
+          value: result,
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        });
+        return binding;
       }
       case 'Variable': {
         const variable = node.name;
@@ -357,7 +372,12 @@ export class TreeInterpreter {
       case 'MultiSelectHash': {
         const collected: Record<string, JSONValue> = {};
         for (const child of node.children) {
-          collected[child.name] = this.visit(child.value, value) as JSONValue;
+          Object.defineProperty(collected, child.name, {
+            value: this.visit(child.value, value) as JSONValue,
+            enumerable: true,
+            writable: true,
+            configurable: true,
+          });
         }
         this.checkOutputSize(collected);
         return collected;

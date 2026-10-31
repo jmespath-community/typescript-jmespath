@@ -103,6 +103,6 @@ export const sub = binOp((a, b) => a - b);
 export const mul = binOp((a, b) => a * b);
 export const divide = binOp((a, b) => a / notZero(b));
 export const div = binOp((a, b) => Math.floor(a / notZero(b)));
-export const mod = binOp((a, b) => a % b);
+export const mod = binOp((a, b) => a % notZero(b));
 
 export * from './ast';

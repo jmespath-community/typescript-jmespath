@@ -194,4 +194,18 @@ describe('Searches compiled ast', () => {
     expect(jmespath.search(nullProto, 'name')).toBe('test');
     expect(jmespath.search(nullProto, 'toString')).toBeNull();
   });
+
+  it('preserves __proto__ as an own property in MultiSelectHash and let bindings', () => {
+    const res = jmespath.search({}, '{ __proto__: `42` }') as Record<string, unknown>;
+    expect(Object.prototype.hasOwnProperty.call(res, '__proto__')).toBe(true);
+    expect(res.__proto__).toBe(42);
+    expect(Object.keys(res)).toEqual(['__proto__']);
+
+    expect(jmespath.search({}, "let $__proto__ = 'hello' in $__proto__")).toBe('hello');
+  });
+
+  it('raises not-a-number error on modulo by zero', () => {
+    expect(() => jmespath.search({}, '`10` % `0`')).toThrow('not-a-number: divide by zero');
+    expect(() => jmespath.search({}, '`10` % `-0`')).toThrow('not-a-number: divide by zero');
+  });
 });
