@@ -27,7 +27,7 @@ export class TreeInterpreter {
 
   withScope(scope: ScopeEntry): TreeInterpreter {
     const interpreter = new TreeInterpreter(this._options);
-    interpreter.runtime._functionTable = this.runtime._functionTable;
+    interpreter.runtime = this.runtime;
     interpreter._rootValue = this._rootValue;
     interpreter._scope = this._scope.withScope(scope);
     interpreter._depth = this._depth;
@@ -169,10 +169,7 @@ export class TreeInterpreter {
       }
       case 'Variable': {
         const variable = node.name;
-        if (
-          !this._scope.getValue(variable) &&
-          !Object.prototype.hasOwnProperty.call(this._scope.currentScopeData, variable)
-        ) {
+        if (!this._scope.hasValue(variable)) {
           throw new Error(`Error referencing undefined variable ${variable}`);
         }
         return this._scope.getValue(variable);
@@ -396,9 +393,15 @@ export class TreeInterpreter {
         for (const child of node.children) {
           args.push(this.visit(child, value) as JSONValue);
         }
-        const res = this.runtime.callFunction(node.name, args);
-        this.checkOutputSize(res);
-        return res;
+        const prevInterpreter = this.runtime._interpreter;
+        this.runtime._interpreter = this;
+        try {
+          const res = this.runtime.callFunction(node.name, args);
+          this.checkOutputSize(res);
+          return res;
+        } finally {
+          this.runtime._interpreter = prevInterpreter;
+        }
       }
       case 'ExpressionReference':
         return {

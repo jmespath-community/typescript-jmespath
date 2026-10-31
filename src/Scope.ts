@@ -15,6 +15,18 @@ export class ScopeChain {
     return outer;
   }
 
+  public hasValue(identifier: string): boolean {
+    if (Object.prototype.hasOwnProperty.call(this.data, identifier)) {
+      return true;
+    }
+
+    if (this.inner) {
+      return this.inner.hasValue(identifier);
+    }
+
+    return false;
+  }
+
   public getValue(identifier: string): JSONValue {
     if (Object.prototype.hasOwnProperty.call(this.data, identifier)) {
       return this.data[identifier];
