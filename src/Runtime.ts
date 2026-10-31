@@ -518,17 +518,8 @@ export class Runtime implements FunctionRegistry {
     return keyFunc;
   }
 
-  private functionAvg: RuntimeFunction<[number[]], number | null> = ([inputArray]) => {
-    if (!inputArray || inputArray.length == 0) {
-      return null;
-    }
-
-    let sum = 0;
-    for (let i = 0; i < inputArray.length; i += 1) {
-      sum += inputArray[i];
-    }
-    return sum / inputArray.length;
-  };
+  private functionAvg: RuntimeFunction<[number[]], number | null> = ([inputArray]) =>
+    inputArray && inputArray.length ? inputArray.reduce((a, b) => a + b, 0) / inputArray.length : null;
 
   private functionContains: RuntimeFunction<[string[] | JSONArray, JSONValue], JSONValue> = ([
     searchable,
@@ -554,20 +545,11 @@ export class Runtime implements FunctionRegistry {
     return searchStr.endsWith(suffix);
   };
 
-  private functionFindFirst = this.createFindFunction(findFirst);
-  private functionFindLast = this.createFindFunction(findLast);
+  private functionFindFirst: RuntimeFunction<JSONValue[], number | null> = ([subject, search, start, end]) =>
+    findFirst(subject as string, search as string, start as number, end as number);
 
-  private createFindFunction(
-    findFn: (subject: string, search: string, start?: number, end?: number) => number | null,
-  ): RuntimeFunction<JSONValue[], number | null> {
-    return resolvedArgs => {
-      const subject = resolvedArgs[0] as string;
-      const search = resolvedArgs[1] as string;
-      const start = resolvedArgs.length > 2 ? (resolvedArgs[2] as number) : undefined;
-      const end = resolvedArgs.length > 3 ? (resolvedArgs[3] as number) : undefined;
-      return findFn(subject, search, start, end);
-    };
-  }
+  private functionFindLast: RuntimeFunction<JSONValue[], number | null> = ([subject, search, start, end]) =>
+    findLast(subject as string, search as string, start as number, end as number);
 
   private functionFromItems: RuntimeFunction<[JSONArrayKeyValuePairs], JSONObject> = ([array]) => {
     for (const pair of array) {
@@ -607,24 +589,16 @@ export class Runtime implements FunctionRegistry {
     return Object.fromEntries(groups);
   };
 
-  private functionItems: RuntimeFunction<[JSONObject], JSONArray> = ([inputValue]) => {
-    return Object.entries(inputValue);
-  };
+  private functionItems: RuntimeFunction<[JSONObject], JSONArray> = ([inputValue]) => Object.entries(inputValue);
 
-  private functionJoin: RuntimeFunction<[string, string[]], string> = resolvedArgs => {
-    const [joinChar, listJoin] = resolvedArgs;
-    return listJoin.join(joinChar);
-  };
+  private functionJoin: RuntimeFunction<[string, string[]], string> = ([joinChar, listJoin]) => listJoin.join(joinChar);
 
-  private functionLength: RuntimeFunction<[string | JSONArray | JSONObject], number> = ([inputValue]) => {
-    if (typeof inputValue === 'string') {
-      return new Text(inputValue).length;
-    }
-    if (Array.isArray(inputValue)) {
-      return inputValue.length;
-    }
-    return Object.keys(inputValue).length;
-  };
+  private functionLength: RuntimeFunction<[string | JSONArray | JSONObject], number> = ([inputValue]) =>
+    typeof inputValue === 'string'
+      ? [...inputValue].length
+      : Array.isArray(inputValue)
+        ? inputValue.length
+        : Object.keys(inputValue).length;
 
   private functionMap: RuntimeFunction<[ExpressionNode, JSONArray], JSONArray> = ([exprefNode, elements]) => {
     if (!this._interpreter) {
@@ -726,52 +700,27 @@ export class Runtime implements FunctionRegistry {
     return resolvedArgs.find(arg => arg !== null) ?? null;
   };
 
-  private functionPadLeft = this.createPadFunction(padLeft);
-  private functionPadRight = this.createPadFunction(padRight);
+  private functionPadLeft: RuntimeFunction<JSONValue[], string> = ([subject, width, padding]) =>
+    padLeft(subject as string, width as number, padding as string);
 
-  private createPadFunction(
-    padFn: (subject: string, width: number, padding?: string) => string,
-  ): RuntimeFunction<JSONValue[], string> {
-    return resolvedArgs => {
-      const subject = resolvedArgs[0] as string;
-      const width = resolvedArgs[1] as number;
-      const padding = resolvedArgs.length > 2 ? (resolvedArgs[2] as string) : undefined;
-      return padFn(subject, width, padding);
-    };
-  }
+  private functionPadRight: RuntimeFunction<JSONValue[], string> = ([subject, width, padding]) =>
+    padRight(subject as string, width as number, padding as string);
 
-  private functionReplace: RuntimeFunction<JSONValue[], string> = resolvedArgs => {
-    const subject = <string>resolvedArgs[0];
-    const string = <string>resolvedArgs[1];
-    const by = <string>resolvedArgs[2];
-    return replace(subject, string, by, resolvedArgs.length > 3 ? <number>resolvedArgs[3] : undefined);
-  };
+  private functionReplace: RuntimeFunction<JSONValue[], string> = ([subject, string, by, count]) =>
+    replace(subject as string, string as string, by as string, count as number);
 
-  private functionSplit: RuntimeFunction<JSONValue[], string[]> = resolvedArgs => {
-    const subject = <string>resolvedArgs[0];
-    const search = <string>resolvedArgs[1];
-    return split(subject, search, resolvedArgs.length > 2 ? <number>resolvedArgs[2] : undefined);
-  };
+  private functionSplit: RuntimeFunction<JSONValue[], string[]> = ([subject, search, count]) =>
+    split(subject as string, search as string, count as number);
 
-  private functionReverse: RuntimeFunction<[string | JSONArray], string | JSONArray> = ([inputValue]) => {
-    const typeName = this.getTypeName(inputValue);
-    if (typeName === InputArgument.TYPE_STRING) {
-      return new Text(inputValue as string).reverse();
-    }
-    const reversedArray = [...(inputValue as JSONArray)];
-    reversedArray.reverse();
-    return reversedArray;
-  };
+  private functionReverse: RuntimeFunction<[string | JSONArray], string | JSONArray> = ([inputValue]) =>
+    typeof inputValue === 'string' ? [...inputValue].reverse().join('') : [...(inputValue as JSONArray)].reverse();
 
-  private functionSort: RuntimeFunction<[(string | number)[]], (string | number)[]> = ([inputValue]) => {
-    if (inputValue.length <= 1) {
-      return inputValue;
-    }
-    if (typeof inputValue[0] === 'string') {
-      return (<string[]>[...inputValue]).sort(Text.comparer);
-    }
-    return [...inputValue].sort();
-  };
+  private functionSort: RuntimeFunction<[(string | number)[]], (string | number)[]> = ([inputValue]) =>
+    inputValue.length <= 1
+      ? inputValue
+      : typeof inputValue[0] === 'string'
+        ? (<string[]>[...inputValue]).sort(Text.comparer)
+        : [...inputValue].sort((a, b) => (a as number) - (b as number));
 
   private functionSortBy: RuntimeFunction<[number[] | string[], ExpressionNode], JSONValue> = resolvedArgs => {
     const sortedArray = [...resolvedArgs[0]];
@@ -840,19 +789,12 @@ export class Runtime implements FunctionRegistry {
     return typeof inputValue === 'string' ? inputValue : JSON.stringify(inputValue);
   };
 
-  private functionTrim = this.createTrimFunction(trim);
-  private functionTrimLeft = this.createTrimFunction(trimLeft);
-  private functionTrimRight = this.createTrimFunction(trimRight);
-
-  private createTrimFunction(
-    trimFn: (subject: string, chars?: string) => string,
-  ): RuntimeFunction<JSONValue[], string> {
-    return resolvedArgs => {
-      const subject = resolvedArgs[0] as string;
-      const chars = resolvedArgs.length > 1 ? (resolvedArgs[1] as string) : undefined;
-      return trimFn(subject, chars);
-    };
-  }
+  private functionTrim: RuntimeFunction<JSONValue[], string> = ([subject, chars]) =>
+    trim(subject as string, chars as string);
+  private functionTrimLeft: RuntimeFunction<JSONValue[], string> = ([subject, chars]) =>
+    trimLeft(subject as string, chars as string);
+  private functionTrimRight: RuntimeFunction<JSONValue[], string> = ([subject, chars]) =>
+    trimRight(subject as string, chars as string);
 
   private functionType: RuntimeFunction<[JSONValue], string> = ([inputValue]) => {
     const type = this.getTypeName(inputValue);

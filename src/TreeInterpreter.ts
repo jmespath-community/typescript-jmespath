@@ -191,8 +191,8 @@ export class TreeInterpreter {
         if (!Array.isArray(value) && typeof value !== 'string') {
           return null;
         }
-        const { start, stop, step } = this.computeSliceParams(value.length, node);
         const target = typeof value === 'string' ? [...value] : value;
+        const { start, stop, step } = this.computeSliceParams(target.length, node);
         const sliced = this.slice(target, start, stop, step);
         const res = typeof value === 'string' ? (sliced as string[]).join('') : sliced;
         this.checkOutputSize(res);
