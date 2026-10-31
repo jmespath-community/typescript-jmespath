@@ -1,6 +1,7 @@
 import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
 import { Token } from './Lexer.type';
+import { DEFAULT_MAX_DEPTH } from './Parser';
 import { Options, ScopeEntry } from './Parser.type';
 import { Runtime } from './Runtime';
 import { ScopeChain } from './Scope';
@@ -14,11 +15,13 @@ export class TreeInterpreter {
   private _scope: ScopeChain;
   private _options?: Options;
   private _depth = 0;
+  private _maxDepth: number = DEFAULT_MAX_DEPTH;
   private _deadline = 0;
 
   constructor(options?: Options) {
     this.runtime = new Runtime(this);
     this._scope = new ScopeChain();
+    this._maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
     if (options) {
       this._options = options;
       this._deadline = options.timeoutMs !== undefined ? Date.now() + options.timeoutMs : 0;
@@ -31,6 +34,7 @@ export class TreeInterpreter {
     interpreter._rootValue = this._rootValue;
     interpreter._scope = this._scope.withScope(scope);
     interpreter._depth = this._depth;
+    interpreter._maxDepth = this._maxDepth;
     interpreter._deadline = this._deadline;
     return interpreter;
   }
@@ -42,6 +46,7 @@ export class TreeInterpreter {
     this._rootValue = value;
     this._scope = emptyScopeChain;
     this._options = options;
+    this._maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
     this._depth = 0;
     this._deadline = options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : 0;
     const result = this.visit(node, value) as JSONValue;
@@ -115,23 +120,18 @@ export class TreeInterpreter {
   }
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
-    if (this._options) {
-      if (this._deadline > 0 && Date.now() >= this._deadline) {
-        throw new Error(`Query execution timed out after ${this._options.timeoutMs}ms`);
-      }
-      if (this._options.maxDepth !== undefined) {
-        if (this._depth >= this._options.maxDepth) {
-          throw new Error(`Evaluation exceeds maximum allowed depth of ${this._options.maxDepth}`);
-        }
-        this._depth += 1;
-        try {
-          return this.evaluateNode(node, value);
-        } finally {
-          this._depth -= 1;
-        }
-      }
+    if (this._deadline > 0 && Date.now() >= this._deadline) {
+      throw new Error(`Query execution timed out after ${this._options?.timeoutMs}ms`);
     }
-    return this.evaluateNode(node, value);
+    if (this._depth >= this._maxDepth) {
+      throw new Error(`Evaluation exceeds maximum allowed depth of ${this._maxDepth}`);
+    }
+    this._depth += 1;
+    try {
+      return this.evaluateNode(node, value);
+    } finally {
+      this._depth -= 1;
+    }
   }
 
   private evaluateNode(

@@ -493,13 +493,13 @@ export async function* searchStream<T = JSONValue, D = unknown>(
   }
 
   for await (const result of results) {
+    if (maxOutputSize !== undefined && count >= maxOutputSize) {
+      throw new Error(`Output size exceeds maximum allowed size of ${maxOutputSize}`);
+    }
     yield result as T;
     count++;
     if (limit !== undefined && count >= limit) {
       break;
-    }
-    if (maxOutputSize !== undefined && count > maxOutputSize) {
-      throw new Error(`Output size exceeds maximum allowed size of ${maxOutputSize}`);
     }
   }
 }

@@ -104,9 +104,12 @@ describe('Searches compiled ast', () => {
     expect(_tMeta).toBeNull();
   });
 
-  it('enforces maxDepth option', () => {
+  it('enforces maxDepth option and defaults to DEFAULT_MAX_DEPTH', () => {
     expect(() => jmespath.search({ a: { b: 1 } }, 'a.b', { maxDepth: 1 })).toThrow(/depth/i);
     expect(jmespath.search({ a: { b: 1 } }, 'a.b', { maxDepth: 5 })).toEqual(1);
+
+    const chainedDeepQuery = `${'a.'.repeat(1200)}b`;
+    expect(() => jmespath.search({}, chainedDeepQuery)).toThrow(/depth of 1000/i);
   });
 
   it('enforces function allow and deny lists', () => {

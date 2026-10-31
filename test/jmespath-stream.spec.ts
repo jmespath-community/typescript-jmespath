@@ -321,6 +321,17 @@ describe('searchStream', () => {
       );
     });
 
+    it('never yields more than maxOutputSize items to incremental consumers', async () => {
+      const yielded: number[] = [];
+      const source = createAsyncGenerator([1, 2, 3, 4]);
+      await expect(async () => {
+        for await (const item of searchStream(source, '[*]', { maxOutputSize: 2 })) {
+          yielded.push(item as number);
+        }
+      }).rejects.toThrow('Output size exceeds maximum allowed size of 2');
+      expect(yielded).toEqual([1, 2]);
+    });
+
     it('enforces timeoutMs during streaming', async () => {
       async function* slowGenerator() {
         for (const user of sampleUsers) {
