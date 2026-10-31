@@ -76,4 +76,51 @@ describe('scopes', () => {
       }
     }
   });
+
+  it('hasValue correctly detects presence for falsy values across scope chains', () => {
+    const scope = jmespath.Scope();
+    const outer = scope.withScope({ zero: 0, empty: '', no: false, nil: null });
+    const inner = outer.withScope({ local: 1 });
+
+    expect(outer.hasValue('zero')).toBe(true);
+    expect(outer.hasValue('empty')).toBe(true);
+    expect(outer.hasValue('no')).toBe(true);
+    expect(outer.hasValue('nil')).toBe(true);
+    expect(outer.hasValue('missing')).toBe(false);
+
+    expect(inner.hasValue('zero')).toBe(true);
+    expect(inner.hasValue('empty')).toBe(true);
+    expect(inner.hasValue('no')).toBe(true);
+    expect(inner.hasValue('nil')).toBe(true);
+    expect(inner.hasValue('local')).toBe(true);
+    expect(inner.hasValue('missing')).toBe(false);
+  });
+
+  it('evaluates nested let expressions when outer scope variables are falsy', () => {
+    expect(jmespath.search({}, 'let $x = `0` in let $y = `1` in $x')).toBe(0);
+    expect(jmespath.search({}, 'let $x = `null` in let $y = `1` in $x')).toBeNull();
+    expect(jmespath.search({}, 'let $x = `false` in let $y = `1` in $x')).toBe(false);
+    expect(jmespath.search({}, 'let $x = `""` in let $y = `1` in $x')).toBe('');
+    expect(() => jmespath.search({}, 'let $x = `0` in let $y = `1` in $z')).toThrow(/undefined variable z/i);
+  });
+
+  it('preserves lexical let scope inside higher-order functions', () => {
+    expect(jmespath.search({}, 'let $offset = `10` in `[1, 2, 3]` | map(&(@ + $offset), @)')).toEqual([11, 12, 13]);
+    expect(jmespath.search({}, 'let $mult = `-1` in `[1, 2, 3]` | sort_by(@, &(@ * $mult))')).toEqual([3, 2, 1]);
+    expect(jmespath.search({}, 'let $mult = `-1` in `[1, 2, 3]` | max_by(@, &(@ * $mult))')).toBe(1);
+    expect(jmespath.search({}, 'let $mult = `-1` in `[1, 2, 3]` | min_by(@, &(@ * $mult))')).toBe(3);
+    expect(
+      jmespath.search(
+        {},
+        'let $tag = `"x"` in `[{"cat": "a", "v": 1}, {"cat": "b", "v": 2}]` | group_by(@, &join(`"-"`, [cat, $tag]))',
+      ),
+    ).toEqual({
+      'a-x': [{ cat: 'a', v: 1 }],
+      'b-x': [{ cat: 'b', v: 2 }],
+    });
+    expect(jmespath.search({}, 'let $factor = `2` in `[[1, 2], [3, 4]]` | map(&map(&(@ * $factor), @), @)')).toEqual([
+      [2, 4],
+      [6, 8],
+    ]);
+  });
 });
