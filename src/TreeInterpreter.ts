@@ -86,6 +86,9 @@ export class TreeInterpreter {
         if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
           continue;
         }
+        if (!Object.prototype.hasOwnProperty.call(elem, key)) {
+          continue;
+        }
         const val = (elem as JSONObject)[key];
         if (val !== undefined && val !== null) {
           this.collect(collected, val);
@@ -149,7 +152,9 @@ export class TreeInterpreter {
           return null;
         }
         // return the value of the field
-        return (value as JSONObject)[identifier] ?? null;
+        return Object.prototype.hasOwnProperty.call(value, identifier)
+          ? ((value as JSONObject)[identifier] ?? null)
+          : null;
       case 'LetExpression': {
         const scope: JSONObject = {};
         for (const binding of node.bindings) {
@@ -229,6 +234,9 @@ export class TreeInterpreter {
               continue;
             }
             if (!elem || typeof elem !== 'object' || Array.isArray(elem)) {
+              continue;
+            }
+            if (!Object.prototype.hasOwnProperty.call(elem, key)) {
               continue;
             }
             const val = (elem as JSONObject)[key];

@@ -169,4 +169,26 @@ describe('Searches compiled ast', () => {
     expect(jmespath.validate('a ? b : to_string(c)', { disallowedFunctions: ['to_string'] }).valid).toBe(false);
     expect(jmespath.validate('let $a = b in $a', { maxNodes: 3 }).valid).toBe(false);
   });
+
+  it('prevents Object.prototype property leakage on field, projection, and filter evaluations', () => {
+    expect(jmespath.search({}, 'toString')).toBeNull();
+    expect(jmespath.search({}, 'valueOf')).toBeNull();
+    expect(jmespath.search({}, 'constructor')).toBeNull();
+    expect(jmespath.search({}, '__proto__')).toBeNull();
+    expect(jmespath.search([{}], '[*].toString')).toEqual([]);
+    expect(jmespath.search([{}], '[*].valueOf')).toEqual([]);
+    expect(jmespath.search([{}], '[?toString != null]')).toEqual([]);
+    expect(jmespath.search([{}], '[?true].toString')).toEqual([]);
+
+    // Preserves own properties with standard names
+    expect(jmespath.search({ toString: 'custom' }, 'toString')).toBe('custom');
+    expect(jmespath.search([{ toString: 'own' }, {}], '[*].toString')).toEqual(['own']);
+    expect(jmespath.search([{ toString: 'own' }, {}], '[?toString != null]')).toEqual([{ toString: 'own' }]);
+
+    // Safe against null prototype objects
+    const nullProto = Object.create(null);
+    nullProto.name = 'test';
+    expect(jmespath.search(nullProto, 'name')).toBe('test');
+    expect(jmespath.search(nullProto, 'toString')).toBeNull();
+  });
 });
