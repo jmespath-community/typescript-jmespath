@@ -23,36 +23,26 @@ export const strictDeepEqual = (first: unknown, second: unknown): boolean => {
     return true;
   }
   if (isObject(first) && isObject(second)) {
-    const firstEntries = Object.entries(first);
-    const secondKeys = new Set(Object.keys(second));
-    if (firstEntries.length !== secondKeys.size) {
+    const keys = Object.keys(first);
+    if (keys.length !== Object.keys(second).length) {
       return false;
     }
-    for (const [key, value] of firstEntries) {
-      if (!strictDeepEqual(value, second[key])) {
-        return false;
-      }
-      secondKeys.delete(key);
-    }
-    return secondKeys.size === 0;
+    return keys.every(
+      key => Object.prototype.hasOwnProperty.call(second, key) && strictDeepEqual(first[key], second[key]),
+    );
   }
   return false;
 };
 
 export const isFalse = (obj: unknown): boolean => {
-  // falsey values
-  if (obj === null || obj === undefined || obj === false) {
+  if (obj == null || obj === false) {
     return true;
   }
   if (typeof obj === 'string') {
     return obj === '';
   }
   if (typeof obj === 'object') {
-    if (Array.isArray(obj)) {
-      return obj.length === 0;
-    }
-    // check if object is empty
-    return Object.keys(obj).length === 0;
+    return Array.isArray(obj) ? obj.length === 0 : Object.keys(obj).length === 0;
   }
   return false;
 };
@@ -101,29 +91,18 @@ const notZero = (n: number): number => {
   return n;
 };
 
-export const add = (left?: JSONValue, right?: JSONValue): number => {
-  ensureNumbers(left, right);
-  return (left as number) + (right as number);
-};
-export const sub = (left?: JSONValue, right?: JSONValue): number => {
-  ensureNumbers(left, right);
-  return (left as number) - (right as number);
-};
-export const mul = (left?: JSONValue, right?: JSONValue): number => {
-  ensureNumbers(left, right);
-  return (left as number) * (right as number);
-};
-export const divide = (left?: JSONValue, right?: JSONValue): number => {
-  ensureNumbers(left, right);
-  return (left as number) / notZero(right as number);
-};
-export const div = (left?: JSONValue, right?: JSONValue): number => {
-  ensureNumbers(left, right);
-  return Math.floor((left as number) / notZero(right as number));
-};
-export const mod = (left?: JSONValue, right?: JSONValue): number => {
-  ensureNumbers(left, right);
-  return (left as number) % (right as number);
-};
+const binOp =
+  (fn: (a: number, b: number) => number) =>
+  (left?: JSONValue, right?: JSONValue): number => {
+    ensureNumbers(left, right);
+    return fn(left as number, right as number);
+  };
+
+export const add = binOp((a, b) => a + b);
+export const sub = binOp((a, b) => a - b);
+export const mul = binOp((a, b) => a * b);
+export const divide = binOp((a, b) => a / notZero(b));
+export const div = binOp((a, b) => Math.floor(a / notZero(b)));
+export const mod = binOp((a, b) => a % b);
 
 export * from './ast';
