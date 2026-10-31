@@ -90,9 +90,9 @@ export const split = (subject: string, search: string, count?: number): string[]
 
 const trimImpl = (subject: string, pattern: string, chars?: string): string => {
   const charClass = chars ? chars.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') : '\\s\u0085';
-  return subject.replace(new RegExp(pattern.replace('%s', charClass)), '$1');
+  return subject.replace(new RegExp(pattern.replace('%s', charClass), 'u'), '');
 };
 
-export const trimLeft = (subject: string, chars?: string): string => trimImpl(subject, '^[%s]*(.*?)', chars);
-export const trimRight = (subject: string, chars?: string): string => trimImpl(subject, '(.*?)[%s]*$', chars);
+export const trimLeft = (subject: string, chars?: string): string => trimImpl(subject, '^[%s]+', chars);
+export const trimRight = (subject: string, chars?: string): string => trimImpl(subject, '[%s]+$', chars);
 export const trim = (subject: string, chars?: string): string => trimLeft(trimRight(subject, chars), chars);

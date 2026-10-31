@@ -107,6 +107,14 @@ describe('Evaluates functions', () => {
     expect(jmespath.search({}, 'merge({ a: `1` })')).toEqual({ a: 1 });
     expect(jmespath.search({}, 'merge({ a: `1` }, { b: `2` }, { c: `3` })')).toEqual({ a: 1, b: 2, c: 3 });
   });
+  it('trim(), trim_left(), and trim_right() preserve astral code points with shared surrogates', () => {
+    expect(jmespath.search('😁', "trim(@, '😀')")).toEqual('😁');
+    expect(jmespath.search('😁hello', "trim_left(@, '😀')")).toEqual('😁hello');
+    expect(jmespath.search('hello\uD83C\uDE00', "trim_right(@, '\uD83D\uDE00')")).toEqual('hello\uD83C\uDE00');
+    expect(jmespath.search('😀hello😀', "trim(@, '😀')")).toEqual('hello');
+    expect(jmespath.search('😀hello', "trim_left(@, '😀')")).toEqual('hello');
+    expect(jmespath.search('hello😀', "trim_right(@, '😀')")).toEqual('hello');
+  });
   it('pad_left()', () => {
     // this should be included in the compliance test suite
     expect(jmespath.search('', 'pad_left(@, `10`)')).toEqual('');
@@ -238,6 +246,16 @@ describe('Type-checks function arguments', () => {
     expectError(() => {
       return jmespath.search({}, 'zip([`1`], `2`)');
     }, ['invalid-type', 'argument 2']);
+  });
+  it('sort_by() validates key expression type on single-element arrays', () => {
+    expectError(() => {
+      return jmespath.search([{ a: false }], 'sort_by(@, &a)');
+    }, 'invalid-type');
+    expectError(() => {
+      return jmespath.search([{ a: [1] }], 'sort_by(@, &a)');
+    }, 'invalid-type');
+    expect(jmespath.search([{ a: 42 }], 'sort_by(@, &a)')).toEqual([{ a: 42 }]);
+    expect(jmespath.search([], 'sort_by(@, &a)')).toEqual([]);
   });
   it('length()', () => {
     try {
