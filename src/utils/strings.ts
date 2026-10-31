@@ -4,19 +4,93 @@ export const findFirst = (subject: string, sub: string, start?: number, end?: nu
   if (!subject || !sub) {
     return null;
   }
-  const s = Math.max(ensureInteger(start ?? 0), 0);
-  const e = Math.min(ensureInteger(end ?? subject.length), subject.length);
-  const offset = subject.slice(s, e).indexOf(sub);
-  return offset === -1 ? null : offset + s;
+  const chars = [...subject];
+  const subChars = [...sub];
+  const len = chars.length;
+  const subLen = subChars.length;
+  if (subLen === 0 || subLen > len) {
+    return null;
+  }
+  let s = ensureInteger(start ?? 0);
+  if (s < 0) {
+    s += len;
+    if (s < 0) {
+      s = 0;
+    }
+  } else if (s > len) {
+    s = len;
+  }
+  let e = ensureInteger(end ?? len);
+  if (e < 0) {
+    e += len;
+    if (e < 0) {
+      e = 0;
+    }
+  } else if (e > len) {
+    e = len;
+  }
+  if (s >= e || s + subLen > e) {
+    return null;
+  }
+  for (let i = s; i <= e - subLen; i++) {
+    let match = true;
+    for (let j = 0; j < subLen; j++) {
+      if (chars[i + j] !== subChars[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return i;
+    }
+  }
+  return null;
 };
 export const findLast = (subject: string, sub: string, start?: number, end?: number): number | null => {
   if (!subject || !sub) {
     return null;
   }
-  const s = Math.max(ensureInteger(start ?? 0), 0);
-  const e = Math.min(ensureInteger(end ?? subject.length), subject.length);
-  const offset = subject.slice(s, e).lastIndexOf(sub);
-  return offset === -1 ? null : offset + s;
+  const chars = [...subject];
+  const subChars = [...sub];
+  const len = chars.length;
+  const subLen = subChars.length;
+  if (subLen === 0 || subLen > len) {
+    return null;
+  }
+  let s = ensureInteger(start ?? 0);
+  if (s < 0) {
+    s += len;
+    if (s < 0) {
+      s = 0;
+    }
+  } else if (s > len) {
+    s = len;
+  }
+  let e = ensureInteger(end ?? len);
+  if (e < 0) {
+    e += len;
+    if (e < 0) {
+      e = 0;
+    }
+  } else if (e > len) {
+    e = len;
+  }
+  if (s >= e || s + subLen > e) {
+    return null;
+  }
+  for (let i = e - subLen; i >= s; i--) {
+    let match = true;
+    for (let j = 0; j < subLen; j++) {
+      if (chars[i + j] !== subChars[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      return i;
+    }
+  }
+  return null;
 };
 export const lower = (subject: string): string => subject.toLowerCase();
 const ensurePadFuncParams = (name: string, width: number, padding = ' '): string => {
@@ -52,25 +126,43 @@ export const replace = (subject: string, string: string, by: string, count?: num
   if (count === 0) {
     return subject;
   }
-  if (!count) {
+  if (count === null || count === undefined) {
     return subject.split(string).join(by);
   }
   ensurePositiveInteger(count);
-  while (count-- > 0 && subject.includes(string)) {
-    subject = subject.replace(string, by);
+  if (string === '') {
+    const parts = [...subject];
+    const replaceCount = Math.min(count, Math.max(0, parts.length - 1));
+    return parts.slice(0, replaceCount + 1).join(by) + parts.slice(replaceCount + 1).join('');
   }
-  return subject;
+  const parts = subject.split(string);
+  if (parts.length <= 1) {
+    return subject;
+  }
+  const replaceCount = Math.min(count, parts.length - 1);
+  const replacedHead = parts.slice(0, replaceCount + 1).join(by);
+  const remainingTail = parts.slice(replaceCount + 1).join(string);
+  return remainingTail.length > 0 ? replacedHead + string + remainingTail : replacedHead;
 };
 export const split = (subject: string, search: string, count?: number): string[] => {
-  if (subject.length == 0 && search.length === 0) {
+  if (subject.length === 0 && search.length === 0) {
     return [];
+  }
+  if (count !== null && count !== undefined) {
+    ensurePositiveInteger(count);
+    if (count === 0) {
+      return [subject];
+    }
+  }
+  if (search === '') {
+    const chars = [...subject];
+    if (count === null || count === undefined) {
+      return chars;
+    }
+    return [...chars.slice(0, count), chars.slice(count).join('')];
   }
   if (count === null || count === undefined) {
     return subject.split(search);
-  }
-  ensurePositiveInteger(count);
-  if (count === 0) {
-    return [subject];
   }
   const split = subject.split(search);
   return [...split.slice(0, count), split.slice(count).join(search)];
