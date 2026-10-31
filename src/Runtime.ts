@@ -1,19 +1,7 @@
 import type { ExpressionNode } from './AST.type';
 import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue, ObjectDict } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
-import {
-  findFirst,
-  findLast,
-  lower,
-  padLeft,
-  padRight,
-  replace,
-  split,
-  trim,
-  trimLeft,
-  trimRight,
-  upper,
-} from './utils/strings';
+import { findFirst, findLast, padLeft, padRight, replace, split, trim, trimLeft, trimRight } from './utils/strings';
 import { Text } from './utils/text';
 
 export enum InputArgument {
@@ -149,22 +137,6 @@ export interface FunctionRegistry {
   clearCustomFunctions(): void;
 }
 
-// Factory functions for common function patterns
-const createMathFunction =
-  (mathFn: (n: number) => number): RuntimeFunction<[number], number> =>
-  ([value]) =>
-    mathFn(value);
-
-const createStringFunction =
-  (stringFn: (s: string) => string): RuntimeFunction<[string], string> =>
-  ([subject]) =>
-    stringFn(subject);
-
-const createObjectFunction =
-  <T>(objFn: (obj: JSONObject) => T): RuntimeFunction<[JSONObject], T> =>
-  ([obj]) =>
-    objFn(obj);
-
 const ARRAY_SUBTYPES: Partial<Record<InputArgument, InputArgument>> = {
   [InputArgument.TYPE_ARRAY_NUMBER]: InputArgument.TYPE_NUMBER,
   [InputArgument.TYPE_ARRAY_OBJECT]: InputArgument.TYPE_OBJECT,
@@ -219,45 +191,103 @@ export class Runtime implements FunctionRegistry {
 
   private buildFunctionTable(): FunctionTable {
     return {
-      abs: { _func: createMathFunction(Math.abs), _signature: s(NUM) },
-      ceil: { _func: createMathFunction(Math.ceil), _signature: s(NUM) },
-      floor: { _func: createMathFunction(Math.floor), _signature: s(NUM) },
-      lower: { _func: createStringFunction(lower), _signature: s(STR) },
-      upper: { _func: createStringFunction(upper), _signature: s(STR) },
-      keys: { _func: createObjectFunction(Object.keys), _signature: s(OBJ) },
-      values: { _func: createObjectFunction(Object.values), _signature: s(OBJ) },
-      avg: { _func: this.functionAvg, _signature: s(ARR_NUM) },
+      abs: { _func: ([v]) => Math.abs(v as number), _signature: s(NUM) },
+      ceil: { _func: ([v]) => Math.ceil(v as number), _signature: s(NUM) },
+      floor: { _func: ([v]) => Math.floor(v as number), _signature: s(NUM) },
+      lower: { _func: ([s]) => (s as string).toLowerCase(), _signature: s(STR) },
+      upper: { _func: ([s]) => (s as string).toUpperCase(), _signature: s(STR) },
+      keys: { _func: ([o]) => Object.keys(o as JSONObject), _signature: s(OBJ) },
+      values: { _func: ([o]) => Object.values(o as JSONObject), _signature: s(OBJ) },
+      avg: {
+        _func: ([arr]) =>
+          arr && (arr as number[]).length
+            ? (arr as number[]).reduce((a, b) => a + b, 0) / (arr as number[]).length
+            : null,
+        _signature: s(ARR_NUM),
+      },
       contains: { _func: this.functionContains, _signature: s([STR, ARR], ANY) },
-      ends_with: { _func: this.functionEndsWith, _signature: s(STR, STR) },
-      find_first: { _func: this.functionFindFirst, _signature: [...s(STR, STR), ...opt(NUM, NUM)] },
-      find_last: { _func: this.functionFindLast, _signature: [...s(STR, STR), ...opt(NUM, NUM)] },
+      ends_with: { _func: ([str, suf]) => (str as string).endsWith(suf as string), _signature: s(STR, STR) },
+      find_first: {
+        _func: ([s, sub, st, en]) => findFirst(s as string, sub as string, st as number, en as number),
+        _signature: [...s(STR, STR), ...opt(NUM, NUM)],
+      },
+      find_last: {
+        _func: ([s, sub, st, en]) => findLast(s as string, sub as string, st as number, en as number),
+        _signature: [...s(STR, STR), ...opt(NUM, NUM)],
+      },
       from_items: { _func: this.functionFromItems, _signature: s(ARR_ARR) },
       group_by: { _func: this.functionGroupBy, _signature: s(ARR, EXP) },
-      items: { _func: this.functionItems, _signature: s(OBJ) },
-      join: { _func: this.functionJoin, _signature: s(STR, ARR_STR) },
-      length: { _func: this.functionLength, _signature: s([STR, ARR, OBJ]) },
+      items: { _func: ([o]) => Object.entries(o as JSONObject), _signature: s(OBJ) },
+      join: { _func: ([sep, arr]) => (arr as string[]).join(sep as string), _signature: s(STR, ARR_STR) },
+      length: {
+        _func: ([v]) =>
+          typeof v === 'string' ? [...v].length : Array.isArray(v) ? v.length : Object.keys(v as JSONObject).length,
+        _signature: s([STR, ARR, OBJ]),
+      },
       map: { _func: this.functionMap, _signature: s(EXP, ARR) },
-      max: { _func: this.functionMax, _signature: s([ARR_NUM, ARR_STR]) },
-      max_by: { _func: this.functionMaxBy, _signature: s(ARR, EXP) },
-      merge: { _func: this.functionMerge, _signature: variadic(OBJ) },
-      min: { _func: this.functionMin, _signature: s([ARR_NUM, ARR_STR]) },
-      min_by: { _func: this.functionMinBy, _signature: s(ARR, EXP) },
-      not_null: { _func: this.functionNotNull, _signature: variadic(ANY) },
-      pad_left: { _func: this.functionPadLeft, _signature: [...s(STR, NUM), ...opt(STR)] },
-      pad_right: { _func: this.functionPadRight, _signature: [...s(STR, NUM), ...opt(STR)] },
-      replace: { _func: this.functionReplace, _signature: [...s(STR, STR, STR), ...opt(NUM)] },
-      reverse: { _func: this.functionReverse, _signature: s([STR, ARR]) },
+      max: {
+        _func: ([v]) => this.findExtreme(v as (string | number)[], cmp => cmp > 0, Math.max),
+        _signature: s([ARR_NUM, ARR_STR]),
+      },
+      max_by: {
+        _func: args => this.findExtremeBy(args as [JSONArray, ExpressionNode], cmp => cmp > 0),
+        _signature: s(ARR, EXP),
+      },
+      merge: { _func: args => Object.assign({}, ...args), _signature: variadic(OBJ) },
+      min: {
+        _func: ([v]) => this.findExtreme(v as (string | number)[], cmp => cmp < 0, Math.min),
+        _signature: s([ARR_NUM, ARR_STR]),
+      },
+      min_by: {
+        _func: args => this.findExtremeBy(args as [JSONArray, ExpressionNode], cmp => cmp < 0),
+        _signature: s(ARR, EXP),
+      },
+      not_null: {
+        _func: args => (args as JSONArray).find(arg => arg !== null) ?? null,
+        _signature: variadic(ANY),
+      },
+      pad_left: {
+        _func: ([s, w, p]) => padLeft(s as string, w as number, p as string),
+        _signature: [...s(STR, NUM), ...opt(STR)],
+      },
+      pad_right: {
+        _func: ([s, w, p]) => padRight(s as string, w as number, p as string),
+        _signature: [...s(STR, NUM), ...opt(STR)],
+      },
+      replace: {
+        _func: ([s, str, by, c]) => replace(s as string, str as string, by as string, c as number),
+        _signature: [...s(STR, STR, STR), ...opt(NUM)],
+      },
+      reverse: {
+        _func: ([v]) => (typeof v === 'string' ? [...v].reverse().join('') : [...(v as JSONArray)].reverse()),
+        _signature: s([STR, ARR]),
+      },
       sort: { _func: this.functionSort, _signature: s([ARR_STR, ARR_NUM]) },
       sort_by: { _func: this.functionSortBy, _signature: s(ARR, EXP) },
-      split: { _func: this.functionSplit, _signature: [...s(STR, STR), ...opt(NUM)] },
-      starts_with: { _func: this.functionStartsWith, _signature: s(STR, STR) },
-      sum: { _func: this.functionSum, _signature: s(ARR_NUM) },
-      to_array: { _func: this.functionToArray, _signature: s(ANY) },
+      split: {
+        _func: ([s, sub, c]) => split(s as string, sub as string, c as number),
+        _signature: [...s(STR, STR), ...opt(NUM)],
+      },
+      starts_with: { _func: ([str, pre]) => (str as string).startsWith(pre as string), _signature: s(STR, STR) },
+      sum: { _func: ([arr]) => (arr as number[]).reduce((x, y) => x + y, 0), _signature: s(ARR_NUM) },
+      to_array: { _func: ([v]) => (Array.isArray(v) ? v : [v]), _signature: s(ANY) },
       to_number: { _func: this.functionToNumber, _signature: s(ANY) },
-      to_string: { _func: this.functionToString, _signature: s(ANY) },
-      trim: { _func: this.functionTrim, _signature: [...s(STR), ...opt(STR)] },
-      trim_left: { _func: this.functionTrimLeft, _signature: [...s(STR), ...opt(STR)] },
-      trim_right: { _func: this.functionTrimRight, _signature: [...s(STR), ...opt(STR)] },
+      to_string: {
+        _func: ([v]) => (typeof v === 'string' ? v : JSON.stringify(v)),
+        _signature: s(ANY),
+      },
+      trim: {
+        _func: ([s, c]) => trim(s as string, c as string),
+        _signature: [...s(STR), ...opt(STR)],
+      },
+      trim_left: {
+        _func: ([s, c]) => trimLeft(s as string, c as string),
+        _signature: [...s(STR), ...opt(STR)],
+      },
+      trim_right: {
+        _func: ([s, c]) => trimRight(s as string, c as string),
+        _signature: [...s(STR), ...opt(STR)],
+      },
       type: { _func: this.functionType, _signature: s(ANY) },
       zip: { _func: this.functionZip, _signature: variadic(ARR) },
     };
@@ -518,9 +548,6 @@ export class Runtime implements FunctionRegistry {
     return keyFunc;
   }
 
-  private functionAvg: RuntimeFunction<[number[]], number | null> = ([inputArray]) =>
-    inputArray && inputArray.length ? inputArray.reduce((a, b) => a + b, 0) / inputArray.length : null;
-
   private functionContains: RuntimeFunction<[string[] | JSONArray, JSONValue], JSONValue> = ([
     searchable,
     searchValue,
@@ -540,16 +567,6 @@ export class Runtime implements FunctionRegistry {
 
     return null;
   };
-
-  private functionEndsWith: RuntimeFunction<[string, string], boolean> = ([searchStr, suffix]) => {
-    return searchStr.endsWith(suffix);
-  };
-
-  private functionFindFirst: RuntimeFunction<JSONValue[], number | null> = ([subject, search, start, end]) =>
-    findFirst(subject as string, search as string, start as number, end as number);
-
-  private functionFindLast: RuntimeFunction<JSONValue[], number | null> = ([subject, search, start, end]) =>
-    findLast(subject as string, search as string, start as number, end as number);
 
   private functionFromItems: RuntimeFunction<[JSONArrayKeyValuePairs], JSONObject> = ([array]) => {
     for (const pair of array) {
@@ -589,17 +606,6 @@ export class Runtime implements FunctionRegistry {
     return Object.fromEntries(groups);
   };
 
-  private functionItems: RuntimeFunction<[JSONObject], JSONArray> = ([inputValue]) => Object.entries(inputValue);
-
-  private functionJoin: RuntimeFunction<[string, string[]], string> = ([joinChar, listJoin]) => listJoin.join(joinChar);
-
-  private functionLength: RuntimeFunction<[string | JSONArray | JSONObject], number> = ([inputValue]) =>
-    typeof inputValue === 'string'
-      ? [...inputValue].length
-      : Array.isArray(inputValue)
-        ? inputValue.length
-        : Object.keys(inputValue).length;
-
   private functionMap: RuntimeFunction<[ExpressionNode, JSONArray], JSONArray> = ([exprefNode, elements]) => {
     if (!this._interpreter) {
       return [];
@@ -632,9 +638,6 @@ export class Runtime implements FunctionRegistry {
     }
     return extreme;
   }
-
-  private functionMax: RuntimeFunction<[(string | number)[]], string | number | null> = ([inputValue]) =>
-    this.findExtreme(inputValue, cmp => cmp > 0, Math.max);
 
   private findExtremeBy(resolvedArgs: [JSONArray, ExpressionNode], isBetter: (cmp: number) => boolean): JSONValue {
     const resolvedArray = resolvedArgs[0];
@@ -683,38 +686,6 @@ export class Runtime implements FunctionRegistry {
     return extremeRecord;
   }
 
-  private functionMaxBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = resolvedArgs =>
-    this.findExtremeBy(resolvedArgs, cmp => cmp > 0);
-
-  private functionMerge: RuntimeFunction<JSONObject[], JSONObject> = resolvedArgs => {
-    return Object.assign({}, ...resolvedArgs);
-  };
-
-  private functionMin: RuntimeFunction<[(string | number)[]], string | number | null> = ([inputValue]) =>
-    this.findExtreme(inputValue, cmp => cmp < 0, Math.min);
-
-  private functionMinBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = resolvedArgs =>
-    this.findExtremeBy(resolvedArgs, cmp => cmp < 0);
-
-  private functionNotNull: RuntimeFunction<JSONArray, JSONValue> = resolvedArgs => {
-    return resolvedArgs.find(arg => arg !== null) ?? null;
-  };
-
-  private functionPadLeft: RuntimeFunction<JSONValue[], string> = ([subject, width, padding]) =>
-    padLeft(subject as string, width as number, padding as string);
-
-  private functionPadRight: RuntimeFunction<JSONValue[], string> = ([subject, width, padding]) =>
-    padRight(subject as string, width as number, padding as string);
-
-  private functionReplace: RuntimeFunction<JSONValue[], string> = ([subject, string, by, count]) =>
-    replace(subject as string, string as string, by as string, count as number);
-
-  private functionSplit: RuntimeFunction<JSONValue[], string[]> = ([subject, search, count]) =>
-    split(subject as string, search as string, count as number);
-
-  private functionReverse: RuntimeFunction<[string | JSONArray], string | JSONArray> = ([inputValue]) =>
-    typeof inputValue === 'string' ? [...inputValue].reverse().join('') : [...(inputValue as JSONArray)].reverse();
-
   private functionSort: RuntimeFunction<[(string | number)[]], (string | number)[]> = ([inputValue]) =>
     inputValue.length <= 1
       ? inputValue
@@ -756,18 +727,6 @@ export class Runtime implements FunctionRegistry {
     });
   };
 
-  private functionStartsWith: RuntimeFunction<[string, string], boolean> = ([searchable, searchStr]) => {
-    return searchable.startsWith(searchStr);
-  };
-
-  private functionSum: RuntimeFunction<[number[]], number> = ([inputValue]) => {
-    return inputValue.reduce((x, y) => x + y, 0);
-  };
-
-  private functionToArray: RuntimeFunction<[JSONValue], JSONArray> = ([inputValue]) => {
-    return Array.isArray(inputValue) ? inputValue : [inputValue];
-  };
-
   private functionToNumber: RuntimeFunction<[JSONValue], number | null> = ([inputValue]) => {
     const typeName = this.getTypeName(inputValue);
     if (typeName === InputArgument.TYPE_NUMBER) {
@@ -784,17 +743,6 @@ export class Runtime implements FunctionRegistry {
     }
     return null;
   };
-
-  private functionToString: RuntimeFunction<[JSONValue], string> = ([inputValue]) => {
-    return typeof inputValue === 'string' ? inputValue : JSON.stringify(inputValue);
-  };
-
-  private functionTrim: RuntimeFunction<JSONValue[], string> = ([subject, chars]) =>
-    trim(subject as string, chars as string);
-  private functionTrimLeft: RuntimeFunction<JSONValue[], string> = ([subject, chars]) =>
-    trimLeft(subject as string, chars as string);
-  private functionTrimRight: RuntimeFunction<JSONValue[], string> = ([subject, chars]) =>
-    trimRight(subject as string, chars as string);
 
   private functionType: RuntimeFunction<[JSONValue], string> = ([inputValue]) => {
     const type = this.getTypeName(inputValue);

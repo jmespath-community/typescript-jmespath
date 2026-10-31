@@ -100,23 +100,18 @@ export async function* normalizeSource<T>(
   const textDecoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
 
   for await (const chunk of toAsyncIterable(source)) {
-    if (chunk instanceof Uint8Array && textDecoder) {
-      buffer += textDecoder.decode(chunk, { stream: true });
-      if (buffer.includes('\n')) {
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed) {
-            yield parseItem(trimmed, parseJson);
-          }
-        }
-      }
-    } else if (typeof chunk === 'string') {
-      if (parseJson === false) {
+    const str =
+      chunk instanceof Uint8Array && textDecoder
+        ? textDecoder.decode(chunk, { stream: true })
+        : typeof chunk === 'string'
+          ? chunk
+          : null;
+
+    if (str !== null) {
+      if (parseJson === false && typeof chunk === 'string') {
         yield chunk;
       } else {
-        buffer += chunk;
+        buffer += str;
         if (buffer.includes('\n')) {
           const lines = buffer.split('\n');
           buffer = lines.pop() ?? '';
@@ -128,20 +123,18 @@ export async function* normalizeSource<T>(
           }
         }
       }
-    } else if (flatten && Array.isArray(chunk)) {
-      if (buffer.trim()) {
-        yield parseItem(buffer.trim(), parseJson);
-        buffer = '';
-      }
-      for (let i = 0; i < chunk.length; i++) {
-        yield chunk[i];
-      }
     } else {
       if (buffer.trim()) {
         yield parseItem(buffer.trim(), parseJson);
         buffer = '';
       }
-      yield chunk;
+      if (flatten && Array.isArray(chunk)) {
+        for (const item of chunk) {
+          yield item;
+        }
+      } else {
+        yield chunk;
+      }
     }
   }
 
@@ -204,6 +197,22 @@ export function isStreamableNode(node: ExpressionNode): boolean {
     default:
       return false;
   }
+}
+
+async function drainStream(
+  source: AsyncIterable<unknown>,
+  checkDeadline: () => void,
+  maxOutputSize?: number,
+): Promise<JSONValue[]> {
+  const collected: JSONValue[] = [];
+  for await (const item of source) {
+    checkDeadline();
+    collected.push(item as JSONValue);
+    if (maxOutputSize !== undefined && collected.length > maxOutputSize) {
+      throw new Error(`Output size exceeds maximum allowed size of ${maxOutputSize}`);
+    }
+  }
+  return collected;
 }
 
 /**
@@ -290,14 +299,7 @@ export async function* evaluateStreamNode(
         }
 
         // Slices with negative indices or scalar indices require accumulating the stream
-        const collected: JSONValue[] = [];
-        for await (const item of source) {
-          checkDeadline();
-          collected.push(item as JSONValue);
-          if (options?.maxOutputSize !== undefined && collected.length > options.maxOutputSize) {
-            throw new Error(`Output size exceeds maximum allowed size of ${options.maxOutputSize}`);
-          }
-        }
+        const collected = await drainStream(source, checkDeadline, options?.maxOutputSize);
         const result = interpreter.search(node, collected, options);
         if (node.right.type === 'Slice' && Array.isArray(result)) {
           for (const item of result) {
@@ -364,14 +366,7 @@ export async function* evaluateStreamNode(
         }
       } else {
         // Collect left results and evaluate terminal non-streamable stage
-        const collected: JSONValue[] = [];
-        for await (const item of leftStream) {
-          checkDeadline();
-          collected.push(item);
-          if (options?.maxOutputSize !== undefined && collected.length > options.maxOutputSize) {
-            throw new Error(`Output size exceeds maximum allowed size of ${options.maxOutputSize}`);
-          }
-        }
+        const collected = await drainStream(leftStream, checkDeadline, options?.maxOutputSize);
         const result = interpreter.search(node.right, collected, options);
         if (result !== null && result !== undefined) {
           yield result;
@@ -417,14 +412,7 @@ export async function* evaluateStreamNode(
       }
 
       // Non-streamable root: accumulate items and evaluate
-      const collected: JSONValue[] = [];
-      for await (const item of source) {
-        checkDeadline();
-        collected.push(item as JSONValue);
-        if (options?.maxOutputSize !== undefined && collected.length > options.maxOutputSize) {
-          throw new Error(`Output size exceeds maximum allowed size of ${options.maxOutputSize}`);
-        }
-      }
+      const collected = await drainStream(source, checkDeadline, options?.maxOutputSize);
       const result = interpreter.search(node, collected, options);
       if (result !== null && result !== undefined) {
         yield result;

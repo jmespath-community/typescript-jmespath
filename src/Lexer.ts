@@ -150,45 +150,41 @@ class StreamLexer {
     return stream.slice(start, this._current);
   }
 
-  private consumeQuotedIdentifier(stream: string): string {
+  private consumeUntil(stream: string, delimiter: string): string {
     const start = this._current;
     this._current += 1;
-    const maxLength = stream.length;
-    while (stream[this._current] !== '"' && this._current < maxLength) {
-      let current = this._current;
-      if (stream[current] === '\\' && (stream[current + 1] === '\\' || stream[current + 1] === '"')) {
-        current += 2;
+    const len = stream.length;
+    while (this._current < len && stream[this._current] !== delimiter) {
+      if (
+        stream[this._current] === '\\' &&
+        (stream[this._current + 1] === '\\' || stream[this._current + 1] === delimiter)
+      ) {
+        this._current += 2;
       } else {
-        current += 1;
+        this._current += 1;
       }
-      this._current = current;
     }
-    this._current += 1;
-    const [value, ok] = this.parseJSON(stream.slice(start, this._current));
+    if (this._current < len) {
+      this._current += 1;
+    }
+    return stream.slice(start, this._current);
+  }
+
+  private consumeQuotedIdentifier(stream: string): string {
+    const raw = this.consumeUntil(stream, '"');
+    const [value, ok] = this.parseJSON(raw);
     if (!ok) {
-      const error = new Error(`syntax: unexpected end of JSON input`);
+      const error = new Error('syntax: unexpected end of JSON input');
       error.name = 'LexerError';
       throw error;
     }
-    return <string>value;
+    return value as string;
   }
 
   private consumeRawStringLiteral(stream: string): string {
-    const start = this._current;
-    this._current += 1;
-    const maxLength = stream.length;
-    while (stream[this._current] !== `'` && this._current < maxLength) {
-      let current = this._current;
-      if (stream[current] === '\\' && (stream[current + 1] === '\\' || stream[current + 1] === `'`)) {
-        current += 2;
-      } else {
-        current += 1;
-      }
-      this._current = current;
-    }
-    this._current += 1;
-    const literal = stream.slice(start + 1, this._current - 1);
-    return literal.replace(/\\(['\\])/g, '$1');
+    const raw = this.consumeUntil(stream, "'");
+    const content = raw.endsWith("'") && raw.length > 1 ? raw.slice(1, -1) : raw.slice(1);
+    return content.replace(/\\(['\\])/g, '$1');
   }
 
   private consumeNumber(stream: string): LexerToken {
@@ -252,33 +248,10 @@ class StreamLexer {
   }
 
   private consumeLiteral(stream: string): JSONValue {
-    this._current += 1;
-    const start = this._current;
-    const maxLength = stream.length;
-
-    while (stream[this._current] !== '`' && this._current < maxLength) {
-      let current = this._current;
-      if (stream[current] === '\\' && (stream[current + 1] === '\\' || stream[current + 1] === '`')) {
-        current += 2;
-      } else {
-        current += 1;
-      }
-      this._current = current;
-    }
-    let literalString = stream.slice(start, this._current).trimStart();
-    literalString = literalString.replace('\\`', '`');
-
-    let literal: JSONValue = null;
-    let ok = false;
-
-    // attempts to detect and parse valid JSON
-
-    if (this.looksLikeJSON(literalString)) {
-      [literal, ok] = this.parseJSON(literalString);
-    }
-
-    // invalid JSON values should be converted to quoted
-    // JSON strings during the JEP-12 deprecation period.
+    const raw = this.consumeUntil(stream, '`');
+    const inner = raw.endsWith('`') && raw.length > 1 ? raw.slice(1, -1) : raw.slice(1);
+    const literalString = inner.trimStart().replace('\\`', '`');
+    let [literal, ok] = this.parseJSON(literalString);
 
     if (!ok && this._enable_legacy_literals) {
       [literal, ok] = this.parseJSON(`"${literalString}"`);
@@ -286,36 +259,13 @@ class StreamLexer {
 
     if (!ok) {
       const error = new Error(
-        `Syntax error: unexpected end of JSON input or invalid format for a JSON literal: ${stream[this._current]}`,
+        `Syntax error: unexpected end of JSON input or invalid format for a JSON literal: ${stream[this._current - 1] ?? ''}`,
       );
       error.name = 'LexerError';
       throw error;
     }
 
-    this._current += 1;
     return literal;
-  }
-
-  private looksLikeJSON(literalString: string): boolean {
-    const startingChars = '[{"';
-    const jsonLiterals = ['true', 'false', 'null'];
-    const numberLooking = '-0123456789';
-
-    if (literalString === '') {
-      return false;
-    }
-    if (startingChars.includes(literalString[0])) {
-      return true;
-    }
-    if (jsonLiterals.includes(literalString)) {
-      return true;
-    }
-    if (numberLooking.includes(literalString[0])) {
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const [_, ok] = this.parseJSON(literalString);
-      return ok;
-    }
-    return false;
   }
 
   private parseJSON(text: string): [JSONValue, boolean] {

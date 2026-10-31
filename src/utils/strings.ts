@@ -34,8 +34,6 @@ export const findLast = (subject: string, sub: string, start?: number, end?: num
   return idx === -1 ? null : [...target.slice(0, idx)].length + s;
 };
 
-export const lower = (subject: string): string => subject.toLowerCase();
-
 const createPad =
   (isLeft: boolean, name: string) =>
   (subject: string, width: number, padding = ' '): string => {
@@ -98,5 +96,3 @@ const trimImpl = (subject: string, pattern: string, chars?: string): string => {
 export const trimLeft = (subject: string, chars?: string): string => trimImpl(subject, '^[%s]*(.*?)', chars);
 export const trimRight = (subject: string, chars?: string): string => trimImpl(subject, '(.*?)[%s]*$', chars);
 export const trim = (subject: string, chars?: string): string => trimLeft(trimRight(subject, chars), chars);
-
-export const upper = (subject: string): string => subject.toUpperCase();
