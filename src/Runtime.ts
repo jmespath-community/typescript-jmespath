@@ -704,14 +704,18 @@ export class Runtime implements FunctionRegistry {
 
   private functionSortBy: RuntimeFunction<[number[] | string[], ExpressionNode], JSONValue> = resolvedArgs => {
     const sortedArray = [...resolvedArgs[0]];
-    if (sortedArray.length <= 1) {
+    if (sortedArray.length === 0) {
       return sortedArray;
     }
     const interpreter = this._interpreter;
     const exprefNode = resolvedArgs[1];
     const requiredType = this.getTypeName(interpreter.visit(exprefNode, sortedArray[0]) as JSONValue);
-    if (requiredType !== undefined && ![InputArgument.TYPE_NUMBER, InputArgument.TYPE_STRING].includes(requiredType)) {
-      throw new Error(`Invalid type: unexpected type (${this.TYPE_NAME_TABLE[requiredType]})`);
+    if (requiredType === undefined || ![InputArgument.TYPE_NUMBER, InputArgument.TYPE_STRING].includes(requiredType)) {
+      const typeName = requiredType !== undefined ? this.TYPE_NAME_TABLE[requiredType] : 'undefined';
+      throw new Error(`Invalid type: unexpected type (${typeName})`);
+    }
+    if (sortedArray.length === 1) {
+      return sortedArray;
     }
     function throwInvalidTypeError(rt: Runtime, item: string | number): never {
       throw new Error(

@@ -215,6 +215,24 @@ async function drainStream(
   return collected;
 }
 
+async function* drainAndEvaluate(
+  source: AsyncIterable<unknown>,
+  node: ExpressionNode,
+  interpreter: TreeInterpreter,
+  checkDeadline: () => void,
+  options?: StreamOptions,
+): AsyncGenerator<JSONValue, void, unknown> {
+  const collected = await drainStream(source, checkDeadline, options?.maxOutputSize);
+  const result = interpreter.search(node, collected, options);
+  if (Array.isArray(result)) {
+    for (const item of result) {
+      yield item;
+    }
+  } else if (result !== null && result !== undefined) {
+    yield result;
+  }
+}
+
 /**
  * Evaluates an AST node over an AsyncIterable stream of items.
  */
@@ -234,6 +252,10 @@ export async function* evaluateStreamNode(
 
   switch (node.type) {
     case 'Projection': {
+      if (!isStreamableNode(node)) {
+        yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
+        return;
+      }
       const { left, right } = node;
       let streamSource = source;
       if (left.type === 'IndexExpression' && left.right.type === 'Slice') {
@@ -299,15 +321,7 @@ export async function* evaluateStreamNode(
         }
 
         // Slices with negative indices or scalar indices require accumulating the stream
-        const collected = await drainStream(source, checkDeadline, options?.maxOutputSize);
-        const result = interpreter.search(node, collected, options);
-        if (node.right.type === 'Slice' && Array.isArray(result)) {
-          for (const item of result) {
-            yield item;
-          }
-        } else if (result !== null && result !== undefined) {
-          yield result;
-        }
+        yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
         return;
       }
       for await (const item of source) {
@@ -321,6 +335,10 @@ export async function* evaluateStreamNode(
     }
 
     case 'FilterProjection': {
+      if (!isStreamableNode(node)) {
+        yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
+        return;
+      }
       const { condition, right } = node;
       if (right.type === 'Identity' || right.type === 'Current') {
         for await (const item of source) {
@@ -412,11 +430,7 @@ export async function* evaluateStreamNode(
       }
 
       // Non-streamable root: accumulate items and evaluate
-      const collected = await drainStream(source, checkDeadline, options?.maxOutputSize);
-      const result = interpreter.search(node, collected, options);
-      if (result !== null && result !== undefined) {
-        yield result;
-      }
+      yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
       return;
     }
   }

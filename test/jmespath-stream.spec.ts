@@ -538,5 +538,22 @@ describe('searchStream', () => {
       const results = await collectStream(searchStream(source, 'sum(items)[0]'));
       expect(results).toEqual([]);
     });
+
+    it('evaluates non-streamable flattened projection [*].tags[] correctly', async () => {
+      const data = [{ tags: ['a', 'b'] }, { tags: ['c'] }, { tags: [] }, { tags: ['d', 'e'] }];
+      const source = createAsyncGenerator(data);
+      const results = await collectStream(searchStream(source, '[*].tags[]'));
+      expect(results).toEqual(['a', 'b', 'c', 'd', 'e']);
+    });
+
+    it('evaluates non-streamable filter projection with field left foo[?bar > `5`]', async () => {
+      const data = [
+        { bar: 10, foo: [{ bar: 1 }] },
+        { bar: 2, foo: [{ bar: 20 }] },
+      ];
+      const source = createAsyncGenerator(data);
+      const results = await collectStream(searchStream(source, 'foo[?bar > `5`]'));
+      expect(results).toEqual([]);
+    });
   });
 });
