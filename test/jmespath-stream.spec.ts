@@ -423,6 +423,45 @@ describe('searchStream', () => {
       expect(results).toEqual(['95', '88', '60']);
     });
 
+    it('evaluates flattened projections using the complete input', async () => {
+      const records = [{ tags: ['a', 'b'] }, { tags: [] }, { tags: null }, { name: 'missing' }, { tags: ['c'] }];
+      const expression = '[*].tags[]';
+      expect(jmespath.search(records, expression)).toEqual(['a', 'b', 'c']);
+
+      const results = await collectStream(searchStream(createAsyncGenerator(records), expression));
+      expect(results).toEqual(['a', 'b', 'c']);
+    });
+
+    it('evaluates flattened projections after negative slices', async () => {
+      const source = createAsyncGenerator([{ tags: ['a'] }, { tags: ['b', 'c'] }]);
+      expect(await collectStream(searchStream(source, '[-1:].tags[]'))).toEqual(['b', 'c']);
+    });
+
+    it('does not yield empty flattened projection results', async () => {
+      const source = createAsyncGenerator([{ tags: [] }, { tags: null }]);
+      expect(await collectStream(searchStream(source, '[*].tags[]'))).toEqual([]);
+    });
+
+    it('applies limit to individual flattened projection results', async () => {
+      const source = createAsyncGenerator([{ tags: ['a', 'b'] }, { tags: ['c'] }]);
+      expect(await collectStream(searchStream(source, '[*].tags[]', { limit: 2 }))).toEqual(['a', 'b']);
+    });
+
+    it('retains the collection bound for non-streamable projections', async () => {
+      const source = createAsyncGenerator([{ tags: ['a'] }, { tags: ['b'] }, { tags: ['c'] }]);
+      await expect(collectStream(searchStream(source, '[*].tags[]', { maxOutputSize: 2 }))).rejects.toThrow(
+        'Output size exceeds maximum allowed size of 2',
+      );
+    });
+
+    it.each([
+      { expression: '[-2:].name', expected: ['Charlie', 'Dana'] },
+      { expression: '[::-1].name', expected: ['Dana', 'Charlie', 'Bob', 'Alice'] },
+    ])('preserves slice projection $expression', async ({ expression, expected }) => {
+      const results = await collectStream(searchStream(createAsyncGenerator(sampleUsers), expression));
+      expect(results).toEqual(expected);
+    });
+
     it('evaluates negative slice by accumulating stream elements', async () => {
       const source = createAsyncGenerator(sampleUsers);
       const results = await collectStream(searchStream(source, '[-2:]'));
