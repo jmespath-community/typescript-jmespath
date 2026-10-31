@@ -152,6 +152,8 @@ const opt = (...types: (InputArgument | InputArgument[])[]): InputSignature[] =>
   types.map(t => ({ types: Array.isArray(t) ? t : [t], optional: true }));
 const variadic = (...types: (InputArgument | InputArgument[])[]): InputSignature[] =>
   types.map(t => ({ types: Array.isArray(t) ? t : [t], variadic: true }));
+const optVariadic = (...types: (InputArgument | InputArgument[])[]): InputSignature[] =>
+  types.map(t => ({ types: Array.isArray(t) ? t : [t], variadic: true, optional: true }));
 
 const {
   TYPE_NUMBER: NUM,
@@ -233,7 +235,7 @@ export class Runtime implements FunctionRegistry {
         _func: args => this.findExtremeBy(args as [JSONArray, ExpressionNode], cmp => cmp > 0),
         _signature: s(ARR, EXP),
       },
-      merge: { _func: args => Object.assign({}, ...args), _signature: variadic(OBJ) },
+      merge: { _func: args => Object.assign({}, ...args), _signature: optVariadic(OBJ) },
       min: {
         _func: ([v]) => this.findExtreme(v as (string | number)[], cmp => cmp < 0, Math.min),
         _signature: s([ARR_NUM, ARR_STR]),
@@ -470,8 +472,15 @@ export class Runtime implements FunctionRegistry {
   }
 
   private validateTypes(name: string, args: (JSONValue | ExpressionNode)[], signature: InputSignature[]): void {
-    for (let i = 0; i < signature.length; i += 1) {
-      const currentSpec = signature[i].types;
+    const lastSigIndex = signature.length - 1;
+    const isVariadic = signature[lastSigIndex]?.variadic ?? false;
+
+    for (let i = 0; i < args.length; i += 1) {
+      const sig = i < signature.length ? signature[i] : isVariadic ? signature[lastSigIndex] : undefined;
+      if (!sig) {
+        continue;
+      }
+      const currentSpec = sig.types;
       const actualType = this.getTypeName(args[i]) as InputArgument;
 
       if (actualType === undefined) {

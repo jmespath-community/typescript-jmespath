@@ -102,6 +102,11 @@ describe('Evaluates functions', () => {
       ['baz', 'qux'],
     ]);
   });
+  it('merge()', () => {
+    expect(jmespath.search({}, 'merge()')).toEqual({});
+    expect(jmespath.search({}, 'merge({ a: `1` })')).toEqual({ a: 1 });
+    expect(jmespath.search({}, 'merge({ a: `1` }, { b: `2` }, { c: `3` })')).toEqual({ a: 1, b: 2, c: 3 });
+  });
   it('pad_left()', () => {
     // this should be included in the compliance test suite
     expect(jmespath.search('', 'pad_left(@, `10`)')).toEqual('');
@@ -220,6 +225,19 @@ describe('Type-checks function arguments', () => {
     expectError(() => {
       return jmespath.search([{ k: 'foo' }, { k: 1 }], 'min_by(@, &k)');
     }, 'invalid-type');
+  });
+  it('merge() rejects non-object arguments even after the first', () => {
+    expectError(() => {
+      return jmespath.search({}, 'merge({ a: `1` }, `2`)');
+    }, ['invalid-type', 'argument 2']);
+    expectError(() => {
+      return jmespath.search({}, 'merge(`1`)');
+    }, ['invalid-type', 'argument 1']);
+  });
+  it('zip() rejects non-array arguments even after the first', () => {
+    expectError(() => {
+      return jmespath.search({}, 'zip([`1`], `2`)');
+    }, ['invalid-type', 'argument 2']);
   });
   it('length()', () => {
     try {
