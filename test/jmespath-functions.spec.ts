@@ -253,6 +253,30 @@ describe('Type-checks function arguments', () => {
       return jmespath.search('subject string', "pad_right(@, `10`, '😀😀')");
     }, 'invalid-value');
   });
+
+  it('replace() does not repeatedly mutate its own inserted substitutions', () => {
+    expect(jmespath.search({}, "replace('a', 'a', 'ba', `3`)")).toEqual('ba');
+    expect(jmespath.search({}, "replace('banana', 'an', 'anan', `1`)")).toEqual('bananana');
+    expect(jmespath.search({}, "replace('abc', '', 'x', `1`)")).toEqual('axbc');
+  });
+
+  it('find_first() and find_last() handle negative slice bounds and codepoints correctly', () => {
+    expect(jmespath.search({ s: 'subject string' }, "find_first(s, 's', `-6`)")).toBe(8);
+    expect(jmespath.search({ s: 'subject string' }, "find_first(s, 's', `-3`)")).toBeNull();
+    expect(jmespath.search({ s: 'subject string' }, "find_last(s, 's', `-5`)")).toBeNull();
+    expect(jmespath.search({ s: 'subject string' }, "find_last(s, 's', `0`, `-7`)")).toBe(0);
+
+    // Unicode code point indexing
+    expect(jmespath.search({ s: '😀abc😀' }, "find_first(s, 'a')")).toBe(1);
+    expect(jmespath.search({ s: '😀abc😀' }, "find_first(s, '😀', `1`)")).toBe(4);
+    expect(jmespath.search({ s: '😀abc😀' }, "find_last(s, '😀')")).toBe(4);
+    expect(jmespath.search({ s: '😀abc😀' }, "find_last(s, '😀', `0`, `3`)")).toBe(0);
+  });
+
+  it('split() splits empty search string by Unicode code points', () => {
+    expect(jmespath.search({}, "split('😀ab', '')")).toEqual(['😀', 'a', 'b']);
+    expect(jmespath.search({}, "split('😀ab', '', `1`)")).toEqual(['😀', 'ab']);
+  });
 });
 
 describe('custom functions', () => {
