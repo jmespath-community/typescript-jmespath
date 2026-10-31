@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import jmespath from '../src';
+import jmespath, { compile, type ExpressionNode, type ExpressionReference } from '../src';
 
 describe('Searches compiled ast', () => {
   it('search a compiled expression', () => {
@@ -59,6 +59,16 @@ describe('Searches compiled ast', () => {
     const item: Item = { id: 'x1' };
     const id = jmespath.search<string>(item, 'id');
     expect(id).toEqual('x1');
+  });
+
+  it('exports ExpressionNode and ExpressionReference types', () => {
+    const node: ExpressionNode = compile('foo.bar');
+    expect(node.type).toBe('Subexpression');
+    const compiled = jmespath.compileQuery('foo.bar');
+    const ast: ExpressionNode = compiled.ast;
+    expect(ast.type).toBe('Subexpression');
+    const ref: ExpressionReference = { expref: true, ...node };
+    expect(ref.expref).toBe(true);
   });
 
   it('automatically infers types from literal path expressions', () => {

@@ -17,6 +17,7 @@ import { ScopeChain } from './Scope';
 import TreeInterpreterInst from './TreeInterpreter';
 import { findDisallowedFunction } from './utils';
 
+export type { ExpressionNode, ExpressionReference } from './AST.type';
 export type { JSONArray, JSONObject, JSONPrimitive, JSONValue } from './JSON.type';
 export type { Options } from './Parser.type';
 export type { PathValue } from './Path.type';
