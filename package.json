@@ -82,13 +82,15 @@
     "start": "tsdown --watch",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:prod": "npm run lint:ci && npm run test",
+    "test:prod": "npm run lint:ci && npm run typecheck && npm run test",
     "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts",
     "coverage": "vitest run --coverage",
-    "deploy-docs": "node scripts/gh-pages-publish.cjs"
+    "deploy-docs": "node scripts/gh-pages-publish.cjs",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
+    "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.0.5",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
