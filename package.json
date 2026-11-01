@@ -86,14 +86,14 @@
     "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts",
     "coverage": "vitest run --coverage",
     "deploy-docs": "node scripts/gh-pages-publish.cjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "node scripts/install-hooks.js",
+    "hooks:install": "node scripts/install-hooks.js"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.0.5",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.6.0",
     "shelljs": "^0.10.0",
     "tinybench": "^6.2.0",
     "tsdown": "~0.23.4",

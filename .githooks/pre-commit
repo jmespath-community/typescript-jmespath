@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+# Bypass with `git commit --no-verify`.
+#
+# Refuse to rewrite the index when staged files also have unstaged changes:
+# re-staging the formatted output would silently include those changes.
+if git status --porcelain | grep -q '^[MADRC][MADRC]'; then
+  printf '%s\n' 'ERROR: Some staged files have unstaged changes' >&2
+  exit 1
+fi
+
+# Format, organize imports, lint, and apply safe fixes to staged files only.
+./node_modules/.bin/biome check --write --staged --files-ignore-unknown=true --no-errors-on-unmatched
+git update-index --again

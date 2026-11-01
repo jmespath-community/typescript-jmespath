@@ -31,7 +31,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": false,
+      "preset": "none",
       "complexity": { "noBannedTypes": "error" },
       "correctness": { "noUnusedVariables": "warn" },
       "style": {
