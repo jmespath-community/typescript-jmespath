@@ -76,7 +76,7 @@
     "lint:ci": "biome check --diagnostic-level=error",
     "prebuild": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "tsdown",
-    "dev": "ts-node src/cli.ts",
+    "dev": "tsx src/cli.ts",
     "perf": "node --expose-gc scripts/perf.js",
     "perf:stream": "node --expose-gc scripts/stream-perf.js",
     "start": "tsdown --watch",
@@ -85,7 +85,7 @@
     "test:prod": "npm run lint:ci && npm run test",
     "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts",
     "coverage": "vitest run --coverage",
-    "deploy-docs": "ts-node scripts/gh-pages-publish"
+    "deploy-docs": "node scripts/gh-pages-publish.cjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
@@ -94,12 +94,13 @@
     "lint-staged": "^17.6.0",
     "shelljs": "^0.10.0",
     "tinybench": "^6.2.0",
-    "ts-node": "^10.9.2",
     "tsdown": "~0.23.4",
-    "typescript": "^5.9.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
     "vitest": "^5.0.5"
   },
   "allowScripts": {
+    "esbuild": true,
     "fsevents": true
   }
 }
