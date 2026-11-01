@@ -1,0 +1,20 @@
+name: 🛡️ osv-scanner (pull request)
+
+# Compares the pull request against OSV.dev and reports only the vulnerabilities
+# the branch introduces relative to the base branch.
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@0a65f82af05cd58cf587827b0bb0489548c18346 # v2.7.0
+    with:
+      # Forks receive a read-only token, so only upload code-scanning results for
+      # branches in this repository. The scan and PR annotations still run.
+      upload-sarif: ${{ github.event.pull_request.head.repo.fork == false }}
