@@ -39,6 +39,9 @@ jobs:
     - name: 🔎 Lint
       run: npm run lint:ci
 
+    - name: 🧠 Typecheck
+      run: npm run typecheck
+
     - name: ☢ Run tests with coverage
       run: npm run coverage
 

@@ -305,7 +305,7 @@ export class TreeInterpreter {
             return div(first, second);
 
           default:
-            throw new Error(`Syntax error: unknown arithmetic operator: ${node.operator}`);
+            throw new Error(`Syntax error: unknown arithmetic operator: ${(node as { operator: Token }).operator}`);
         }
       }
       case 'Unary': {
@@ -320,7 +320,7 @@ export class TreeInterpreter {
             return -(operand as number);
 
           default:
-            throw new Error(`Syntax error: unknown arithmetic operator: ${node.operator}`);
+            throw new Error(`Syntax error: unknown arithmetic operator: ${(node as { operator: Token }).operator}`);
         }
       }
       case 'Comparator': {
