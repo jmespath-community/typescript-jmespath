@@ -1,31 +1,30 @@
-import { defineConfig, Options } from 'tsup';
+import { defineConfig, type UserConfig } from 'tsdown';
 
-const baseConfig: Options = {
-  dts: true,
+const baseConfig: UserConfig = {
+  dts: { sourcemap: false },
   sourcemap: true,
   clean: false,
   treeshake: true,
-  splitting: false,
 };
 
-const nodeConfig: Options = {
+const nodeConfig: UserConfig = {
   ...baseConfig,
   platform: 'node',
   target: 'es2022',
   format: ['cjs', 'esm'],
   outDir: 'dist',
-  outExtension({ format }) {
-    return {
-      js: format === 'cjs' ? '.cjs' : '.mjs',
-    };
-  },
+  outExtensions: ({ format }) => ({
+    js: format === 'cjs' ? '.cjs' : '.mjs',
+    dts: format === 'cjs' ? '.d.cts' : '.d.ts',
+  }),
 };
 
-const browserConfig: Options = {
+const browserConfig: UserConfig = {
   ...baseConfig,
   platform: 'browser',
   target: 'es2020',
-  globalName: 'jmespath',
+  dts: false,
+  outDir: 'dist',
 };
 
 export default defineConfig([
@@ -44,43 +43,29 @@ export default defineConfig([
     ...browserConfig,
     entry: ['src/index.ts'],
     format: ['esm'],
-    outExtension() {
-      return {
-        js: '.esm.js',
-      };
-    },
+    outputOptions: { entryFileNames: 'index.esm.js' },
   },
   {
     ...browserConfig,
     entry: ['src/index.ts'],
     format: ['esm'],
     minify: true,
-    outExtension() {
-      return {
-        js: '.esm.min.js',
-      };
-    },
+    outputOptions: { entryFileNames: 'index.esm.min.js' },
   },
   {
     ...browserConfig,
     entry: ['src/index.ts'],
     format: ['iife'],
-    outExtension() {
-      return {
-        js: '.umd.js',
-      };
-    },
+    globalName: 'jmespath',
+    outputOptions: { entryFileNames: 'index.umd.js' },
   },
   {
     ...browserConfig,
     entry: ['src/index.ts'],
     format: ['iife'],
+    globalName: 'jmespath',
     minify: true,
-    outExtension() {
-      return {
-        js: '.umd.min.js',
-      };
-    },
+    outputOptions: { entryFileNames: 'index.umd.min.js' },
   },
   // CLI build
   {

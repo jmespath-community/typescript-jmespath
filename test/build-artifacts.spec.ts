@@ -114,7 +114,7 @@ describe('Build Artifacts', () => {
       expect(existsSync(umdPath), `Expected ${umdPath} to exist`).toBe(true);
 
       const content = readFileSync(umdPath, 'utf-8');
-      // tsup generates IIFE format with global variable
+      // tsdown generates IIFE format with global variable
       expect(content).toMatch(/var jmespath = \(function\s*\(/);
     });
 
