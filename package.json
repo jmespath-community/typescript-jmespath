@@ -96,7 +96,7 @@
     "tinybench": "^6.2.0",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.12"
   },
   "allowScripts": {
