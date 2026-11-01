@@ -74,7 +74,7 @@
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "lint:ci": "biome check --diagnostic-level=error",
-    "prebuild": "rimraf dist",
+    "prebuild": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "tsup",
     "dev": "ts-node src/cli.ts",
     "perf": "node --expose-gc scripts/perf.js",
@@ -85,22 +85,22 @@
     "test:prod": "npm run lint:ci && npm run test",
     "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts",
     "coverage": "vitest run --coverage",
-    "deploy-docs": "ts-node scripts/gh-pages-publish",
-    "report-coverage": "cat ./coverage/lcov.info | coveralls"
+    "deploy-docs": "ts-node scripts/gh-pages-publish"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.2",
-    "@vitest/coverage-v8": "^4.0.6",
-    "clean-publish": "^6.0.1",
-    "coveralls-next": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.12",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.6",
-    "rimraf": "^6.1.0",
     "shelljs": "^0.10.0",
     "tinybench": "^5.1.0",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.6"
+    "vitest": "^4.1.12"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "fsevents": true
   }
 }
