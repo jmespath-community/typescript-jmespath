@@ -1,3 +1,0 @@
-{
-  "**/{src,test}/**/*.{ts,js}": ["biome check --write", "git add"]
-}
