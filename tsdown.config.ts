@@ -1,7 +1,7 @@
 import { defineConfig, type UserConfig } from 'tsdown';
 
 const baseConfig: UserConfig = {
-  dts: { sourcemap: false },
+  dts: { sourcemap: true },
   sourcemap: true,
   clean: false,
   treeshake: true,

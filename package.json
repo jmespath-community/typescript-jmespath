@@ -20,28 +20,55 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "browser": {
-        "import": "./dist/index.esm.js",
-        "require": "./dist/index.umd.js",
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.esm.js"
+        },
+        "require": {
+          "types": "./dist/index.d.cts",
+          "default": "./dist/index.umd.js"
+        },
         "default": "./dist/index.umd.js"
       },
       "node": {
-        "import": "./dist/index.mjs",
-        "require": "./dist/index.cjs"
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.mjs"
+        },
+        "require": {
+          "types": "./dist/index.d.cts",
+          "default": "./dist/index.cjs"
+        }
       },
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./stream": {
-      "types": "./dist/stream.d.ts",
-      "import": "./dist/stream.mjs",
-      "require": "./dist/stream.cjs"
+      "import": {
+        "types": "./dist/stream.d.ts",
+        "default": "./dist/stream.mjs"
+      },
+      "require": {
+        "types": "./dist/stream.d.cts",
+        "default": "./dist/stream.cjs"
+      }
     },
     "./cli": {
-      "types": "./dist/cli.d.ts",
-      "import": "./dist/cli.mjs",
-      "require": "./dist/cli.cjs"
+      "import": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.mjs"
+      },
+      "require": {
+        "types": "./dist/cli.d.cts",
+        "default": "./dist/cli.cjs"
+      }
     }
   },
   "files": [
@@ -70,6 +97,13 @@
   "engines": {
     "node": ">=20.19.0"
   },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=22.18.0",
+      "onFail": "warn"
+    }
+  },
   "scripts": {
     "lint": "biome check",
     "lint:fix": "biome check --write",
@@ -87,13 +121,14 @@
     "coverage": "vitest run --coverage",
     "deploy-docs": "node scripts/gh-pages-publish.cjs",
     "typecheck": "tsc --noEmit",
-    "prepare": "node scripts/install-hooks.js",
-    "hooks:install": "node scripts/install-hooks.js"
+    "hooks:install": "node scripts/install-hooks.js",
+    "check:pkg": "publint"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.0.5",
+    "publint": "^0.3.25",
     "shelljs": "^0.10.0",
     "tinybench": "^6.2.0",
     "tsdown": "~0.23.4",
