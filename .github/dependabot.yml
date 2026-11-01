@@ -23,13 +23,11 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
+    # Majors are deliberately left ungrouped: they bundle incompatible changes
+    # that cannot be reviewed together (e.g. typescript 7 breaks the DTS build).
     groups:
       development:
         dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
-      development-major:
-        dependency-type: "development"
-        update-types:
-          - "major"
