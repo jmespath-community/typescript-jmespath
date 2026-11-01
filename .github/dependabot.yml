@@ -1,0 +1,35 @@
+# Keep development dependencies current without flooding the repository with
+# pull requests, while staying clear of freshly published versions.
+#
+# This package has no runtime dependencies, so every entry below is a
+# development dependency that never reaches consumers.
+#
+# GitHub Actions pins are managed by `gh actions-lock` (see
+# `verify-lockfile.yml`), so they are left out here: bumping a pin requires a
+# refreshed `.github/workflows/actions.lock` in the same commit.
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    # Dependabot waits 3 days by default; widen the window because a release
+    # only has to survive long enough to be caught and pulled by the registry.
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    groups:
+      development:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      development-major:
+        dependency-type: "development"
+        update-types:
+          - "major"
