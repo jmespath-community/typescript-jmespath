@@ -1,0 +1,19 @@
+name: 🛡️ osv-scanner (scheduled)
+
+# Full scan of the dependency tree, including malware advisories that `npm audit`
+# does not cover, on every push to main and once a week.
+on:
+  schedule:
+    - cron: "30 12 * * 1"
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@0a65f82af05cd58cf587827b0bb0489548c18346 # v2.7.0
