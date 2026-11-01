@@ -48,6 +48,9 @@ jobs:
     - name: 🧪 Test build artifacts
       run: npm test -- test/build-artifacts.spec.ts
 
+    - name: 📦 Check package exports
+      run: npm run check:pkg
+
     - name: 📊 Upload coverage reports
       if: matrix.node-version == '24.x'  # only upload coverage for one Node version
       uses: actions/upload-artifact@v4.6.2

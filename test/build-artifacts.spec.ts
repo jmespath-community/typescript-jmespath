@@ -230,32 +230,29 @@ describe('Build Artifacts', () => {
 
       expect(pkg.exports).toBeDefined();
       expect(pkg.exports['.']).toBeDefined();
-      expect(pkg.exports['.'].types).toBe('./dist/index.d.ts');
-      expect(pkg.exports['.'].import).toBe('./dist/index.mjs');
-      expect(pkg.exports['.'].require).toBe('./dist/index.cjs');
+      expect(pkg.exports['.'].import).toEqual({ types: './dist/index.d.ts', default: './dist/index.mjs' });
+      expect(pkg.exports['.'].require).toEqual({ types: './dist/index.d.cts', default: './dist/index.cjs' });
 
       // Check browser exports
       expect(pkg.exports['.'].browser).toBeDefined();
-      expect(pkg.exports['.'].browser.import).toBe('./dist/index.esm.js');
-      expect(pkg.exports['.'].browser.require).toBe('./dist/index.umd.js');
+      expect(pkg.exports['.'].browser.import).toEqual({ types: './dist/index.d.ts', default: './dist/index.esm.js' });
+      expect(pkg.exports['.'].browser.require).toEqual({ types: './dist/index.d.cts', default: './dist/index.umd.js' });
       expect(pkg.exports['.'].browser.default).toBe('./dist/index.umd.js');
 
       // Check Node.js specific exports
       expect(pkg.exports['.'].node).toBeDefined();
-      expect(pkg.exports['.'].node.import).toBe('./dist/index.mjs');
-      expect(pkg.exports['.'].node.require).toBe('./dist/index.cjs');
+      expect(pkg.exports['.'].node.import).toEqual({ types: './dist/index.d.ts', default: './dist/index.mjs' });
+      expect(pkg.exports['.'].node.require).toEqual({ types: './dist/index.d.cts', default: './dist/index.cjs' });
 
       // Check stream export
       expect(pkg.exports['./stream']).toBeDefined();
-      expect(pkg.exports['./stream'].types).toBe('./dist/stream.d.ts');
-      expect(pkg.exports['./stream'].import).toBe('./dist/stream.mjs');
-      expect(pkg.exports['./stream'].require).toBe('./dist/stream.cjs');
+      expect(pkg.exports['./stream'].import).toEqual({ types: './dist/stream.d.ts', default: './dist/stream.mjs' });
+      expect(pkg.exports['./stream'].require).toEqual({ types: './dist/stream.d.cts', default: './dist/stream.cjs' });
 
       // Check CLI export
       expect(pkg.exports['./cli']).toBeDefined();
-      expect(pkg.exports['./cli'].types).toBe('./dist/cli.d.ts');
-      expect(pkg.exports['./cli'].import).toBe('./dist/cli.mjs');
-      expect(pkg.exports['./cli'].require).toBe('./dist/cli.cjs');
+      expect(pkg.exports['./cli'].import).toEqual({ types: './dist/cli.d.ts', default: './dist/cli.mjs' });
+      expect(pkg.exports['./cli'].require).toEqual({ types: './dist/cli.d.cts', default: './dist/cli.cjs' });
     });
   });
 });
