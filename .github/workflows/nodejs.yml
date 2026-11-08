@@ -46,7 +46,7 @@ jobs:
       run: npm run coverage
 
     - name: 🧪 Test build artifacts
-      run: npm test -- test/build-artifacts.spec.ts
+      run: npm test -- test/build-artifacts.spec.ts test/package-consumers.spec.ts
 
     - name: 📦 Check package exports
       run: npm run check:pkg

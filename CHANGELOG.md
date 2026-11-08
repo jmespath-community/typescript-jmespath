@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Fixed browser-targeted CommonJS imports resolving to the IIFE bundle instead of `index.cjs`. The legacy `browser` field and `browser.default` now resolve to `index.esm.js`; `unpkg` and `jsdelivr` still serve the script-tag bundle ([#167](https://github.com/jmespath-community/typescript-jmespath/issues/167)).
+
 ## [1.5.0] - 2026-10-30
 
 ### Added

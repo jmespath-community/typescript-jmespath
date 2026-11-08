@@ -13,7 +13,7 @@
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
-  "browser": "./dist/index.umd.js",
+  "browser": "./dist/index.esm.js",
   "unpkg": "./dist/index.umd.min.js",
   "jsdelivr": "./dist/index.umd.min.js",
   "types": "./dist/index.d.ts",
@@ -27,9 +27,9 @@
         },
         "require": {
           "types": "./dist/index.d.cts",
-          "default": "./dist/index.umd.js"
+          "default": "./dist/index.cjs"
         },
-        "default": "./dist/index.umd.js"
+        "default": "./dist/index.esm.js"
       },
       "node": {
         "import": {
@@ -117,7 +117,7 @@
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:prod": "npm run lint:ci && npm run typecheck && npm run test",
-    "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts",
+    "test:build": "npm run build && npm test -- test/build-artifacts.spec.ts test/package-consumers.spec.ts",
     "coverage": "vitest run --coverage",
     "deploy-docs": "node scripts/gh-pages-publish.cjs",
     "typecheck": "tsc --noEmit",
@@ -128,6 +128,7 @@
     "@biomejs/biome": "2.6.3",
     "@types/node": "^26.6.4",
     "@vitest/coverage-v8": "^5.0.5",
+    "esbuild": "^0.28.2",
     "publint": "^0.3.25",
     "shelljs": "^0.10.0",
     "tinybench": "^6.2.0",

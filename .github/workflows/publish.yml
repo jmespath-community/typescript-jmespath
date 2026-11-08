@@ -66,6 +66,6 @@ jobs:
           head -1 dist/cli.mjs | grep -q "^#!" || (echo "CLI binary missing shebang" && exit 1)
           echo "✅ All build artifacts validated"
       - name: 🧪 Test build artifacts
-        run: npm test -- test/build-artifacts.spec.ts
+        run: npm test -- test/build-artifacts.spec.ts test/package-consumers.spec.ts
       - name: ✉️ publish
         run: npm publish --verbose --access public --tag latest --provenance

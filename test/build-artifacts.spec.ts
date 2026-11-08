@@ -196,7 +196,7 @@ describe('Build Artifacts', () => {
 
       expect(pkg.main).toBe('./dist/index.cjs');
       expect(pkg.module).toBe('./dist/index.mjs');
-      expect(pkg.browser).toBe('./dist/index.umd.js');
+      expect(pkg.browser).toBe('./dist/index.esm.js');
       expect(pkg.types).toBe('./dist/index.d.ts');
       expect(pkg.type).toBe('module');
     });
@@ -236,8 +236,8 @@ describe('Build Artifacts', () => {
       // Check browser exports
       expect(pkg.exports['.'].browser).toBeDefined();
       expect(pkg.exports['.'].browser.import).toEqual({ types: './dist/index.d.ts', default: './dist/index.esm.js' });
-      expect(pkg.exports['.'].browser.require).toEqual({ types: './dist/index.d.cts', default: './dist/index.umd.js' });
-      expect(pkg.exports['.'].browser.default).toBe('./dist/index.umd.js');
+      expect(pkg.exports['.'].browser.require).toEqual({ types: './dist/index.d.cts', default: './dist/index.cjs' });
+      expect(pkg.exports['.'].browser.default).toBe('./dist/index.esm.js');
 
       // Check Node.js specific exports
       expect(pkg.exports['.'].node).toBeDefined();
