@@ -125,8 +125,8 @@
     "check:pkg": "publint"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.4",
-    "@types/node": "^24.19.2",
+    "@biomejs/biome": "2.6.3",
+    "@types/node": "^26.6.4",
     "@vitest/coverage-v8": "^5.0.5",
     "publint": "^0.3.25",
     "shelljs": "^0.10.0",
