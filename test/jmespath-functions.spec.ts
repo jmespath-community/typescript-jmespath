@@ -312,6 +312,9 @@ describe('Type-checks function arguments', () => {
   it('split() splits empty search string by Unicode code points', () => {
     expect(jmespath.search({}, "split('😀ab', '')")).toEqual(['😀', 'a', 'b']);
     expect(jmespath.search({}, "split('😀ab', '', `1`)")).toEqual(['😀', 'ab']);
+    expect(jmespath.search({}, "split('a-b', '-', `2`)")).toEqual(['a', 'b']);
+    expect(jmespath.search({}, "split('a-b', '-', `5`)")).toEqual(['a', 'b']);
+    expect(jmespath.search({}, "split('ab', '', `5`)")).toEqual(['a', 'b']);
   });
 });
 
