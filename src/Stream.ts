@@ -155,7 +155,11 @@ export function isStreamableNode(node: ExpressionNode): boolean {
       if (node.left.type === 'Identity' || node.left.type === 'Current') {
         return true;
       }
-      if (node.left.type === 'IndexExpression' && node.left.right.type === 'Slice') {
+      if (
+        node.left.type === 'IndexExpression' &&
+        (node.left.left.type === 'Identity' || node.left.left.type === 'Current') &&
+        node.left.right.type === 'Slice'
+      ) {
         const slice = node.left.right;
         return (
           (slice.start === null || slice.start >= 0) &&
@@ -344,7 +348,9 @@ export async function* evaluateStreamNode(
         for await (const item of source) {
           checkDeadline();
           if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
-            yield item as JSONValue;
+            if (item !== null && item !== undefined) {
+              yield item as JSONValue;
+            }
           }
         }
         return;

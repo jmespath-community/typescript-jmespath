@@ -473,6 +473,21 @@ describe('searchStream', () => {
       expect(await collectStream(searchStream(source, '[1:3:-1]'))).toEqual([]);
     });
 
+    it.each(['[0:3]', '[::-1]', '[?`true`]', '[?@ == `null`]'])(
+      'drops null elements in standalone projection %s',
+      async expression => {
+        const data = [null, 1, null];
+        const expected = jmespath.search(data, expression);
+        const results = await collectStream(searchStream(createAsyncGenerator(data), expression));
+        expect(results).toEqual(expected);
+      },
+    );
+
+    it('treats non-root slice projections as non-streamable like other non-root projections', async () => {
+      const records = [{ items: [{ name: 'a' }, { name: 'b' }] }];
+      expect(await collectStream(searchStream(createAsyncGenerator(records), 'items[0:2].name'))).toEqual([]);
+    });
+
     it('ignores field extraction on primitive items', async () => {
       const source = createAsyncGenerator([1, 'string', null]);
       const results = await collectStream(searchStream(source, 'name'));
