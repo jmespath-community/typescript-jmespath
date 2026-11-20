@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Parser, Interpreter & Streaming**:
-  - Restored `Projection` wrapping for standalone slice expressions so `null` elements are dropped per JEP-10 (`[0:3]`, `[::-1]`), and dropped `null` elements in `Stream.ts` `FilterProjection` `Identity`/`Current` fast paths ([#175](https://github.com/jmespath-community/typescript-jmespath/pull/175), [#174](https://github.com/jmespath-community/typescript-jmespath/issues/174)).
+  - Restored `Projection` wrapping for standalone slice expressions so `null` elements are dropped per JEP-10 (`[0:3]`, `[::-1]`), and dropped `null` elements in `Stream.ts` `FilterProjection` `Identity`/`Current` fast paths ([#175](https://github.com/jmespath-community/typescript-jmespath/pull/175), [#174](https://github.com/jmespath-community/typescript-jmespath/issues/174); reported by [@bardrop](https://github.com/bardrop)).
   - Restricted `isStreamableNode` for slice-based projections to `Identity` and `Current` left targets so non-root slice projections such as `items[0:2].name` fall back to `drainAndEvaluate` ([#175](https://github.com/jmespath-community/typescript-jmespath/pull/175)).
   - Guarded `Stream.ts` `Field` fast paths with `Object.prototype.hasOwnProperty.call` to prevent `Object.prototype` property leakage ([#179](https://github.com/jmespath-community/typescript-jmespath/pull/179)).
 - **Lexer & Built-in Functions**:
