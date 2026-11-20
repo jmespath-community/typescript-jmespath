@@ -7,8 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-20
+
 ### Fixed
-- Fixed browser-targeted CommonJS imports resolving to the IIFE bundle instead of `index.cjs`. The legacy `browser` field and `browser.default` now resolve to `index.esm.js`; `unpkg` and `jsdelivr` still serve the script-tag bundle ([#167](https://github.com/jmespath-community/typescript-jmespath/issues/167)).
+- **Parser, Interpreter & Streaming**:
+  - Restored `Projection` wrapping for standalone slice expressions so `null` elements are dropped per JEP-10 (`[0:3]`, `[::-1]`), and dropped `null` elements in `Stream.ts` `FilterProjection` `Identity`/`Current` fast paths ([#175](https://github.com/jmespath-community/typescript-jmespath/pull/175), [#174](https://github.com/jmespath-community/typescript-jmespath/issues/174); reported by [@bardrop](https://github.com/bardrop)).
+  - Restricted `isStreamableNode` for slice-based projections to `Identity` and `Current` left targets so non-root slice projections such as `items[0:2].name` fall back to `drainAndEvaluate` ([#175](https://github.com/jmespath-community/typescript-jmespath/pull/175)).
+  - Guarded `Stream.ts` `Field` fast paths with `Object.prototype.hasOwnProperty.call` to prevent `Object.prototype` property leakage ([#179](https://github.com/jmespath-community/typescript-jmespath/pull/179)).
+- **Lexer & Built-in Functions**:
+  - Rejected unclosed backtick JSON literals with `LexerError` and unescaped all escaped backticks within literals ([#178](https://github.com/jmespath-community/typescript-jmespath/pull/178)).
+  - Preserved trailing delimiter matches with finite `count` and split empty search strings by Unicode code points in `replace()` ([#176](https://github.com/jmespath-community/typescript-jmespath/pull/176)).
+  - Avoided appending a spurious trailing empty string in `split()` when `count` exceeds the number of delimiter matches ([#177](https://github.com/jmespath-community/typescript-jmespath/pull/177)).
+  - Preserved `"__proto__"` as an own data property when merging objects in `merge()` ([#179](https://github.com/jmespath-community/typescript-jmespath/pull/179)).
+- **Packaging**:
+  - Fixed browser-targeted CommonJS imports resolving to the IIFE bundle instead of `index.cjs`; the legacy `browser` field and `browser.default` now resolve to `index.esm.js`, while `unpkg` and `jsdelivr` still serve the script-tag bundle ([#172](https://github.com/jmespath-community/typescript-jmespath/pull/172), [#167](https://github.com/jmespath-community/typescript-jmespath/issues/167)).
+  - Resolved conditional TypeScript declarations for CJS (`import` vs `require` `.d.cts`) and removed install-time scripts ([#166](https://github.com/jmespath-community/typescript-jmespath/pull/166)).
 
 ## [1.5.0] - 2026-10-30
 
@@ -84,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Migrated linter and formatter to Biome ([#49](https://github.com/jmespath-community/typescript-jmespath/pull/49)).
 
+[1.5.1]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.3.0...v1.4.0
