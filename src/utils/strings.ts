@@ -61,14 +61,14 @@ export const replace = (subject: string, string: string, by: string, count?: num
   if (count === 0) {
     return subject;
   }
-  const parts = subject.split(string);
+  const parts = string === '' ? [...subject] : subject.split(string);
   if (count === null || count === undefined) {
     return parts.join(by);
   }
   ensurePositiveInteger(count);
-  const head = parts.slice(0, count + 1).join(by);
-  const tail = parts.slice(count + 1).join(string);
-  return tail.length > 0 ? head + string + tail : head;
+  return count >= parts.length - 1
+    ? parts.join(by)
+    : [...parts.slice(0, count), parts.slice(count).join(string)].join(by);
 };
 
 export const split = (subject: string, search: string, count?: number): string[] => {
