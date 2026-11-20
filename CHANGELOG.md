@@ -97,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Migrated linter and formatter to Biome ([#49](https://github.com/jmespath-community/typescript-jmespath/pull/49)).
 
+[1.5.1]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.3.0...v1.4.0
