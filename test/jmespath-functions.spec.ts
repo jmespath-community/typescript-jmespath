@@ -106,6 +106,11 @@ describe('Evaluates functions', () => {
     expect(jmespath.search({}, 'merge()')).toEqual({});
     expect(jmespath.search({}, 'merge({ a: `1` })')).toEqual({ a: 1 });
     expect(jmespath.search({}, 'merge({ a: `1` }, { b: `2` }, { c: `3` })')).toEqual({ a: 1, b: 2, c: 3 });
+    const mergedProto = jmespath.search<Record<string, unknown>>({}, 'merge({ "__proto__": { a: `1` } }, { b: `2` })');
+    expect(Object.prototype.hasOwnProperty.call(mergedProto, '__proto__')).toBe(true);
+    expect(Object.getPrototypeOf(mergedProto)).toBe(Object.prototype);
+    expect(mergedProto['__proto__']).toEqual({ a: 1 });
+    expect(mergedProto.b).toBe(2);
   });
   it('trim(), trim_left(), and trim_right() preserve astral code points with shared surrogates', () => {
     expect(jmespath.search('😁', "trim(@, '😀')")).toEqual('😁');

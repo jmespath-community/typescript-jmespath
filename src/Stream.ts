@@ -278,7 +278,12 @@ export async function* evaluateStreamNode(
         const key = right.name;
         for await (const item of streamSource) {
           checkDeadline();
-          if (item && typeof item === 'object' && !Array.isArray(item)) {
+          if (
+            item &&
+            typeof item === 'object' &&
+            !Array.isArray(item) &&
+            Object.prototype.hasOwnProperty.call(item, key)
+          ) {
             const val = (item as Record<string, unknown>)[key];
             if (val !== undefined && val !== null) {
               yield val as JSONValue;
@@ -360,7 +365,12 @@ export async function* evaluateStreamNode(
         for await (const item of source) {
           checkDeadline();
           if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
-            if (item && typeof item === 'object' && !Array.isArray(item)) {
+            if (
+              item &&
+              typeof item === 'object' &&
+              !Array.isArray(item) &&
+              Object.prototype.hasOwnProperty.call(item, key)
+            ) {
               const val = (item as Record<string, unknown>)[key];
               if (val !== undefined && val !== null) {
                 yield val as JSONValue;
@@ -412,7 +422,12 @@ export async function* evaluateStreamNode(
       const key = node.name;
       for await (const item of source) {
         checkDeadline();
-        if (item && typeof item === 'object' && !Array.isArray(item)) {
+        if (
+          item &&
+          typeof item === 'object' &&
+          !Array.isArray(item) &&
+          Object.prototype.hasOwnProperty.call(item, key)
+        ) {
           const val = (item as Record<string, unknown>)[key];
           if (val !== undefined && val !== null) {
             yield val as JSONValue;
