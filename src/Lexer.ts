@@ -254,11 +254,11 @@ class StreamLexer {
 
   private consumeLiteral(stream: string): JSONValue {
     const raw = this.consumeUntil(stream, '`');
-    const inner = raw.endsWith('`') && raw.length > 1 ? raw.slice(1, -1) : raw.slice(1);
-    const literalString = inner.trimStart().replace('\\`', '`');
-    let [literal, ok] = this.parseJSON(literalString);
+    const closed = raw.endsWith('`') && raw.length >= 2;
+    const literalString = closed ? raw.slice(1, -1).trimStart().replace(/\\`/g, '`') : '';
+    let [literal, ok] = closed ? this.parseJSON(literalString) : [null, false];
 
-    if (!ok && this._enable_legacy_literals) {
+    if (closed && !ok && this._enable_legacy_literals) {
       [literal, ok] = this.parseJSON(`"${literalString}"`);
     }
 
