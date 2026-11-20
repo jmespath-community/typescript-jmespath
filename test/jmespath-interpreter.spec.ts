@@ -6,8 +6,12 @@ describe('Searches compiled ast', () => {
     expect(jmespath.search({ foo: { bar: 'BAZ' } }, 'foo.bar')).toEqual('BAZ');
   });
 
-  it('preserves null elements in standalone slice expression', () => {
-    expect(jmespath.search([1, null, 2], '[0:3]')).toEqual([1, null, 2]);
+  it('drops null elements in standalone slice expression', () => {
+    expect(jmespath.search([1, null, 2], '[0:3]')).toEqual([1, 2]);
+    expect(jmespath.search([null, 1, null], '[::-1]')).toEqual([1]);
+    expect(jmespath.search({ items: [null, 1, null, 2] }, 'items[:3]')).toEqual([1]);
+    expect(jmespath.search([null, 1, null], 'length([0:2])')).toBe(1);
+    expect(jmespath.search('hello', '[0:3]')).toEqual('hel');
   });
 
   it.each(['[1:4:-1]', '[1:4:-2]', '[4:1:2]', '[4:1:3]', '[-100:100:-2]', '[100:-100:2]'])(

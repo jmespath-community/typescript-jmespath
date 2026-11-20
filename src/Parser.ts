@@ -363,13 +363,9 @@ class TokenParser {
       right,
     };
     if (right.type === 'Slice') {
-      const rhs = this.parseProjectionRHS(bindingPower.Star);
-      if (rhs.type === 'Identity') {
-        return indexExpr;
-      }
       return {
         left: indexExpr,
-        right: rhs,
+        right: this.parseProjectionRHS(bindingPower.Star),
         type: 'Projection',
       };
     }
