@@ -153,4 +153,15 @@ describe('tokenize', () => {
     expect(() => jmespath.tokenize("'unterminated")).toThrow('Syntax error: unclosed single quote');
     expect(() => jmespath.tokenize("'")).toThrow('Syntax error: unclosed single quote');
   });
+  it('should throw LexerError on unclosed backtick literal and unescape multiple backticks', () => {
+    expect(() => jmespath.tokenize('`20')).toThrow('Syntax error: unexpected end of JSON input');
+    expect(() => jmespath.tokenize('`true')).toThrow('Syntax error: unexpected end of JSON input');
+    expect(() => jmespath.tokenize('`"foo"')).toThrow('Syntax error: unexpected end of JSON input');
+    expect(() => jmespath.tokenize('`foo', { enable_legacy_literals: true })).toThrow(
+      'Syntax error: unexpected end of JSON input',
+    );
+    expect(jmespath.tokenize('`["a\\`b", "c\\`d"]`')).toMatchObject([
+      { type: 'Literal', value: ['a`b', 'c`d'], start: 0 },
+    ]);
+  });
 });
