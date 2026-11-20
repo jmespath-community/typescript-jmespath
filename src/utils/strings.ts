@@ -82,7 +82,7 @@ export const split = (subject: string, search: string, count?: number): string[]
     }
   }
   const parts = search === '' ? [...subject] : subject.split(search);
-  if (count === null || count === undefined) {
+  if (count === null || count === undefined || count >= parts.length - 1) {
     return parts;
   }
   return [...parts.slice(0, count), parts.slice(count).join(search)];
