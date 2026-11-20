@@ -294,6 +294,9 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.search({}, "replace('a', 'a', 'ba', `3`)")).toEqual('ba');
     expect(jmespath.search({}, "replace('banana', 'an', 'anan', `1`)")).toEqual('bananana');
     expect(jmespath.search({}, "replace('abc', '', 'x', `1`)")).toEqual('axbc');
+    expect(jmespath.search({}, "replace('aa', 'a', 'b', `1`)")).toEqual('ba');
+    expect(jmespath.search({}, "replace('a_b_', '_', '-', `1`)")).toEqual('a-b_');
+    expect(jmespath.search({}, "replace('😀ab', '', 'x', `1`)")).toEqual('😀xab');
   });
 
   it('find_first() and find_last() handle negative slice bounds and codepoints correctly', () => {
