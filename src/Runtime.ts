@@ -235,7 +235,10 @@ export class Runtime implements FunctionRegistry {
         _func: args => this.findExtremeBy(args as [JSONArray, ExpressionNode], cmp => cmp > 0),
         _signature: s(ARR, EXP),
       },
-      merge: { _func: args => Object.assign({}, ...args), _signature: optVariadic(OBJ) },
+      merge: {
+        _func: args => Object.fromEntries((args as JSONObject[]).flatMap(Object.entries)),
+        _signature: optVariadic(OBJ),
+      },
       min: {
         _func: ([v]) => this.findExtreme(v as (string | number)[], cmp => cmp < 0, Math.min),
         _signature: s([ARR_NUM, ARR_STR]),

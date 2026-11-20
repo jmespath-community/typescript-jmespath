@@ -609,5 +609,13 @@ describe('searchStream', () => {
       const results = await collectStream(searchStream(source, 'foo[?bar > `5`]'));
       expect(results).toEqual([]);
     });
+
+    it.each(['[*].toString', '[?`true`].toString', 'toString', '[*].__proto__'])(
+      'does not leak Object.prototype properties on field lookup %s',
+      async expression => {
+        const results = await collectStream(searchStream(createAsyncGenerator([{}]), expression));
+        expect(results).toEqual([]);
+      },
+    );
   });
 });
