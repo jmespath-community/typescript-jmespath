@@ -132,6 +132,9 @@ describe('parsing', () => {
     it.each(['[a, b,]', 'foo.[a, ]'])('should reject multi-select list with trailing comma %s', expr => {
       expect(() => jmespath.compile(expr)).toThrow(/Syntax error: unexpected token Rbracket/);
     });
+    it.each(['length(c,)', "join(',', a,)"])('should reject function arguments with trailing comma: %s', expr => {
+      expect(() => jmespath.compile(expr)).toThrow(/Syntax error/);
+    });
     it('should parse valid multi-select hash', () => {
       expect(jmespath.compile('{a: b, c: d}')).toMatchObject({
         type: 'MultiSelectHash',
