@@ -92,7 +92,7 @@ export function runCli(io: CliIO = {}): void {
   }
 }
 
-if (!process.env.VITEST) {
+if (!process.env.VITEST || /cli\.(ts|mjs|cjs)$/.test(process.argv[1] ?? '')) {
   runCli();
 }
 
