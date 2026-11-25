@@ -12,27 +12,31 @@ const normalizeBounds = (len: number, start?: number, end?: number): [number, nu
   return [s, Math.min(len, e)];
 };
 
-export const findFirst = (subject: string, sub: string, start?: number, end?: number): number | null => {
-  if (!subject || !sub) {
-    return null;
+const indexOfCodePoints = (haystack: string[], needle: string[], fromEnd: boolean): number => {
+  const last = haystack.length - needle.length;
+  for (let i = fromEnd ? last : 0; fromEnd ? i >= 0 : i <= last; i += fromEnd ? -1 : 1) {
+    if (needle.every((c, j) => haystack[i + j] === c)) {
+      return i;
+    }
   }
-  const chars = [...subject];
-  const [s, e] = normalizeBounds(chars.length, start, end);
-  const target = chars.slice(s, e).join('');
-  const idx = target.indexOf(sub);
-  return idx === -1 ? null : [...target.slice(0, idx)].length + s;
+  return -1;
 };
 
-export const findLast = (subject: string, sub: string, start?: number, end?: number): number | null => {
+const find = (fromEnd: boolean, subject: string, sub: string, start?: number, end?: number): number | null => {
   if (!subject || !sub) {
     return null;
   }
   const chars = [...subject];
   const [s, e] = normalizeBounds(chars.length, start, end);
-  const target = chars.slice(s, e).join('');
-  const idx = target.lastIndexOf(sub);
-  return idx === -1 ? null : [...target.slice(0, idx)].length + s;
+  const idx = indexOfCodePoints(chars.slice(s, e), [...sub], fromEnd);
+  return idx === -1 ? null : idx + s;
 };
+
+export const findFirst = (subject: string, sub: string, start?: number, end?: number): number | null =>
+  find(false, subject, sub, start, end);
+
+export const findLast = (subject: string, sub: string, start?: number, end?: number): number | null =>
+  find(true, subject, sub, start, end);
 
 const createPad =
   (isLeft: boolean, name: string) =>
