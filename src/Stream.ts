@@ -1,9 +1,10 @@
 import type { ExpressionNode } from './AST.type';
 import type { JSONValue } from './JSON.type';
-import Parser from './Parser';
+import Parser, { DEFAULT_MAX_DEPTH } from './Parser';
 import type { Options } from './Parser.type';
 import { TreeInterpreter, TreeInterpreterInstance } from './TreeInterpreter';
 import { findDisallowedFunction, isExpressionNode, isFalse } from './utils';
+import { countNodes } from './utils/ast';
 
 export type StreamSource<T = unknown> = AsyncIterable<T> | Iterable<T> | ReadableStream<T>;
 
@@ -367,7 +368,12 @@ export async function* evaluateStreamNode(
   interpreter: TreeInterpreter,
   options?: StreamOptions,
   deadline?: number,
+  depth = 0,
 ): AsyncGenerator<JSONValue, void, unknown> {
+  const maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
+  if (depth >= maxDepth) {
+    throw new Error(`Evaluation exceeds maximum allowed depth of ${maxDepth}`);
+  }
   if (options?.timeoutMs !== undefined && (typeof options.timeoutMs !== 'number' || Number.isNaN(options.timeoutMs))) {
     throw new RangeError('timeoutMs must be a valid number');
   }
@@ -394,7 +400,7 @@ export async function* evaluateStreamNode(
       const { left, right } = node;
       let streamSource = timedSource;
       if (left.type === 'IndexExpression' && left.right.type === 'Slice') {
-        streamSource = evaluateStreamNode(timedSource, left, interpreter, options, effectiveDeadline);
+        streamSource = evaluateStreamNode(timedSource, left, interpreter, options, effectiveDeadline, depth + 1);
       }
       if (right.type === 'Identity' || right.type === 'Current') {
         for await (const item of streamSource) {
@@ -516,9 +522,16 @@ export async function* evaluateStreamNode(
         yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
         return;
       }
-      const leftStream = evaluateStreamNode(timedSource, node.left, interpreter, options, effectiveDeadline);
+      const leftStream = evaluateStreamNode(timedSource, node.left, interpreter, options, effectiveDeadline, depth + 1);
       if (isListStreamableNode(node.right)) {
-        for await (const res of evaluateStreamNode(leftStream, node.right, interpreter, options, effectiveDeadline)) {
+        for await (const res of evaluateStreamNode(
+          leftStream,
+          node.right,
+          interpreter,
+          options,
+          effectiveDeadline,
+          depth + 1,
+        )) {
           yield res;
         }
       } else {
@@ -599,6 +612,10 @@ export async function* searchStream<T = JSONValue, D = unknown>(
 
   const ast: ExpressionNode = typeof expression === 'string' ? Parser.parse(expression, options) : expression;
 
+  if (typeof expression !== 'string' && options?.maxNodes !== undefined && countNodes(ast) > options.maxNodes) {
+    throw new Error(`Expression exceeds maximum allowed node count of ${options.maxNodes}`);
+  }
+
   if (options) {
     const fnError = findDisallowedFunction(ast, options);
     if (fnError) {
@@ -607,7 +624,14 @@ export async function* searchStream<T = JSONValue, D = unknown>(
   }
 
   const interpreter = new TreeInterpreter(options);
-  interpreter.runtime._functionTable = TreeInterpreterInstance.runtime._functionTable;
+  for (const [name, entry] of Object.entries(TreeInterpreterInstance.runtime._functionTable)) {
+    if (
+      Object.hasOwn(TreeInterpreterInstance.runtime._functionTable, name) &&
+      !Object.hasOwn(interpreter.runtime._functionTable, name)
+    ) {
+      interpreter.runtime._functionTable[name] = entry;
+    }
+  }
 
   if (options?.timeoutMs !== undefined && (typeof options.timeoutMs !== 'number' || Number.isNaN(options.timeoutMs))) {
     throw new RangeError('timeoutMs must be a valid number');

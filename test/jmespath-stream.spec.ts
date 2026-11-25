@@ -764,5 +764,26 @@ describe('searchStream', () => {
         expect(results).toEqual([]);
       },
     );
+
+    it('preserves let scopes inside built-in higher-order functions like map', async () => {
+      const results = await collectStream(
+        searchStream(createAsyncGenerator([1, 2, 3]), 'let $x = `10` in map(&(@ + $x), @)'),
+      );
+      expect(results).toEqual([11, 12, 13]);
+    });
+
+    it('enforces maxNodes for pre-parsed ASTs', async () => {
+      const ast = jmespath.compile('a.b.c.d');
+      await expect(
+        collectStream(searchStream(createAsyncGenerator([{ a: { b: { c: { d: 1 } } } }]), ast, { maxNodes: 2 })),
+      ).rejects.toThrow('Expression exceeds maximum allowed node count of 2');
+    });
+
+    it('enforces maxDepth on deeply piped streamable expressions', async () => {
+      const expr = Array(15).fill('[*]').join(' | ');
+      await expect(collectStream(searchStream(createAsyncGenerator([[1]]), expr, { maxDepth: 5 }))).rejects.toThrow(
+        'Evaluation exceeds maximum allowed depth of 5',
+      );
+    });
   });
 });
