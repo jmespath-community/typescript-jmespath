@@ -30,6 +30,10 @@ export class TreeInterpreter {
   private _maxDepth: number = DEFAULT_MAX_DEPTH;
   private _deadline = 0;
 
+  get maxOutputSize(): number | undefined {
+    return this._options?.maxOutputSize;
+  }
+
   constructor(options?: Options) {
     this.runtime = new Runtime(this);
     this._scope = new ScopeChain();

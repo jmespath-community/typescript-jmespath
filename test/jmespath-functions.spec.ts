@@ -362,6 +362,14 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.isRegistered('constructor')).toBe(false);
     expect(jmespath.isRegistered('toString')).toBe(false);
   });
+
+  it('rejects non-finite integers and bounds pad_left()/pad_right() width before allocation', () => {
+    expectError(() => jmespath.search('a', 'pad_left(@, `1e999`)'), 'invalid-value');
+    expectError(() => jmespath.search('a', 'pad_left(@, `1000000000`)'), 'invalid-value');
+    expectError(() => jmespath.search('a', 'pad_right(@, `1000000000`)'), 'invalid-value');
+    expectError(() => jmespath.search('a', 'pad_left(@, `100`)', { maxOutputSize: 10 }), 'Output size exceeds');
+    expectError(() => jmespath.search('abc', 'find_first(@, `"b"`, `1e999`)'), 'invalid-value');
+  });
 });
 
 describe('custom functions', () => {

@@ -253,11 +253,11 @@ export class Runtime implements FunctionRegistry {
         _signature: variadic(ANY),
       },
       pad_left: {
-        _func: ([s, w, p]) => padLeft(s as string, w as number, p as string),
+        _func: ([s, w, p]) => padLeft(s as string, w as number, p as string, this._interpreter?.maxOutputSize),
         _signature: [...s(STR, NUM), ...opt(STR)],
       },
       pad_right: {
-        _func: ([s, w, p]) => padRight(s as string, w as number, p as string),
+        _func: ([s, w, p]) => padRight(s as string, w as number, p as string, this._interpreter?.maxOutputSize),
         _signature: [...s(STR, NUM), ...opt(STR)],
       },
       replace: {
