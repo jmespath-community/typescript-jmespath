@@ -445,6 +445,10 @@ class TokenParser {
       expression = this.expression(0);
       if (this.lookahead(0) === Token.TOK_COMMA) {
         this.match(Token.TOK_COMMA);
+        if (isEndToken()) {
+          const token = this.lookaheadToken(0);
+          this.errorToken(token, `Syntax error: unexpected token ${token.type} after trailing comma`);
+        }
       }
       args.push(expression);
     }
