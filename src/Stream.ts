@@ -484,10 +484,11 @@ export async function* evaluateStreamNode(
       if (right.type === 'Identity' || right.type === 'Current') {
         for await (const item of timedSource) {
           checkDeadline();
-          if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
-            if (item !== null && item !== undefined) {
-              yield item as JSONValue;
-            }
+          if (isFalse(interpreter.visit(condition, item as JSONValue))) {
+            continue;
+          }
+          if (item !== null && item !== undefined) {
+            yield item as JSONValue;
           }
         }
         return;
@@ -496,22 +497,24 @@ export async function* evaluateStreamNode(
         const key = right.name;
         for await (const item of timedSource) {
           checkDeadline();
-          if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
-            const val = ownField(item, key);
-            if (val !== undefined) {
-              yield val;
-            }
+          if (isFalse(interpreter.visit(condition, item as JSONValue))) {
+            continue;
+          }
+          const val = ownField(item, key);
+          if (val !== undefined) {
+            yield val;
           }
         }
         return;
       }
       for await (const item of timedSource) {
         checkDeadline();
-        if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
-          const res = interpreter.visit(right, item as JSONValue) as JSONValue;
-          if (res !== null && res !== undefined) {
-            yield res;
-          }
+        if (isFalse(interpreter.visit(condition, item as JSONValue))) {
+          continue;
+        }
+        const res = interpreter.visit(right, item as JSONValue) as JSONValue;
+        if (res !== null && res !== undefined) {
+          yield res;
         }
       }
       return;
