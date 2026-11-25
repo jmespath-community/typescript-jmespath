@@ -107,35 +107,36 @@ export async function* normalizeSource<T>(
           ? chunk
           : null;
 
-    if (str !== null) {
-      if (parseJson === false) {
-        if (typeof chunk === 'string' || str) {
-          yield str;
-        }
-      } else {
-        buffer += str;
-        if (buffer.includes('\n')) {
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed) {
-              yield parseItem(trimmed, parseJson);
-            }
-          }
-        }
-      }
-    } else {
+    if (str === null) {
       if (buffer.trim()) {
         yield parseItem(buffer.trim(), parseJson);
         buffer = '';
       }
       if (flatten && Array.isArray(chunk)) {
-        for (const item of chunk) {
-          yield item;
-        }
+        yield* chunk;
       } else {
         yield chunk;
+      }
+      continue;
+    }
+
+    if (parseJson === false) {
+      if (typeof chunk === 'string' || str) {
+        yield str;
+      }
+      continue;
+    }
+
+    buffer += str;
+    if (!buffer.includes('\n')) {
+      continue;
+    }
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed) {
+        yield parseItem(trimmed, parseJson);
       }
     }
   }
@@ -203,6 +204,20 @@ export function isStreamableNode(node: ExpressionNode): boolean {
     default:
       return false;
   }
+}
+
+/**
+ * Returns the own, non-null value of `key` on a plain object item, otherwise undefined.
+ */
+function ownField(item: unknown, key: string): JSONValue | undefined {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return undefined;
+  }
+  if (!Object.prototype.hasOwnProperty.call(item, key)) {
+    return undefined;
+  }
+  const val = (item as Record<string, unknown>)[key];
+  return val === null ? undefined : (val as JSONValue | undefined);
 }
 
 async function drainStream(
@@ -280,16 +295,9 @@ export async function* evaluateStreamNode(
         const key = right.name;
         for await (const item of streamSource) {
           checkDeadline();
-          if (
-            item &&
-            typeof item === 'object' &&
-            !Array.isArray(item) &&
-            Object.prototype.hasOwnProperty.call(item, key)
-          ) {
-            const val = (item as Record<string, unknown>)[key];
-            if (val !== undefined && val !== null) {
-              yield val as JSONValue;
-            }
+          const val = ownField(item, key);
+          if (val !== undefined) {
+            yield val;
           }
         }
         return;
@@ -305,41 +313,39 @@ export async function* evaluateStreamNode(
     }
 
     case 'IndexExpression': {
-      if (node.left.type === 'Identity' || node.left.type === 'Current') {
-        if (node.right.type === 'Slice') {
-          const slice = node.right;
-          const start = slice.start ?? 0;
-          const stop = slice.stop ?? Infinity;
-          const step = slice.step ?? 1;
-
-          if (start >= 0 && stop >= 0 && step > 0) {
-            let index = 0;
-            for await (const item of source) {
-              checkDeadline();
-              if (index >= stop) {
-                break;
-              }
-              if (index >= start && (index - start) % step === 0) {
-                yield item as JSONValue;
-              }
-              index++;
-              if (index >= stop) {
-                break;
-              }
-            }
-            return;
+      if (node.left.type !== 'Identity' && node.left.type !== 'Current') {
+        for await (const item of source) {
+          checkDeadline();
+          const res = interpreter.visit(node, item as JSONValue) as JSONValue;
+          if (res !== null && res !== undefined) {
+            yield res;
           }
         }
+        return;
+      }
 
+      const slice = node.right.type === 'Slice' ? node.right : null;
+      const start = slice?.start ?? 0;
+      const stop = slice?.stop ?? Infinity;
+      const step = slice?.step ?? 1;
+      if (!slice || start < 0 || stop < 0 || step <= 0) {
         // Slices with negative indices or scalar indices require accumulating the stream
         yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
         return;
       }
+
+      let index = 0;
       for await (const item of source) {
         checkDeadline();
-        const res = interpreter.visit(node, item as JSONValue) as JSONValue;
-        if (res !== null && res !== undefined) {
-          yield res;
+        if (index >= stop) {
+          break;
+        }
+        if (index >= start && (index - start) % step === 0) {
+          yield item as JSONValue;
+        }
+        index++;
+        if (index >= stop) {
+          break;
         }
       }
       return;
@@ -367,16 +373,9 @@ export async function* evaluateStreamNode(
         for await (const item of source) {
           checkDeadline();
           if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
-            if (
-              item &&
-              typeof item === 'object' &&
-              !Array.isArray(item) &&
-              Object.prototype.hasOwnProperty.call(item, key)
-            ) {
-              const val = (item as Record<string, unknown>)[key];
-              if (val !== undefined && val !== null) {
-                yield val as JSONValue;
-              }
+            const val = ownField(item, key);
+            if (val !== undefined) {
+              yield val;
             }
           }
         }
@@ -424,16 +423,9 @@ export async function* evaluateStreamNode(
       const key = node.name;
       for await (const item of source) {
         checkDeadline();
-        if (
-          item &&
-          typeof item === 'object' &&
-          !Array.isArray(item) &&
-          Object.prototype.hasOwnProperty.call(item, key)
-        ) {
-          const val = (item as Record<string, unknown>)[key];
-          if (val !== undefined && val !== null) {
-            yield val as JSONValue;
-          }
+        const val = ownField(item, key);
+        if (val !== undefined) {
+          yield val;
         }
       }
       return;
