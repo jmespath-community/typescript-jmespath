@@ -42,6 +42,13 @@ describe('Build Artifacts', () => {
       expect(content).toContain('TYPE_STRING: InputArgument;');
       expect(content).toContain('TYPE_NUMBER: InputArgument;');
     });
+
+    it('should not reference NodeJS namespace in public declaration files', () => {
+      for (const file of ['index.d.ts', 'index.d.cts', 'stream.d.ts', 'stream.d.cts']) {
+        const content = readFileSync(join(DIST_DIR, file), 'utf-8');
+        expect(content).not.toContain('NodeJS.');
+      }
+    });
   });
 
   describe('Node.js Bundles', () => {
