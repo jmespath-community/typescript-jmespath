@@ -49,15 +49,20 @@ export async function* toAsyncIterable<T>(source: StreamSource<T>): AsyncGenerat
   // Check for WHATWG ReadableStream via getReader()
   if (typeof (source as ReadableStream<T>).getReader === 'function') {
     const reader = (source as ReadableStream<T>).getReader();
+    let readerDone = false;
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
+          readerDone = true;
           break;
         }
         yield value;
       }
     } finally {
+      if (!readerDone) {
+        await reader.cancel?.().catch(() => {});
+      }
       reader.releaseLock();
     }
     return;
@@ -155,10 +160,17 @@ export async function* normalizeSource<T>(
     }
   }
 
-  if (textDecoder && buffer) {
-    buffer += textDecoder.decode();
+  if (textDecoder) {
+    const remaining = textDecoder.decode();
+    if (remaining) {
+      if (parseJson === false) {
+        yield remaining;
+      } else {
+        buffer += remaining;
+      }
+    }
   }
-  if (buffer.trim()) {
+  if (parseJson !== false && buffer.trim()) {
     yield parseItem(buffer.trim(), parseJson);
   }
 }
@@ -572,6 +584,9 @@ export async function* searchStream<T = JSONValue, D = unknown>(
   const results = evaluateStreamNode(items, ast, interpreter, options, deadline);
 
   const limit = options?.limit;
+  if (limit !== undefined && !Number.isInteger(limit)) {
+    throw new RangeError('limit must be an integer');
+  }
   const maxOutputSize = options?.maxOutputSize;
   let count = 0;
 

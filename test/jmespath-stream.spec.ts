@@ -474,6 +474,63 @@ describe('searchStream', () => {
       expect(results).toEqual(['Alice', 'Bob', 'Charlie', 'Dana']);
     });
 
+    it('cancels getReader() fallback on early exit', async () => {
+      let cancelled = false;
+      let released = false;
+      const mockReaderStream = {
+        getReader() {
+          let i = 0;
+          return {
+            async read() {
+              return { done: false, value: { id: i++ } };
+            },
+            async cancel() {
+              cancelled = true;
+            },
+            releaseLock() {
+              released = true;
+            },
+          };
+        },
+      };
+
+      const results = await collectStream(
+        searchStream(mockReaderStream as unknown as ReadableStream, '[*].id', { limit: 1 }),
+      );
+      expect(results).toEqual([0]);
+      expect(cancelled).toBe(true);
+      expect(released).toBe(true);
+    });
+
+    it('flushes trailing incomplete UTF-8 bytes even when buffer is empty', async () => {
+      const encoder = new TextEncoder();
+      const validLine = encoder.encode('{"a":1}\n');
+      const incompleteUtf8 = encoder.encode('é').slice(0, 1);
+
+      const autoResults = await collectStream(searchStream(createAsyncGenerator([validLine, incompleteUtf8]), '@'));
+      expect(autoResults).toEqual([{ a: 1 }, '\uFFFD']);
+
+      const rawResults = await collectStream(
+        searchStream(createAsyncGenerator([incompleteUtf8]), '@', { parseJson: false }),
+      );
+      expect(rawResults).toEqual(['\uFFFD']);
+    });
+
+    it('rejects non-integer and NaN limit values', async () => {
+      await expect(collectStream(searchStream([1, 2, 3], '[*]', { limit: Number.NaN }))).rejects.toThrow(RangeError);
+      await expect(collectStream(searchStream([1, 2, 3], '[*]', { limit: 1.5 }))).rejects.toThrow(RangeError);
+      await expect(collectStream(searchStream([1, 2, 3], '[*]', { limit: Number.POSITIVE_INFINITY }))).rejects.toThrow(
+        RangeError,
+      );
+    });
+
+    it('preserves compile-time options when searchStream passes undefined overrides', async () => {
+      const query = compileQuery('[*]', { maxOutputSize: 1 });
+      await expect(
+        collectStream(query.searchStream(createAsyncGenerator([1, 2]), { maxOutputSize: undefined })),
+      ).rejects.toThrow('Output size exceeds maximum allowed size of 1');
+    });
+
     it('parses boolean, null, and number literals in NDJSON', async () => {
       const ndjson = 'true\nfalse\nnull\n42\n';
       const source = createAsyncGenerator([ndjson]);
