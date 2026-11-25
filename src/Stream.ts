@@ -108,8 +108,10 @@ export async function* normalizeSource<T>(
           : null;
 
     if (str !== null) {
-      if (parseJson === false && typeof chunk === 'string') {
-        yield chunk;
+      if (parseJson === false) {
+        if (typeof chunk === 'string' || str) {
+          yield str;
+        }
       } else {
         buffer += str;
         if (buffer.includes('\n')) {
