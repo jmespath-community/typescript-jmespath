@@ -249,10 +249,8 @@ describe('Build Artifacts', () => {
       expect(pkg.exports['./stream'].import).toEqual({ types: './dist/stream.d.ts', default: './dist/stream.mjs' });
       expect(pkg.exports['./stream'].require).toEqual({ types: './dist/stream.d.cts', default: './dist/stream.cjs' });
 
-      // Check CLI export
-      expect(pkg.exports['./cli']).toBeDefined();
-      expect(pkg.exports['./cli'].import).toEqual({ types: './dist/cli.d.ts', default: './dist/cli.mjs' });
-      expect(pkg.exports['./cli'].require).toEqual({ types: './dist/cli.d.cts', default: './dist/cli.cjs' });
+      // CLI should not be exposed as a subpath export (side-effecting bin entry only)
+      expect(pkg.exports['./cli']).toBeUndefined();
     });
   });
 });
