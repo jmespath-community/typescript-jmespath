@@ -65,13 +65,28 @@ function compile(expression: string, options?: Options): ExpressionNode {
   return Parser.parse(expression, options);
 }
 
+function mergeStreamOptions(base?: Options, overrides?: StreamOptions): StreamOptions | undefined {
+  if (!base && !overrides) {
+    return undefined;
+  }
+  const merged: StreamOptions = { ...base };
+  if (overrides) {
+    for (const [key, value] of Object.entries(overrides)) {
+      if (value !== undefined) {
+        (merged as Record<string, unknown>)[key] = value;
+      }
+    }
+  }
+  return merged;
+}
+
 function compileQuery<T = JSONValue, D = unknown>(expression: string, options?: Options): CompiledQuery<T, D> {
   const nodeTree = Parser.parse(expression, options);
   const searchFn = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
   const fn = searchFn as CompiledQuery<T, D>;
   fn.search = searchFn;
   fn.searchStream = (source: StreamSource<D>, streamOptions?: StreamOptions) =>
-    searchStream<T, D>(source, nodeTree, { ...options, ...streamOptions });
+    searchStream<T, D>(source, nodeTree, mergeStreamOptions(options, streamOptions));
   fn.ast = nodeTree;
   return fn;
 }
