@@ -5,7 +5,7 @@ import type { Options } from './Parser.type';
 import { TreeInterpreter, TreeInterpreterInstance } from './TreeInterpreter';
 import { findDisallowedFunction, isFalse } from './utils';
 
-export type StreamSource<T = unknown> = AsyncIterable<T> | Iterable<T> | ReadableStream<T> | NodeJS.ReadableStream;
+export type StreamSource<T = unknown> = AsyncIterable<T> | Iterable<T> | ReadableStream<T>;
 
 export interface StreamOptions extends Options {
   /**
