@@ -253,11 +253,11 @@ export class Runtime implements FunctionRegistry {
         _signature: variadic(ANY),
       },
       pad_left: {
-        _func: ([s, w, p]) => padLeft(s as string, w as number, p as string, this._interpreter?.maxOutputSize),
+        _func: ([s, w, p]) => padLeft(s as string, w as number, p as string, this._interpreter.maxOutputSize),
         _signature: [...s(STR, NUM), ...opt(STR)],
       },
       pad_right: {
-        _func: ([s, w, p]) => padRight(s as string, w as number, p as string, this._interpreter?.maxOutputSize),
+        _func: ([s, w, p]) => padRight(s as string, w as number, p as string, this._interpreter.maxOutputSize),
         _signature: [...s(STR, NUM), ...opt(STR)],
       },
       replace: {
@@ -478,13 +478,9 @@ export class Runtime implements FunctionRegistry {
 
   private validateTypes(name: string, args: (JSONValue | ExpressionNode)[], signature: InputSignature[]): void {
     const lastSigIndex = signature.length - 1;
-    const isVariadic = signature[lastSigIndex]?.variadic ?? false;
 
     for (let i = 0; i < args.length; i += 1) {
-      const sig = i < signature.length ? signature[i] : isVariadic ? signature[lastSigIndex] : undefined;
-      if (!sig) {
-        continue;
-      }
+      const sig = signature[i < signature.length ? i : lastSigIndex];
       const currentSpec = sig.types;
       const actualType = this.getTypeName(args[i]) as InputArgument;
 
@@ -547,21 +543,6 @@ export class Runtime implements FunctionRegistry {
     return;
   }
 
-  createKeyFunction(exprefNode: ExpressionNode, allowedTypes: InputArgument[]): (x: JSONValue) => JSONValue {
-    const interpreter = this._interpreter;
-    const keyFunc = (x: JSONValue): JSONValue => {
-      const current = interpreter.visit(exprefNode, x) as JSONValue;
-      if (!allowedTypes.includes(this.getTypeName(current) as InputArgument)) {
-        const msg = `Invalid type: expected one of (${allowedTypes
-          .map(t => this.TYPE_NAME_TABLE[t])
-          .join(' | ')}), received ${this.TYPE_NAME_TABLE[this.getTypeName(current) as InputArgument]}`;
-        throw new Error(msg);
-      }
-      return current;
-    };
-    return keyFunc;
-  }
-
   private functionContains: RuntimeFunction<[string[] | JSONArray, JSONValue], JSONValue> = ([
     searchable,
     searchValue,
@@ -593,9 +574,6 @@ export class Runtime implements FunctionRegistry {
 
   private functionGroupBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = ([array, exprefNode]) => {
     const interpreter = this._interpreter;
-    if (!interpreter) {
-      return {};
-    }
     const groups = new Map<string, JSONValue[]>();
     for (const item of array) {
       const raw = interpreter.visit(exprefNode, item) as JSONValue;
@@ -621,9 +599,6 @@ export class Runtime implements FunctionRegistry {
   };
 
   private functionMap: RuntimeFunction<[ExpressionNode, JSONArray], JSONArray> = ([exprefNode, elements]) => {
-    if (!this._interpreter) {
-      return [];
-    }
     const mapped: JSONValue[] = [];
     const interpreter = this._interpreter;
     for (let i = 0; i < elements.length; i += 1) {
@@ -663,9 +638,6 @@ export class Runtime implements FunctionRegistry {
     }
     const exprefNode = resolvedArgs[1];
     const interpreter = this._interpreter;
-    if (!interpreter) {
-      return null;
-    }
 
     const firstKey = interpreter.visit(exprefNode, resolvedArray[0]) as JSONValue;
     const firstType = this.getTypeName(firstKey) as InputArgument;

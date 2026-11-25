@@ -26,5 +26,4 @@ export class Text {
     return compareStrings(this.string, other);
   }
   static comparer = compareStrings;
-  static compareStrings = compareStrings;
 }
