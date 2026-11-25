@@ -382,6 +382,12 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.search(large, 'max(@)')).toBe(199_999);
     expect(jmespath.search(large, 'min(@)')).toBe(0);
   });
+
+  it('to_number() returns null for overflowing numeric strings', () => {
+    expect(jmespath.search(null, "to_number('1e309')")).toBeNull();
+    expect(jmespath.search(null, "to_number('-1e309')")).toBeNull();
+    expect(jmespath.search(null, "to_number('1e308')")).toBe(1e308);
+  });
 });
 
 describe('custom functions', () => {

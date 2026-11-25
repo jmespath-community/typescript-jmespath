@@ -12,6 +12,7 @@ import {
   divide,
   ensureNumbers,
   exprefObjects,
+  exprefScopes,
   isFalse,
   mod,
   mul,
@@ -159,6 +160,23 @@ export class TreeInterpreter {
       }
     }
     return collected;
+  }
+
+  visitWithScope(
+    node: ExpressionNode,
+    value: JSONValue | ExpressionNode,
+    scope?: ScopeChain,
+  ): JSONValue | ExpressionNode | ExpressionReference {
+    if (!scope || scope === this._scope) {
+      return this.visit(node, value);
+    }
+    const prevScope = this._scope;
+    this._scope = scope;
+    try {
+      return this.visit(node, value);
+    } finally {
+      this._scope = prevScope;
+    }
   }
 
   visit(node: ExpressionNode, value: JSONValue | ExpressionNode): JSONValue | ExpressionNode | ExpressionReference {
@@ -456,6 +474,7 @@ export class TreeInterpreter {
           ...node.child,
         };
         exprefObjects.add(ref);
+        exprefScopes.set(ref, this._scope);
         return ref;
       }
       case 'Current':

@@ -413,4 +413,13 @@ describe('Enhanced Registry API', () => {
       expect(jmespath.isRegistered('sum')).toBe(true); // Built-in should remain
     });
   });
+
+  describe('let scope in expref', () => {
+    it('preserves let-bound variables when an expref is returned out of let', () => {
+      expect(jmespath.search({ items: [1, 2, 3] }, 'map(let $x = `10` in &(@ + $x), items)')).toEqual([11, 12, 13]);
+      expect(
+        jmespath.search({ items: [1, 2, 3] }, 'let $x = `10` in map((let $x = `20` in &(@ + $x)), items)'),
+      ).toEqual([21, 22, 23]);
+    });
+  });
 });
