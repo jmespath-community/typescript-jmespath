@@ -3,7 +3,7 @@ import type { JSONValue } from './JSON.type';
 import Parser from './Parser';
 import type { Options } from './Parser.type';
 import { TreeInterpreter, TreeInterpreterInstance } from './TreeInterpreter';
-import { findDisallowedFunction, isFalse } from './utils';
+import { findDisallowedFunction, isExpressionNode, isFalse } from './utils';
 
 export type StreamSource<T = unknown> = AsyncIterable<T> | Iterable<T> | ReadableStream<T> | NodeJS.ReadableStream;
 
@@ -449,17 +449,6 @@ export async function* evaluateStreamNode(
       return;
     }
   }
-}
-
-function isExpressionNode(val: unknown): val is ExpressionNode {
-  return (
-    typeof val === 'object' &&
-    val !== null &&
-    'type' in val &&
-    typeof (val as { type: unknown }).type === 'string' &&
-    !(Symbol.iterator in val) &&
-    !(Symbol.asyncIterator in val)
-  );
 }
 
 /**

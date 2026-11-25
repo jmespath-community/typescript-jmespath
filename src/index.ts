@@ -15,7 +15,7 @@ import {
 } from './Runtime';
 import { ScopeChain } from './Scope';
 import TreeInterpreterInst from './TreeInterpreter';
-import { findDisallowedFunction } from './utils';
+import { findDisallowedFunction, isExpressionNode } from './utils';
 
 export type { ExpressionNode, ExpressionReference } from './AST.type';
 export type { JSONArray, JSONObject, JSONPrimitive, JSONValue } from './JSON.type';
@@ -145,10 +145,21 @@ const MAX_CACHE_SIZE = 1000;
 const astCache = new Map<string, ExpressionNode>();
 
 function search<T, P extends string>(data: T, expression: P, options?: Options): PathValue<T, P>;
-function search<T = JSONValue, D = unknown>(data: D, expression: string, options?: Options): T;
-function search(data: unknown, expression: string, options?: Options): unknown {
+function search<T = JSONValue, D = unknown>(data: D, expression: string | ExpressionNode, options?: Options): T;
+function search(data: unknown, expression: string | ExpressionNode, options?: Options): unknown {
   let nodeTree: ExpressionNode | undefined;
-  if (!options) {
+  if (typeof expression !== 'string') {
+    if (!isExpressionNode(expression)) {
+      throw new TypeError('Expression must be a string or AST ExpressionNode');
+    }
+    nodeTree = expression;
+    if (options) {
+      const fnError = findDisallowedFunction(nodeTree, options);
+      if (fnError) {
+        throw new Error(fnError);
+      }
+    }
+  } else if (!options) {
     nodeTree = astCache.get(expression);
     if (!nodeTree) {
       nodeTree = Parser.parse(expression);
