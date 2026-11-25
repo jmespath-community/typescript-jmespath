@@ -189,6 +189,8 @@ for await (const item of jmespath.searchStream(logStream, "[:10]", { limit: 10 }
 }
 ```
 
+`limit` caps the number of yielded results and stops reading the source once reached, but only for streamable expressions (projections, filters, slices, field access). Expressions that need the whole input, such as `sum(@)`, `sort_by(...)`, or negative slice indices, must read the entire source before producing any result, so `limit` cannot stop them early. On unbounded sources, bound these queries with `timeoutMs` and `maxOutputSize`.
+
 ### `compile(expression: string): ExpressionNodeTree`
 
 You can precompile all your expressions ready for use later on. The `compile`
