@@ -169,6 +169,25 @@ describe('searchStream', () => {
       const results = await collectStream(searchStream(source, '@', { parseJson: false }));
       expect(results).toEqual(['foo', 'bar', 'baz']);
     });
+
+    it('passes raw decoded strings for Uint8Array chunks when parseJson is false', async () => {
+      const encoder = new TextEncoder();
+      const payload = '{"a":1}\n{"b":2}\n';
+      const bytes = await collectStream(
+        searchStream(createAsyncGenerator([encoder.encode(payload)]), '@', { parseJson: false }),
+      );
+      const strings = await collectStream(searchStream(createAsyncGenerator([payload]), '@', { parseJson: false }));
+      expect(bytes).toEqual([payload]);
+      expect(bytes).toEqual(strings);
+    });
+
+    it('decodes multibyte characters split across Uint8Array chunks when parseJson is false', async () => {
+      const encoded = new TextEncoder().encode('é');
+      const results = await collectStream(
+        searchStream(createAsyncGenerator([encoded.slice(0, 1), encoded.slice(1)]), '@', { parseJson: false }),
+      );
+      expect(results.join('')).toBe('é');
+    });
   });
 
   describe('Array chunk flattening', () => {
