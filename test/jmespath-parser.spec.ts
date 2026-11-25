@@ -100,6 +100,21 @@ describe('parsing', () => {
       return null;
     }, 'syntax');
   });
+  it.each(['a = b', 'c[?@ = `10`]', 'let $x = `1` = `2` in $x', 'let $x = `1`, in $x'])(
+    'should reject = outside let bindings: %s',
+    expr => {
+      expect(() => jmespath.compile(expr)).toThrow();
+      try {
+        jmespath.compile(expr);
+      } catch (e) {
+        expect((e as Error).name).toBe('ParserError');
+      }
+    },
+  );
+  it('should still allow = in valid let bindings', () => {
+    expect(jmespath.search({}, 'let $x = `1` in $x')).toBe(1);
+    expect(jmespath.search({ a: 1, b: 2 }, 'let $x = a, $y = b in [$x, $y]')).toEqual([1, 2]);
+  });
   it('should parse paren expression', () => {
     // see #22 - issue with parenthesized expression-type
     const expected = {
