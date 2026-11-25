@@ -1,6 +1,8 @@
 import type { ExpressionNode, FunctionNode } from '../AST.type';
 import type { Options } from '../Parser.type';
 
+export const exprefObjects = new WeakSet<object>();
+
 const CHILD_PROPS = ['left', 'right', 'condition', 'child', 'operand', 'trueExpr', 'falseExpr', 'expression'] as const;
 
 function pushChildren(node: ExpressionNode, stack: ExpressionNode[]): void {

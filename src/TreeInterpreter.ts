@@ -5,7 +5,19 @@ import { DEFAULT_MAX_DEPTH } from './Parser';
 import { Options, ScopeEntry } from './Parser.type';
 import { Runtime } from './Runtime';
 import { ScopeChain } from './Scope';
-import { add, countNodes, div, divide, ensureNumbers, isFalse, mod, mul, strictDeepEqual, sub } from './utils';
+import {
+  add,
+  countNodes,
+  div,
+  divide,
+  ensureNumbers,
+  exprefObjects,
+  isFalse,
+  mod,
+  mul,
+  strictDeepEqual,
+  sub,
+} from './utils';
 
 const emptyScopeChain = new ScopeChain();
 
@@ -423,11 +435,14 @@ export class TreeInterpreter {
           this.runtime._interpreter = prevInterpreter;
         }
       }
-      case 'ExpressionReference':
-        return {
+      case 'ExpressionReference': {
+        const ref = {
           expref: true,
           ...node.child,
         };
+        exprefObjects.add(ref);
+        return ref;
+      }
       case 'Current':
       case 'Identity':
         return value;

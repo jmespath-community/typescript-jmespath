@@ -348,6 +348,20 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.search({}, "split('a-b', '-', `5`)")).toEqual(['a', 'b']);
     expect(jmespath.search({}, "split('ab', '', `5`)")).toEqual(['a', 'b']);
   });
+
+  it('treats objects with an expref property as objects, not expressions', () => {
+    expect(jmespath.search({ expref: 1 }, 'type(@)')).toBe('object');
+    expect(jmespath.search({ expref: true }, 'type(@)')).toBe('object');
+    expect(jmespath.search({ expref: 1 }, 'keys(@)')).toEqual(['expref']);
+  });
+
+  it('rejects Object.prototype property names as unknown functions', () => {
+    expectError(() => jmespath.search({}, 'constructor(@)'), 'Unknown function');
+    expectError(() => jmespath.search({}, 'toString(@)'), 'Unknown function');
+    expectError(() => jmespath.search({}, 'hasOwnProperty(@)'), 'Unknown function');
+    expect(jmespath.isRegistered('constructor')).toBe(false);
+    expect(jmespath.isRegistered('toString')).toBe(false);
+  });
 });
 
 describe('custom functions', () => {

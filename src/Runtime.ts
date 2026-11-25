@@ -1,6 +1,7 @@
 import type { ExpressionNode } from './AST.type';
-import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue, ObjectDict } from './JSON.type';
+import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
+import { exprefObjects } from './utils';
 import { findFirst, findLast, padLeft, padRight, replace, split, trim, trimLeft, trimRight } from './utils/strings';
 import { Text } from './utils/text';
 
@@ -192,7 +193,7 @@ export class Runtime implements FunctionRegistry {
   }
 
   private buildFunctionTable(): FunctionTable {
-    return {
+    const entries: FunctionTable = {
       abs: { _func: ([v]) => Math.abs(v as number), _signature: s(NUM) },
       ceil: { _func: ([v]) => Math.ceil(v as number), _signature: s(NUM) },
       floor: { _func: ([v]) => Math.floor(v as number), _signature: s(NUM) },
@@ -296,6 +297,7 @@ export class Runtime implements FunctionRegistry {
       type: { _func: this.functionType, _signature: s(ANY) },
       zip: { _func: this.functionZip, _signature: variadic(ARR) },
     };
+    return Object.assign(Object.create(null) as FunctionTable, entries);
   }
 
   /**
@@ -346,7 +348,7 @@ export class Runtime implements FunctionRegistry {
     }
 
     const { override = false, warn = false } = options;
-    const exists = name in this._functionTable;
+    const exists = Object.hasOwn(this._functionTable, name);
 
     // Handle existing function
     if (exists && !override) {
@@ -406,7 +408,7 @@ export class Runtime implements FunctionRegistry {
    * Check if a function is registered
    */
   isRegistered(name: string): boolean {
-    return name in this._functionTable;
+    return Object.hasOwn(this._functionTable, name);
   }
 
   /**
@@ -434,7 +436,7 @@ export class Runtime implements FunctionRegistry {
   }
 
   callFunction(name: string, resolvedArgs: (JSONValue | ExpressionNode)[]): JSONValue {
-    const functionEntry = this._functionTable[name];
+    const functionEntry = Object.hasOwn(this._functionTable, name) ? this._functionTable[name] : undefined;
     if (functionEntry === undefined) {
       throw new Error(`Unknown function: ${name}()`);
     }
@@ -537,7 +539,7 @@ export class Runtime implements FunctionRegistry {
       return InputArgument.TYPE_ARRAY;
     }
     if (typeof obj === 'object') {
-      if ((obj as ObjectDict).expref) {
+      if (exprefObjects.has(obj)) {
         return InputArgument.TYPE_EXPREF;
       }
       return InputArgument.TYPE_OBJECT;
