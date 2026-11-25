@@ -75,6 +75,39 @@ describe('parsing', () => {
     expect(jmespath.compile('-bar')).toMatchObject(expected);
     expect(jmespath.compile('\u2212bar')).toMatchObject(expected);
   });
+  it('should give unary +/- higher precedence than multiplicative operators and lower than dot', () => {
+    expect(jmespath.compile('-a // `2`')).toMatchObject({
+      type: 'Arithmetic',
+      operator: 'Div',
+      left: { type: 'Unary', operator: 'Minus', operand: { type: 'Field', name: 'a' } },
+      right: { type: 'Literal', value: 2 },
+    });
+    expect(jmespath.search({ a: -5 }, '-a // `2`')).toBe(2);
+
+    expect(jmespath.compile('-a * `2`')).toMatchObject({
+      type: 'Arithmetic',
+      operator: 'Star',
+      left: { type: 'Unary', operator: 'Minus', operand: { type: 'Field', name: 'a' } },
+      right: { type: 'Literal', value: 2 },
+    });
+
+    expect(jmespath.compile('+a / `2`')).toMatchObject({
+      type: 'Arithmetic',
+      operator: 'Divide',
+      left: { type: 'Unary', operator: 'Plus', operand: { type: 'Field', name: 'a' } },
+      right: { type: 'Literal', value: 2 },
+    });
+
+    expect(jmespath.compile('-a.b')).toMatchObject({
+      type: 'Unary',
+      operator: 'Minus',
+      operand: {
+        type: 'Subexpression',
+        left: { type: 'Field', name: 'a' },
+        right: { type: 'Field', name: 'b' },
+      },
+    });
+  });
   it('should parse let expression', () => {
     const expected = {
       type: 'LetExpression',
