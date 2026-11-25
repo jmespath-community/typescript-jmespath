@@ -164,4 +164,38 @@ describe('tokenize', () => {
       { type: 'Literal', value: ['a`b', 'c`d'], start: 0 },
     ]);
   });
+  it('should not consume minus sign as part of number digits', () => {
+    expect(jmespath.tokenize('c[1-1]')).toMatchObject([
+      { type: 'UnquotedIdentifier', value: 'c', start: 0 },
+      { type: 'Lbracket', value: '[', start: 1 },
+      { type: 'Number', value: 1, start: 2 },
+      { type: 'Number', value: -1, start: 3 },
+      { type: 'Rbracket', value: ']', start: 5 },
+    ]);
+    expect(() => jmespath.compile('c[1-1]')).toThrow();
+    expect(jmespath.tokenize('c[1-]')).toMatchObject([
+      { type: 'UnquotedIdentifier', value: 'c', start: 0 },
+      { type: 'Lbracket', value: '[', start: 1 },
+      { type: 'Number', value: 1, start: 2 },
+      { type: 'Minus', value: '-', start: 3 },
+      { type: 'Rbracket', value: ']', start: 4 },
+    ]);
+    expect(() => jmespath.compile('c[1-]')).toThrow();
+    expect(jmespath.tokenize('--`5`')).toMatchObject([
+      { type: 'Minus', value: '-', start: 0 },
+      { type: 'Minus', value: '-', start: 1 },
+      { type: 'Literal', value: 5, start: 2 },
+    ]);
+    expect(jmespath.search({}, '--`5`')).toBe(5);
+    expect(jmespath.tokenize('[-1]')).toMatchObject([
+      { type: 'Lbracket', value: '[', start: 0 },
+      { type: 'Number', value: -1, start: 1 },
+      { type: 'Rbracket', value: ']', start: 3 },
+    ]);
+    expect(jmespath.tokenize('a - 1')).toMatchObject([
+      { type: 'UnquotedIdentifier', value: 'a', start: 0 },
+      { type: 'Minus', value: '-', start: 2 },
+      { type: 'Number', value: 1, start: 4 },
+    ]);
+  });
 });
