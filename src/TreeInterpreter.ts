@@ -474,7 +474,9 @@ export class TreeInterpreter {
           ...node.child,
         };
         exprefObjects.add(ref);
-        exprefScopes.set(ref, this._scope);
+        if (this._scope !== emptyScopeChain) {
+          exprefScopes.set(ref, this._scope);
+        }
         return ref;
       }
       case 'Current':
