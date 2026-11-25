@@ -345,6 +345,7 @@ const invalid = validate("foo.", { maxNodes: 10 });
        return dividend / (divisor ?? 1); //OPTIONAL DIVISOR THAT DEFAULTS TO 1
      },
      [{ types: [TYPE_NUMBER] }, { types: [TYPE_NUMBER], optional: true }], //SIGNATURE
+     { override: true },
    );
 
    search({ foo: 60, bar: 10 }, "divide(foo)");
@@ -386,7 +387,7 @@ Experimental support for [ternary operations](https://github.com/jmespath-commun
 - **Condition:** The expression before the `?`. JMESPath determines truthiness based on the evaluated value:
   - `true` is truthy.
   - Any non-empty object, array, or string is truthy.
-  - Any non-zero number is truthy.
+  - Any number (including `0`) is truthy.
   - `false`, `null`, empty objects `{}`, empty arrays `[]`, and empty strings `''` are falsy.
 - **Value if true:** The expression between the `?` and `:`. This is evaluated and returned if the condition is truthy.
 - **Value if false:** The expression after the `:`. This is evaluated and returned if the condition is falsy.
@@ -416,7 +417,7 @@ search({ count: 5 }, "count ? 'count_present' : 'no_count'");
 // OUTPUTS: "count_present"
 
 search({ count: 0 }, "count ? 'count_present' : 'no_count'");
-// OUTPUTS: "no_count"
+// OUTPUTS: "count_present" (0 is truthy in JMESPath)
 ```
 
 Nested Ternaries:
