@@ -43,9 +43,6 @@ const createPad =
       );
     }
     ensurePositiveInteger(width);
-    if (!subject) {
-      return '';
-    }
     const padLen = width - [...subject].length;
     if (padLen <= 0) {
       return subject;
@@ -89,7 +86,7 @@ export const split = (subject: string, search: string, count?: number): string[]
 };
 
 const trimImpl = (subject: string, pattern: string, chars?: string): string => {
-  const charClass = chars ? chars.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') : '\\s\u0085';
+  const charClass = chars ? chars.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') : '\\p{White_Space}';
   return subject.replace(new RegExp(pattern.replace('%s', charClass), 'u'), '');
 };
 

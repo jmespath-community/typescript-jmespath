@@ -120,9 +120,16 @@ describe('Evaluates functions', () => {
     expect(jmespath.search('😀hello', "trim_left(@, '😀')")).toEqual('hello');
     expect(jmespath.search('hello😀', "trim_right(@, '😀')")).toEqual('hello');
   });
+  it('trim(), trim_left(), and trim_right() follow Unicode White_Space (U+FEFF is not whitespace)', () => {
+    expect(jmespath.search('\uFEFF a \uFEFF', 'trim(@)')).toEqual('\uFEFF a \uFEFF');
+    expect(jmespath.search('\u0085\u00A0\u2003 a \u3000', 'trim(@)')).toEqual('a');
+    expect(jmespath.search(' \uFEFFa', 'trim_left(@)')).toEqual('\uFEFFa');
+    expect(jmespath.search('a\uFEFF ', 'trim_right(@)')).toEqual('a\uFEFF');
+  });
   it('pad_left()', () => {
     // this should be included in the compliance test suite
-    expect(jmespath.search('', 'pad_left(@, `10`)')).toEqual('');
+    expect(jmespath.search('', 'pad_left(@, `3`)')).toEqual('   ');
+    expect(jmespath.search('', 'pad_left(@, `0`)')).toEqual('');
     expect(jmespath.search('hi', "pad_left(@, `5`, '😀')")).toEqual('😀😀😀hi');
     expect(jmespath.search('😀', "pad_left(@, `3`, '-')")).toEqual('--😀');
     expect(jmespath.search('hello', "pad_left(@, `5`, '-')")).toEqual('hello');
@@ -130,7 +137,8 @@ describe('Evaluates functions', () => {
   });
   it('pad_right()', () => {
     // this should be included in the compliance test suite
-    expect(jmespath.search('', 'pad_right(@, `10`)')).toEqual('');
+    expect(jmespath.search('', "pad_right(@, `3`, '-')")).toEqual('---');
+    expect(jmespath.search('', 'pad_right(@, `0`)')).toEqual('');
     expect(jmespath.search('hi', "pad_right(@, `5`, '😀')")).toEqual('hi😀😀😀');
     expect(jmespath.search('😀', "pad_right(@, `3`, '-')")).toEqual('😀--');
     expect(jmespath.search('hello', "pad_right(@, `5`, '-')")).toEqual('hello');
