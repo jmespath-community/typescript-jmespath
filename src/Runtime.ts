@@ -408,7 +408,7 @@ export class Runtime implements FunctionRegistry {
    * Check if a function is registered
    */
   isRegistered(name: string): boolean {
-    return Object.hasOwn(this._functionTable, name);
+    return this._functionTable[name] !== undefined;
   }
 
   /**
@@ -436,7 +436,7 @@ export class Runtime implements FunctionRegistry {
   }
 
   callFunction(name: string, resolvedArgs: (JSONValue | ExpressionNode)[]): JSONValue {
-    const functionEntry = Object.hasOwn(this._functionTable, name) ? this._functionTable[name] : undefined;
+    const functionEntry = this._functionTable[name];
     if (functionEntry === undefined) {
       throw new Error(`Unknown function: ${name}()`);
     }
@@ -548,6 +548,9 @@ export class Runtime implements FunctionRegistry {
   ]) => {
     if (Array.isArray(searchable)) {
       const array = <JSONArray>searchable;
+      if (searchValue === null || typeof searchValue !== 'object') {
+        return array.includes(searchValue);
+      }
       return array.some(item => strictDeepEqual(item, searchValue));
     }
 
