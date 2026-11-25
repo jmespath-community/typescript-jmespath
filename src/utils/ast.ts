@@ -1,7 +1,9 @@
 import type { ExpressionNode, FunctionNode } from '../AST.type';
 import type { Options } from '../Parser.type';
+import type { ScopeChain } from '../Scope';
 
 export const exprefObjects = new WeakSet<object>();
+export const exprefScopes = new WeakMap<object, ScopeChain>();
 
 const CHILD_PROPS = ['left', 'right', 'condition', 'child', 'operand', 'trueExpr', 'falseExpr', 'expression'] as const;
 

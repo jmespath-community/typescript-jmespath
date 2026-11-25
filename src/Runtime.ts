@@ -1,7 +1,7 @@
 import type { ExpressionNode } from './AST.type';
 import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
-import { exprefObjects, strictDeepEqual } from './utils';
+import { exprefObjects, exprefScopes, strictDeepEqual } from './utils';
 import { findFirst, findLast, padLeft, padRight, replace, split, trim, trimLeft, trimRight } from './utils/strings';
 import { Text } from './utils/text';
 
@@ -573,9 +573,10 @@ export class Runtime implements FunctionRegistry {
 
   private functionGroupBy: RuntimeFunction<[JSONArray, ExpressionNode], JSONValue> = ([array, exprefNode]) => {
     const interpreter = this._interpreter;
+    const exprefScope = exprefScopes.get(exprefNode);
     const groups = new Map<string, JSONValue[]>();
     for (const item of array) {
-      const raw = interpreter.visit(exprefNode, item) as JSONValue;
+      const raw = interpreter.visitWithScope(exprefNode, item, exprefScope) as JSONValue;
       if (raw === null || raw === undefined) {
         continue;
       }
@@ -600,8 +601,9 @@ export class Runtime implements FunctionRegistry {
   private functionMap: RuntimeFunction<[ExpressionNode, JSONArray], JSONArray> = ([exprefNode, elements]) => {
     const mapped: JSONValue[] = [];
     const interpreter = this._interpreter;
+    const exprefScope = exprefScopes.get(exprefNode);
     for (let i = 0; i < elements.length; i += 1) {
-      mapped.push(<JSONValue>interpreter.visit(exprefNode, elements[i]));
+      mapped.push(<JSONValue>interpreter.visitWithScope(exprefNode, elements[i], exprefScope));
     }
     return mapped;
   };
@@ -637,8 +639,9 @@ export class Runtime implements FunctionRegistry {
     }
     const exprefNode = resolvedArgs[1];
     const interpreter = this._interpreter;
+    const exprefScope = exprefScopes.get(exprefNode);
 
-    const firstKey = interpreter.visit(exprefNode, resolvedArray[0]) as JSONValue;
+    const firstKey = interpreter.visitWithScope(exprefNode, resolvedArray[0], exprefScope) as JSONValue;
     const firstType = this.getTypeName(firstKey) as InputArgument;
     if (firstType !== InputArgument.TYPE_NUMBER && firstType !== InputArgument.TYPE_STRING) {
       throw new Error(
@@ -652,7 +655,7 @@ export class Runtime implements FunctionRegistry {
     let extremeKey = firstKey;
 
     for (let i = 1; i < resolvedArray.length; i += 1) {
-      const currentKey = interpreter.visit(exprefNode, resolvedArray[i]) as JSONValue;
+      const currentKey = interpreter.visitWithScope(exprefNode, resolvedArray[i], exprefScope) as JSONValue;
       const currentType = this.getTypeName(currentKey) as InputArgument;
       if (currentType !== firstType) {
         throw new Error(
@@ -688,7 +691,10 @@ export class Runtime implements FunctionRegistry {
     }
     const interpreter = this._interpreter;
     const exprefNode = resolvedArgs[1];
-    const requiredType = this.getTypeName(interpreter.visit(exprefNode, sortedArray[0]) as JSONValue);
+    const exprefScope = exprefScopes.get(exprefNode);
+    const requiredType = this.getTypeName(
+      interpreter.visitWithScope(exprefNode, sortedArray[0], exprefScope) as JSONValue,
+    );
     if (requiredType === undefined || ![InputArgument.TYPE_NUMBER, InputArgument.TYPE_STRING].includes(requiredType)) {
       const typeName = requiredType !== undefined ? this.TYPE_NAME_TABLE[requiredType] : 'undefined';
       throw new Error(`Invalid type: unexpected type (${typeName})`);
@@ -705,8 +711,8 @@ export class Runtime implements FunctionRegistry {
     }
 
     return sortedArray.sort((a, b) => {
-      const exprA = interpreter.visit(exprefNode, a) as number | string;
-      const exprB = interpreter.visit(exprefNode, b) as number | string;
+      const exprA = interpreter.visitWithScope(exprefNode, a, exprefScope) as number | string;
+      const exprB = interpreter.visitWithScope(exprefNode, b, exprefScope) as number | string;
       if (this.getTypeName(exprA) !== requiredType) {
         throwInvalidTypeError(this, exprA);
       } else if (this.getTypeName(exprB) !== requiredType) {
@@ -728,7 +734,7 @@ export class Runtime implements FunctionRegistry {
       const str = inputValue as string;
       if (JSON_NUMBER_REGEX.test(str)) {
         const convertedValue = Number(str);
-        if (!isNaN(convertedValue)) {
+        if (Number.isFinite(convertedValue)) {
           return convertedValue;
         }
       }
