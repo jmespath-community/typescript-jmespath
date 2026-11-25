@@ -1,7 +1,7 @@
 import type { ExpressionNode } from './AST.type';
 import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
-import { exprefObjects } from './utils';
+import { exprefObjects, strictDeepEqual } from './utils';
 import { findFirst, findLast, padLeft, padRight, replace, split, trim, trimLeft, trimRight } from './utils/strings';
 import { Text } from './utils/text';
 
@@ -229,7 +229,7 @@ export class Runtime implements FunctionRegistry {
       },
       map: { _func: this.functionMap, _signature: s(EXP, ARR) },
       max: {
-        _func: ([v]) => this.findExtreme(v as (string | number)[], cmp => cmp > 0, Math.max),
+        _func: ([v]) => this.findExtreme(v as (string | number)[], cmp => cmp > 0),
         _signature: s([ARR_NUM, ARR_STR]),
       },
       max_by: {
@@ -241,7 +241,7 @@ export class Runtime implements FunctionRegistry {
         _signature: optVariadic(OBJ),
       },
       min: {
-        _func: ([v]) => this.findExtreme(v as (string | number)[], cmp => cmp < 0, Math.min),
+        _func: ([v]) => this.findExtreme(v as (string | number)[], cmp => cmp < 0),
         _signature: s([ARR_NUM, ARR_STR]),
       },
       min_by: {
@@ -568,7 +568,7 @@ export class Runtime implements FunctionRegistry {
   ]) => {
     if (Array.isArray(searchable)) {
       const array = <JSONArray>searchable;
-      return array.includes(searchValue);
+      return array.some(item => strictDeepEqual(item, searchValue));
     }
 
     if (typeof searchable === 'string') {
@@ -632,16 +632,19 @@ export class Runtime implements FunctionRegistry {
     return mapped;
   };
 
-  private findExtreme(
-    inputValue: (string | number)[],
-    isBetter: (cmp: number) => boolean,
-    mathFn: (...values: number[]) => number,
-  ): string | number | null {
+  private findExtreme(inputValue: (string | number)[], isBetter: (cmp: number) => boolean): string | number | null {
     if (!inputValue.length) {
       return null;
     }
     if (this.getTypeName(inputValue[0]) === InputArgument.TYPE_NUMBER) {
-      return mathFn(...(inputValue as number[]));
+      const elements = inputValue as number[];
+      let extreme = elements[0];
+      for (let i = 1; i < elements.length; i += 1) {
+        if (isBetter(elements[i] - extreme)) {
+          extreme = elements[i];
+        }
+      }
+      return extreme;
     }
     const elements = inputValue as string[];
     let extreme = elements[0];

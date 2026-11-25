@@ -370,6 +370,18 @@ describe('Type-checks function arguments', () => {
     expectError(() => jmespath.search('a', 'pad_left(@, `100`)', { maxOutputSize: 10 }), 'Output size exceeds');
     expectError(() => jmespath.search('abc', 'find_first(@, `"b"`, `1e999`)'), 'invalid-value');
   });
+
+  it('contains() uses deep equality for array elements', () => {
+    expect(jmespath.search([[1]], 'contains(@, `[1]`)')).toBe(true);
+    expect(jmespath.search([{ a: 1, b: [2] }], 'contains(@, `{"a": 1, "b": [2]}`)')).toBe(true);
+    expect(jmespath.search([[1]], 'contains(@, `[2]`)')).toBe(false);
+  });
+
+  it('max() and min() handle large numeric arrays without overflowing the call stack', () => {
+    const large = Array.from({ length: 200_000 }, (_, i) => i);
+    expect(jmespath.search(large, 'max(@)')).toBe(199_999);
+    expect(jmespath.search(large, 'min(@)')).toBe(0);
+  });
 });
 
 describe('custom functions', () => {
