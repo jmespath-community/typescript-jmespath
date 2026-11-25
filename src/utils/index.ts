@@ -52,7 +52,7 @@ export const isAlpha = (ch: string): boolean => {
 };
 
 export const isNum = (ch: string): boolean => {
-  return (ch >= '0' && ch <= '9') || ch === '-';
+  return ch >= '0' && ch <= '9';
 };
 export const isAlphaNum = (ch: string): boolean => {
   return isAlpha(ch) || (ch >= '0' && ch <= '9');
