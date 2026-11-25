@@ -55,7 +55,7 @@ export const isNum = (ch: string): boolean => {
   return ch >= '0' && ch <= '9';
 };
 export const isAlphaNum = (ch: string): boolean => {
-  return isAlpha(ch) || (ch >= '0' && ch <= '9');
+  return isAlpha(ch) || isNum(ch);
 };
 
 export const ensureInteger = (value: unknown): number => {

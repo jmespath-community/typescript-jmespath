@@ -4,10 +4,6 @@ export class ScopeChain {
   private inner?: ScopeChain = undefined;
   private data: JSONObject = {};
 
-  get currentScopeData(): JSONObject {
-    return this.data;
-  }
-
   public withScope(data: JSONObject): ScopeChain {
     const outer: ScopeChain = new ScopeChain();
     outer.inner = this;

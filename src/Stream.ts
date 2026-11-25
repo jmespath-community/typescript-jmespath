@@ -458,12 +458,12 @@ export async function* evaluateStreamNode(
         return;
       }
 
+      if (stop <= 0) {
+        return;
+      }
       let index = 0;
       for await (const item of timedSource) {
         checkDeadline();
-        if (index >= stop) {
-          break;
-        }
         if (index >= start && (index - start) % step === 0) {
           yield item as JSONValue;
         }

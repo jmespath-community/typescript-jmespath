@@ -2,7 +2,7 @@ import { JSONValue } from './JSON.type';
 import { LexerOptions, LexerToken, Token } from './Lexer.type';
 import { isAlpha, isAlphaNum, isNum } from './utils/index';
 
-export const basicTokens: Record<string, Token> = {
+const basicTokens: Record<string, Token> = {
   '(': Token.TOK_LPAREN,
   ')': Token.TOK_RPAREN,
   '*': Token.TOK_STAR,
@@ -87,7 +87,7 @@ class StreamLexer {
       } else if (stream[this._current] === '-') {
         if (this._current + 1 < stream.length && isNum(stream[this._current + 1])) {
           const token = this.consumeNumber(stream);
-          token && tokens.push(token);
+          tokens.push(token);
         } else {
           const token = {
             start: this._current,
