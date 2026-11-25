@@ -364,6 +364,62 @@ describe('searchStream', () => {
       );
     });
 
+    it('enforces timeoutMs on stalled sources and calls iterator return()', async () => {
+      let returnCalled = false;
+      const stalledSource: AsyncIterable<{ name: string }> = {
+        [Symbol.asyncIterator]() {
+          return {
+            next() {
+              return new Promise(() => {});
+            },
+            async return() {
+              returnCalled = true;
+              return { done: true, value: undefined };
+            },
+          };
+        },
+      };
+
+      await expect(collectStream(searchStream(stalledSource, '[*].name', { timeoutMs: 20 }))).rejects.toThrow(
+        'Query execution timed out after 20ms',
+      );
+      expect(returnCalled).toBe(true);
+    });
+
+    it('enforces timeoutMs on stalled async generator without hanging', async () => {
+      async function* stalledGenerator() {
+        await new Promise(() => {});
+        yield { name: 'never' };
+      }
+
+      await expect(collectStream(searchStream(stalledGenerator(), '[*].name', { timeoutMs: 20 }))).rejects.toThrow(
+        'Query execution timed out after 20ms',
+      );
+    });
+
+    it('shares timeoutMs deadline across nested pipe stages', async () => {
+      async function* staggeredGenerator() {
+        await new Promise(r => setTimeout(r, 15));
+        yield { name: 'Alice' };
+        await new Promise(r => setTimeout(r, 15));
+        yield { name: 'Bob' };
+      }
+
+      await expect(
+        collectStream(searchStream(staggeredGenerator(), '[*].name | [*] | sort(@)', { timeoutMs: 25 })),
+      ).rejects.toThrow('Query execution timed out after 25ms');
+    });
+
+    it('rejects timeoutMs <= 0 immediately and throws RangeError for NaN', async () => {
+      await expect(collectStream(searchStream([], '[*]', { timeoutMs: 0 }))).rejects.toThrow(
+        'Query execution timed out after 0ms',
+      );
+      await expect(collectStream(searchStream([], '[*]', { timeoutMs: -5 }))).rejects.toThrow(
+        'Query execution timed out after -5ms',
+      );
+      await expect(collectStream(searchStream([], '[*]', { timeoutMs: Number.NaN }))).rejects.toThrow(RangeError);
+    });
+
     it('enforces disallowedFunctions during stream evaluation', async () => {
       const source = createAsyncGenerator(sampleUsers);
       await expect(
