@@ -59,16 +59,6 @@
         "types": "./dist/stream.d.cts",
         "default": "./dist/stream.cjs"
       }
-    },
-    "./cli": {
-      "import": {
-        "types": "./dist/cli.d.ts",
-        "default": "./dist/cli.mjs"
-      },
-      "require": {
-        "types": "./dist/cli.d.cts",
-        "default": "./dist/cli.cjs"
-      }
     }
   },
   "files": [

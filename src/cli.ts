@@ -1,49 +1,104 @@
 'use strict';
 
 import * as fs from 'node:fs';
+import { Readable } from 'node:stream';
 import { ParseArgsConfig, parseArgs } from 'node:util';
 import pkg from '../package.json';
 import jmespath from './index';
 
-const args = getArgs();
-
-if (args.values.help) {
-  printHelp();
-  process.exit(0);
+export interface CliIO {
+  args?: string[];
+  stdin?: Readable;
+  stdout?: (text: string) => void;
+  stderr?: (text: string) => void;
+  exit?: (code: number) => never | void;
 }
 
-if (!args.values['expr-file'] && args.positionals.length < 1) {
-  console.log('Must provide a jmespath expression.');
-  process.exit(1);
-}
+export function runCli(io: CliIO = {}): void {
+  const stdout = io.stdout ?? ((text: string) => console.log(text));
+  const stderr = io.stderr ?? ((text: string) => console.error(text));
+  const exit =
+    io.exit ??
+    ((code: number): never => {
+      process.exit(code);
+    });
 
-let expression = '';
-if (args.values['expr-file']) {
-  expression = fs.readFileSync(<string>args.values['expr-file'], { encoding: 'utf8', flag: 'r' });
-} else {
-  expression = args.positionals[0];
-}
-
-let inputJSON = '';
-if (args?.values?.filename) {
-  inputJSON = fs.readFileSync(<string>args.values.filename, { encoding: 'utf8', flag: 'r' });
-  printResult(inputJSON, expression, <boolean>args.values.compact);
-} else {
-  process.stdin.setEncoding('utf-8');
-  process.stdin.on('readable', function () {
-    const chunk = process.stdin.read();
-    if (chunk !== null) {
-      inputJSON += chunk;
+  let exited = false;
+  const finish = (code: number): void => {
+    if (!exited) {
+      exited = true;
+      exit(code);
     }
-  });
+  };
 
-  process.stdin.on('end', function () {
-    printResult(inputJSON, expression, <boolean>args.values.compact);
-  });
+  const fail = (message: string): void => {
+    stderr(message);
+    finish(1);
+  };
+
+  try {
+    const args = getArgs(io.args);
+
+    if (args.values.help) {
+      stdout(getHelpText());
+      finish(0);
+      return;
+    }
+
+    if (args.values['expr-file']) {
+      if (args.positionals.length > 0) {
+        fail('Unexpected extra positional arguments.');
+        return;
+      }
+    } else if (args.positionals.length < 1) {
+      fail('Must provide a jmespath expression.');
+      return;
+    } else if (args.positionals.length > 1) {
+      fail('Unexpected extra positional arguments.');
+      return;
+    }
+
+    const expression = args.values['expr-file']
+      ? fs.readFileSync(<string>args.values['expr-file'], { encoding: 'utf8', flag: 'r' })
+      : args.positionals[0];
+
+    const compact = <boolean>args.values.compact;
+
+    if (args.values.filename) {
+      const inputJSON = fs.readFileSync(<string>args.values.filename, { encoding: 'utf8', flag: 'r' });
+      stdout(evaluateResult(inputJSON, expression, compact));
+      return;
+    }
+
+    const stdin = io.stdin ?? process.stdin;
+    let inputJSON = '';
+    stdin.setEncoding('utf-8');
+    stdin.on('readable', () => {
+      const chunk = stdin.read();
+      if (chunk !== null) {
+        inputJSON += chunk;
+      }
+    });
+
+    stdin.on('end', () => {
+      try {
+        stdout(evaluateResult(inputJSON, expression, compact));
+      } catch (error) {
+        fail(error instanceof Error ? error.message : String(error));
+      }
+    });
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
-function getArgs() {
+if (!process.env.VITEST || /cli\.(ts|mjs|cjs)$/.test(process.argv[1] ?? '')) {
+  runCli();
+}
+
+function getArgs(rawArgs?: string[]) {
   const config: ParseArgsConfig = {
+    args: rawArgs,
     options: {
       compact: {
         type: 'boolean',
@@ -70,8 +125,8 @@ function getArgs() {
   return parseArgs(config);
 }
 
-function printHelp(): void {
-  console.log(`
+function getHelpText(): string {
+  return `
     NAME:
     jp - jp [<options>] <expression>
 
@@ -86,10 +141,13 @@ function printHelp(): void {
       --filename value, -f value   Read input JSON from a file instead of stdin.
       --expr-file value, -e value  Read JMESPath expression from the specified file.
       --help, -h                   Show help
-      `);
+      `;
 }
 
-function printResult(inputJSON: string, expression: string, compact = false) {
+function evaluateResult(inputJSON: string, expression: string, compact = false): string {
+  if (!inputJSON.trim()) {
+    throw new Error('Empty JSON input.');
+  }
   const parsedInput = JSON.parse(inputJSON);
-  console.log(JSON.stringify(jmespath.search(parsedInput, expression, undefined), null, compact ? 0 : 2));
+  return JSON.stringify(jmespath.search(parsedInput, expression, undefined), null, compact ? 0 : 2);
 }
