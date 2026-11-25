@@ -92,6 +92,7 @@ function parseItem(str: string, parseJson: boolean | 'auto'): unknown {
 export async function* normalizeSource<T>(
   source: StreamSource<T>,
   options?: StreamOptions,
+  deadline?: number,
 ): AsyncGenerator<unknown, void, unknown> {
   const parseJson = options?.parseJson ?? 'auto';
   const flatten = options?.flattenChunks ?? true;
@@ -99,7 +100,20 @@ export async function* normalizeSource<T>(
   let buffer = '';
   const textDecoder = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
 
-  for await (const chunk of toAsyncIterable(source)) {
+  const asyncSource: AsyncIterable<T> =
+    source !== null &&
+    source !== undefined &&
+    (typeof source === 'object' || typeof source === 'function') &&
+    Symbol.asyncIterator in (source as AsyncIterable<T>)
+      ? (source as AsyncIterable<T>)
+      : toAsyncIterable(source);
+
+  const iterableSource =
+    deadline !== undefined && Number.isFinite(deadline)
+      ? iterateWithDeadline(asyncSource, deadline, options?.timeoutMs)
+      : asyncSource;
+
+  for await (const chunk of iterableSource) {
     const str =
       chunk instanceof Uint8Array && textDecoder
         ? textDecoder.decode(chunk, { stream: true })
@@ -254,6 +268,58 @@ async function* drainAndEvaluate(
   }
 }
 
+async function* iterateWithDeadline<T>(
+  source: AsyncIterable<T>,
+  deadline: number,
+  timeoutMs?: number,
+): AsyncGenerator<T, void, unknown> {
+  const iterator = source[Symbol.asyncIterator]();
+  let finished = false;
+  let timedOut = false;
+  try {
+    while (true) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        timedOut = true;
+        Promise.resolve(iterator.return?.()).catch(() => {});
+        throw new Error(`Query execution timed out after ${timeoutMs}ms`);
+      }
+      let timerId: ReturnType<typeof setTimeout> | undefined;
+      const nextPromise = iterator.next();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timerId = setTimeout(() => {
+          timedOut = true;
+          Promise.resolve(iterator.return?.()).catch(() => {});
+          reject(new Error(`Query execution timed out after ${timeoutMs}ms`));
+        }, remaining);
+      });
+      let step: IteratorResult<T>;
+      try {
+        step = await Promise.race([nextPromise, timeoutPromise]);
+      } catch (err) {
+        nextPromise.catch(() => {});
+        if (!timedOut) {
+          finished = true;
+        }
+        throw err;
+      } finally {
+        if (timerId !== undefined) {
+          clearTimeout(timerId);
+        }
+      }
+      if (step.done) {
+        finished = true;
+        return;
+      }
+      yield step.value;
+    }
+  } finally {
+    if (!finished && !timedOut) {
+      await iterator.return?.();
+    }
+  }
+}
+
 /**
  * Evaluates an AST node over an AsyncIterable stream of items.
  */
@@ -262,25 +328,35 @@ export async function* evaluateStreamNode(
   node: ExpressionNode,
   interpreter: TreeInterpreter,
   options?: StreamOptions,
+  deadline?: number,
 ): AsyncGenerator<JSONValue, void, unknown> {
-  const deadline = options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : 0;
+  if (options?.timeoutMs !== undefined && (typeof options.timeoutMs !== 'number' || Number.isNaN(options.timeoutMs))) {
+    throw new RangeError('timeoutMs must be a valid number');
+  }
+  const effectiveDeadline =
+    deadline !== undefined ? deadline : options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : undefined;
 
   function checkDeadline() {
-    if (deadline > 0 && Date.now() >= deadline) {
+    if (effectiveDeadline !== undefined && Date.now() >= effectiveDeadline) {
       throw new Error(`Query execution timed out after ${options?.timeoutMs}ms`);
     }
   }
 
+  const timedSource =
+    effectiveDeadline !== undefined && Number.isFinite(effectiveDeadline)
+      ? iterateWithDeadline(source, effectiveDeadline, options?.timeoutMs)
+      : source;
+
   switch (node.type) {
     case 'Projection': {
       if (!isStreamableNode(node)) {
-        yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
+        yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
         return;
       }
       const { left, right } = node;
-      let streamSource = source;
+      let streamSource = timedSource;
       if (left.type === 'IndexExpression' && left.right.type === 'Slice') {
-        streamSource = evaluateStreamNode(source, left, interpreter, options);
+        streamSource = evaluateStreamNode(timedSource, left, interpreter, options, effectiveDeadline);
       }
       if (right.type === 'Identity' || right.type === 'Current') {
         for await (const item of streamSource) {
@@ -314,7 +390,7 @@ export async function* evaluateStreamNode(
 
     case 'IndexExpression': {
       if (node.left.type !== 'Identity' && node.left.type !== 'Current') {
-        for await (const item of source) {
+        for await (const item of timedSource) {
           checkDeadline();
           const res = interpreter.visit(node, item as JSONValue) as JSONValue;
           if (res !== null && res !== undefined) {
@@ -330,12 +406,12 @@ export async function* evaluateStreamNode(
       const step = slice?.step ?? 1;
       if (!slice || start < 0 || stop < 0 || step <= 0) {
         // Slices with negative indices or scalar indices require accumulating the stream
-        yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
+        yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
         return;
       }
 
       let index = 0;
-      for await (const item of source) {
+      for await (const item of timedSource) {
         checkDeadline();
         if (index >= stop) {
           break;
@@ -353,12 +429,12 @@ export async function* evaluateStreamNode(
 
     case 'FilterProjection': {
       if (!isStreamableNode(node)) {
-        yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
+        yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
         return;
       }
       const { condition, right } = node;
       if (right.type === 'Identity' || right.type === 'Current') {
-        for await (const item of source) {
+        for await (const item of timedSource) {
           checkDeadline();
           if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
             if (item !== null && item !== undefined) {
@@ -370,7 +446,7 @@ export async function* evaluateStreamNode(
       }
       if (right.type === 'Field') {
         const key = right.name;
-        for await (const item of source) {
+        for await (const item of timedSource) {
           checkDeadline();
           if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
             const val = ownField(item, key);
@@ -381,7 +457,7 @@ export async function* evaluateStreamNode(
         }
         return;
       }
-      for await (const item of source) {
+      for await (const item of timedSource) {
         checkDeadline();
         if (!isFalse(interpreter.visit(condition, item as JSONValue))) {
           const res = interpreter.visit(right, item as JSONValue) as JSONValue;
@@ -394,9 +470,9 @@ export async function* evaluateStreamNode(
     }
 
     case 'Pipe': {
-      const leftStream = evaluateStreamNode(source, node.left, interpreter, options);
+      const leftStream = evaluateStreamNode(timedSource, node.left, interpreter, options, effectiveDeadline);
       if (isStreamableNode(node.right)) {
-        for await (const res of evaluateStreamNode(leftStream, node.right, interpreter, options)) {
+        for await (const res of evaluateStreamNode(leftStream, node.right, interpreter, options, effectiveDeadline)) {
           yield res;
         }
       } else {
@@ -412,7 +488,7 @@ export async function* evaluateStreamNode(
 
     case 'Identity':
     case 'Current': {
-      for await (const item of source) {
+      for await (const item of timedSource) {
         checkDeadline();
         yield item as JSONValue;
       }
@@ -421,7 +497,7 @@ export async function* evaluateStreamNode(
 
     case 'Field': {
       const key = node.name;
-      for await (const item of source) {
+      for await (const item of timedSource) {
         checkDeadline();
         const val = ownField(item, key);
         if (val !== undefined) {
@@ -434,7 +510,7 @@ export async function* evaluateStreamNode(
     default: {
       // General expression on each item
       if (isStreamableNode(node)) {
-        for await (const item of source) {
+        for await (const item of timedSource) {
           checkDeadline();
           const res = interpreter.visit(node, item as JSONValue) as JSONValue;
           if (res !== null && res !== undefined) {
@@ -445,7 +521,7 @@ export async function* evaluateStreamNode(
       }
 
       // Non-streamable root: accumulate items and evaluate
-      yield* drainAndEvaluate(source, node, interpreter, checkDeadline, options);
+      yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
       return;
     }
   }
@@ -498,8 +574,13 @@ export async function* searchStream<T = JSONValue, D = unknown>(
   const interpreter = new TreeInterpreter(options);
   interpreter.runtime._functionTable = TreeInterpreterInstance.runtime._functionTable;
 
-  const items = normalizeSource(source, options);
-  const results = evaluateStreamNode(items, ast, interpreter, options);
+  if (options?.timeoutMs !== undefined && (typeof options.timeoutMs !== 'number' || Number.isNaN(options.timeoutMs))) {
+    throw new RangeError('timeoutMs must be a valid number');
+  }
+  const deadline = options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : undefined;
+
+  const items = normalizeSource(source, options, deadline);
+  const results = evaluateStreamNode(items, ast, interpreter, options, deadline);
 
   const limit = options?.limit;
   const maxOutputSize = options?.maxOutputSize;
