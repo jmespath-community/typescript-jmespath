@@ -317,6 +317,15 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.search({ s: '😀abc😀' }, "find_last(s, '😀', `0`, `3`)")).toBe(0);
   });
 
+  it('find_first() and find_last() do not match half of a surrogate pair', () => {
+    const pair = '\ud800\udc00';
+    expect(jmespath.search({ s: pair, sub: '\udc00' }, 'find_first(s, sub)')).toBeNull();
+    expect(jmespath.search({ s: pair, sub: '\ud800' }, 'find_last(s, sub)')).toBeNull();
+    expect(jmespath.search({ s: pair, sub: pair }, 'find_first(s, sub)')).toBe(0);
+    expect(jmespath.search({ s: `a${pair}b`, sub: 'b' }, 'find_first(s, sub)')).toBe(2);
+    expect(jmespath.search({ s: `a${pair}b${pair}`, sub: pair }, 'find_last(s, sub)')).toBe(3);
+  });
+
   it('split() splits empty search string by Unicode code points', () => {
     expect(jmespath.search({}, "split('😀ab', '')")).toEqual(['😀', 'a', 'b']);
     expect(jmespath.search({}, "split('😀ab', '', `1`)")).toEqual(['😀', 'ab']);
