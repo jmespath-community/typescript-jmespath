@@ -38,9 +38,11 @@ export const findFirst = (subject: string, sub: string, start?: number, end?: nu
 export const findLast = (subject: string, sub: string, start?: number, end?: number): number | null =>
   find(true, subject, sub, start, end);
 
+const MAX_PAD_WIDTH = 1_000_000;
+
 const createPad =
   (isLeft: boolean, name: string) =>
-  (subject: string, width: number, padding = ' '): string => {
+  (subject: string, width: number, padding = ' ', maxOutputSize?: number): string => {
     if ([...padding].length !== 1) {
       throw new Error(
         `invalid value, ${name} expects its 'pad' parameter to be a valid string with a single codepoint`,
@@ -50,6 +52,13 @@ const createPad =
     const padLen = width - [...subject].length;
     if (padLen <= 0) {
       return subject;
+    }
+    const outputLen = subject.length + padLen * padding.length;
+    if (maxOutputSize !== undefined && outputLen > maxOutputSize) {
+      throw new Error(`Output size exceeds maximum allowed size of ${maxOutputSize}`);
+    }
+    if (width > MAX_PAD_WIDTH) {
+      throw new Error(`invalid-value: ${name}() width ${width} exceeds maximum allowed width of ${MAX_PAD_WIDTH}`);
     }
     const pad = padding.repeat(padLen);
     return isLeft ? pad + subject : subject + pad;

@@ -59,16 +59,16 @@ export const isAlphaNum = (ch: string): boolean => {
 };
 
 export const ensureInteger = (value: unknown): number => {
-  if (!(typeof value === 'number') || Math.floor(value) !== value) {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
     throw new Error('invalid-value: expecting an integer.');
   }
-  return <number>value;
+  return value;
 };
 export const ensurePositiveInteger = (value: unknown): number => {
-  if (!(typeof value === 'number') || <number>value < 0 || Math.floor(value) !== value) {
+  if (typeof value !== 'number' || value < 0 || !Number.isSafeInteger(value)) {
     throw new Error('invalid-value: expecting a non-negative integer.');
   }
-  return <number>value;
+  return value;
 };
 
 export const ensureNumbers = (...operands: (JSONValue | undefined)[]): void => {
