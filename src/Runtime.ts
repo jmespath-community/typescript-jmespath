@@ -453,7 +453,6 @@ export class Runtime implements FunctionRegistry {
   }
 
   private validateArgs(name: string, args: (JSONValue | ExpressionNode)[], signature: InputSignature[]): void {
-    this.validateInputSignatures(name, signature);
     this.validateArity(name, args, signature);
     this.validateTypes(name, args, signature);
   }

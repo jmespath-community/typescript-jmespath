@@ -21,6 +21,15 @@ import {
 
 const emptyScopeChain = new ScopeChain();
 
+const defineOwnProperty = (obj: object, key: string, value: unknown): void => {
+  Object.defineProperty(obj, key, {
+    value,
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
+};
+
 export class TreeInterpreter {
   runtime: Runtime;
   private _rootValue: JSONValue | null = null;
@@ -45,10 +54,11 @@ export class TreeInterpreter {
   }
 
   withScope(scope: ScopeEntry): TreeInterpreter {
-    const interpreter = new TreeInterpreter(this._options);
+    const interpreter = Object.create(TreeInterpreter.prototype) as TreeInterpreter;
     interpreter.runtime = this.runtime;
     interpreter._rootValue = this._rootValue;
     interpreter._scope = this._scope.withScope(scope);
+    interpreter._options = this._options;
     interpreter._depth = this._depth;
     interpreter._maxDepth = this._maxDepth;
     interpreter._deadline = this._deadline;
@@ -176,12 +186,7 @@ export class TreeInterpreter {
         for (const binding of node.bindings) {
           const bound = this.visit(binding, value) as JSONObject;
           for (const key of Object.keys(bound)) {
-            Object.defineProperty(scope, key, {
-              value: bound[key],
-              enumerable: true,
-              writable: true,
-              configurable: true,
-            });
+            defineOwnProperty(scope, key, bound[key]);
           }
         }
         return this.withScope(scope).visit(node.expression, value);
@@ -190,12 +195,7 @@ export class TreeInterpreter {
         const { variable, reference } = node;
         const result = this.visit(reference, value);
         const binding: JSONObject = {};
-        Object.defineProperty(binding, variable, {
-          value: result,
-          enumerable: true,
-          writable: true,
-          configurable: true,
-        });
+        defineOwnProperty(binding, variable, result);
         return binding;
       }
       case 'Variable': {
@@ -388,12 +388,7 @@ export class TreeInterpreter {
       case 'MultiSelectHash': {
         const collected: Record<string, JSONValue> = {};
         for (const child of node.children) {
-          Object.defineProperty(collected, child.name, {
-            value: this.visit(child.value, value) as JSONValue,
-            enumerable: true,
-            writable: true,
-            configurable: true,
-          });
+          defineOwnProperty(collected, child.name, this.visit(child.value, value) as JSONValue);
         }
         this.checkOutputSize(collected);
         return collected;
