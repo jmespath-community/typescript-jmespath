@@ -126,6 +126,13 @@ describe('Evaluates functions', () => {
     expect(jmespath.search(' \uFEFFa', 'trim_left(@)')).toEqual('\uFEFFa');
     expect(jmespath.search('a\uFEFF ', 'trim_right(@)')).toEqual('a\uFEFF');
   });
+  it('trim() family treats chars literally and runs in linear time', () => {
+    expect(jmespath.search({ s: 'x$&', c: '$&' }, 'trim(s, c)')).toEqual('x');
+    expect(jmespath.search({ s: '$&x$&', c: '$&' }, 'trim_left(s, c)')).toEqual('x$&');
+    const started = Date.now();
+    expect(jmespath.search({ s: `${' '.repeat(100000)}a` }, 'trim_right(s)')).toHaveLength(100001);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
   it('pad_left()', () => {
     // this should be included in the compliance test suite
     expect(jmespath.search('', 'pad_left(@, `3`)')).toEqual('   ');

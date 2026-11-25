@@ -89,11 +89,23 @@ export const split = (subject: string, search: string, count?: number): string[]
   return [...parts.slice(0, count), parts.slice(count).join(search)];
 };
 
-const trimImpl = (subject: string, pattern: string, chars?: string): string => {
-  const charClass = chars ? chars.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') : '\\p{White_Space}';
-  return subject.replace(new RegExp(pattern.replace('%s', charClass), 'u'), '');
+const isWhiteSpace = (ch: string): boolean => /^\p{White_Space}$/u.test(ch);
+
+const trimImpl = (subject: string, left: boolean, right: boolean, chars?: string): string => {
+  const set = chars ? new Set(chars) : null;
+  const matches = (ch: string): boolean => (set ? set.has(ch) : isWhiteSpace(ch));
+  const points = [...subject];
+  let start = 0;
+  let end = points.length;
+  while (left && start < end && matches(points[start])) {
+    start++;
+  }
+  while (right && end > start && matches(points[end - 1])) {
+    end--;
+  }
+  return points.slice(start, end).join('');
 };
 
-export const trimLeft = (subject: string, chars?: string): string => trimImpl(subject, '^[%s]+', chars);
-export const trimRight = (subject: string, chars?: string): string => trimImpl(subject, '[%s]+$', chars);
-export const trim = (subject: string, chars?: string): string => trimLeft(trimRight(subject, chars), chars);
+export const trimLeft = (subject: string, chars?: string): string => trimImpl(subject, true, false, chars);
+export const trimRight = (subject: string, chars?: string): string => trimImpl(subject, false, true, chars);
+export const trim = (subject: string, chars?: string): string => trimImpl(subject, true, true, chars);
