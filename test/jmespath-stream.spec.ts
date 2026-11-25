@@ -659,7 +659,22 @@ describe('searchStream', () => {
     it('evaluates pipe with non-streamable left stage sum(@) | to_string(@)', async () => {
       const source = createAsyncGenerator([1, 2, 3]);
       const results = await collectStream(searchStream(source, 'sum(@) | to_string(@)'));
-      expect(results).toEqual(['[6]']);
+      expect(results).toEqual(['6']);
+    });
+
+    it('falls back to whole-input evaluation for root-referencing expressions and pipes', async () => {
+      const items = [{ a: 1 }, { a: 2 }];
+      expect(await collectStream(searchStream(createAsyncGenerator(items), '[*].[a][0]'))).toEqual([1]);
+      expect(await collectStream(searchStream(createAsyncGenerator(items), '{x:[*].a}'))).toEqual([{ x: [1, 2] }]);
+      expect(await collectStream(searchStream(createAsyncGenerator(items), '[[*].a]'))).toEqual([[1, 2]]);
+      expect(await collectStream(searchStream(createAsyncGenerator(items), 'length(@) | [:1]'))).toEqual([]);
+      expect(await collectStream(searchStream(createAsyncGenerator(items), '[*].a | {x:@}'))).toEqual([{ x: [1, 2] }]);
+      expect(await collectStream(searchStream(createAsyncGenerator(items), 'length([*].a) == `2`'))).toEqual([true]);
+      expect(await collectStream(searchStream(createAsyncGenerator(items), '![*].a'))).toEqual([false]);
+      expect(await collectStream(searchStream(createAsyncGenerator(items), 'length([*].a) + `1`'))).toEqual([3]);
+      expect(
+        await collectStream(searchStream(createAsyncGenerator(items), 'length([*].a) > `1` ? [*].a : `[]`')),
+      ).toEqual([1, 2]);
     });
 
     it('evaluates non-streamable root index expression sum(items)[0]', async () => {

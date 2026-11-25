@@ -163,10 +163,7 @@ export async function* normalizeSource<T>(
   }
 }
 
-/**
- * Checks whether an AST node can be evaluated incrementally item-by-item on a stream.
- */
-export function isStreamableNode(node: ExpressionNode): boolean {
+function isListStreamableNode(node: ExpressionNode): boolean {
   switch (node.type) {
     case 'Projection':
       if (node.left.type === 'Identity' || node.left.type === 'Current') {
@@ -199,25 +196,54 @@ export function isStreamableNode(node: ExpressionNode): boolean {
         }
         return false;
       }
-      return isStreamableNode(node.left);
-    case 'Field':
-    case 'Identity':
-    case 'Current':
-      return true;
-    case 'Subexpression':
-      return isStreamableNode(node.left) && isStreamableNode(node.right);
-    case 'MultiSelectHash':
-    case 'MultiSelectList':
-    case 'Ternary':
-    case 'Comparator':
-    case 'Arithmetic':
-    case 'NotExpression':
-      return true;
+      return false;
     case 'Pipe':
-      return isStreamableNode(node.left) && isStreamableNode(node.right);
+      return isStreamableNode(node.left) && isListStreamableNode(node.right);
     default:
       return false;
   }
+}
+
+function isItemStreamableNode(node: ExpressionNode): boolean {
+  switch (node.type) {
+    case 'Field':
+    case 'Identity':
+    case 'Current':
+    case 'Literal':
+      return true;
+    case 'Subexpression':
+      return isItemStreamableNode(node.left) && isItemStreamableNode(node.right);
+    case 'IndexExpression':
+      return node.left.type !== 'Identity' && node.left.type !== 'Current' && isItemStreamableNode(node.left);
+    case 'MultiSelectHash':
+      return node.children.every(child => isItemStreamableNode(child.value));
+    case 'MultiSelectList':
+      return node.children.every(child => isItemStreamableNode(child));
+    case 'Ternary':
+      return (
+        isItemStreamableNode(node.condition) &&
+        isItemStreamableNode(node.trueExpr) &&
+        isItemStreamableNode(node.falseExpr)
+      );
+    case 'Comparator':
+    case 'Arithmetic':
+    case 'AndExpression':
+    case 'OrExpression':
+      return isItemStreamableNode(node.left) && isItemStreamableNode(node.right);
+    case 'NotExpression':
+      return isItemStreamableNode(node.child);
+    case 'Unary':
+      return isItemStreamableNode(node.operand);
+    default:
+      return false;
+  }
+}
+
+/**
+ * Checks whether an AST node can be evaluated incrementally item-by-item on a stream.
+ */
+export function isStreamableNode(node: ExpressionNode): boolean {
+  return isListStreamableNode(node) || isItemStreamableNode(node);
 }
 
 /**
@@ -390,6 +416,10 @@ export async function* evaluateStreamNode(
 
     case 'IndexExpression': {
       if (node.left.type !== 'Identity' && node.left.type !== 'Current') {
+        if (isListStreamableNode(node.left)) {
+          yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
+          return;
+        }
         for await (const item of timedSource) {
           checkDeadline();
           const res = interpreter.visit(node, item as JSONValue) as JSONValue;
@@ -470,8 +500,12 @@ export async function* evaluateStreamNode(
     }
 
     case 'Pipe': {
+      if (!isStreamableNode(node.left)) {
+        yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
+        return;
+      }
       const leftStream = evaluateStreamNode(timedSource, node.left, interpreter, options, effectiveDeadline);
-      if (isStreamableNode(node.right)) {
+      if (isListStreamableNode(node.right)) {
         for await (const res of evaluateStreamNode(leftStream, node.right, interpreter, options, effectiveDeadline)) {
           yield res;
         }
