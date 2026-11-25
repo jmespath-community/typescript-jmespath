@@ -69,15 +69,31 @@ export class TreeInterpreter {
     if (options?.maxNodes !== undefined && countNodes(node) > options.maxNodes) {
       throw new Error(`Expression exceeds maximum allowed node count of ${options.maxNodes}`);
     }
+    const prevRootValue = this._rootValue;
+    const prevScope = this._scope;
+    const prevOptions = this._options;
+    const prevMaxDepth = this._maxDepth;
+    const prevDepth = this._depth;
+    const prevDeadline = this._deadline;
+
     this._rootValue = value;
     this._scope = emptyScopeChain;
     this._options = options;
     this._maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
     this._depth = 0;
     this._deadline = options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : 0;
-    const result = this.visit(node, value) as JSONValue;
-    this.checkOutputSize(result);
-    return result;
+    try {
+      const result = this.visit(node, value) as JSONValue;
+      this.checkOutputSize(result);
+      return result;
+    } finally {
+      this._rootValue = prevRootValue;
+      this._scope = prevScope;
+      this._options = prevOptions;
+      this._maxDepth = prevMaxDepth;
+      this._depth = prevDepth;
+      this._deadline = prevDeadline;
+    }
   }
 
   private checkOutputSize(val: unknown): void {

@@ -234,4 +234,41 @@ describe('Searches compiled ast', () => {
     expect(() => jmespath.search({}, '`10` % `0`')).toThrow('not-a-number: divide by zero');
     expect(() => jmespath.search({}, '`10` % `-0`')).toThrow('not-a-number: divide by zero');
   });
+
+  it('isolates search() state for re-entrant calls from custom functions', () => {
+    jmespath.registerFunction('reentrant', ([d]) => jmespath.search(d, '@') as import('../src').JSONValue, [
+      { types: [jmespath.TYPE_ANY] },
+    ]);
+    try {
+      expect(jmespath.search({ outer: 1, inner: { x: 2 } }, '[reentrant(inner), $]')).toEqual([
+        { x: 2 },
+        { outer: 1, inner: { x: 2 } },
+      ]);
+      expect(() => jmespath.search({ a: [1, 2, 3, 4], b: 1 }, '[reentrant(b), a][1]', { maxOutputSize: 2 })).toThrow(
+        /output size/i,
+      );
+      expect(() =>
+        jmespath.search({ items: Array.from({ length: 10000 }, (_, i) => i), b: 1 }, '[reentrant(b), items[*]][1]', {
+          timeoutMs: 0,
+        }),
+      ).toThrow(/timed out/i);
+    } finally {
+      jmespath.unregisterFunction('reentrant');
+    }
+  });
+
+  it('enforces allowedFunctions and disallowedFunctions statically in compileQuery() and search()', () => {
+    expect(() => jmespath.compileQuery('length(@)', { allowedFunctions: ['keys'] })).toThrow(
+      "Function 'length' is not allowed",
+    );
+    expect(() => jmespath.compileQuery('length(@)', { disallowedFunctions: ['length'] })).toThrow(
+      "Function 'length' is disallowed",
+    );
+    expect(() => jmespath.search([1, 2], 'not_called && length(@)', { allowedFunctions: ['keys'] })).toThrow(
+      "Function 'length' is not allowed",
+    );
+    expect(() => jmespath.search([1, 2], 'not_called && length(@)', { disallowedFunctions: ['length'] })).toThrow(
+      "Function 'length' is disallowed",
+    );
+  });
 });

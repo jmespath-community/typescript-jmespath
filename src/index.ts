@@ -82,6 +82,12 @@ function mergeStreamOptions(base?: Options, overrides?: StreamOptions): StreamOp
 
 function compileQuery<T = JSONValue, D = unknown>(expression: string, options?: Options): CompiledQuery<T, D> {
   const nodeTree = Parser.parse(expression, options);
+  if (options) {
+    const fnError = findDisallowedFunction(nodeTree, options);
+    if (fnError) {
+      throw new Error(fnError);
+    }
+  }
   const searchFn = (data: D): T => TreeInterpreterInst.search(nodeTree, data as JSONValue, options) as T;
   const fn = searchFn as CompiledQuery<T, D>;
   fn.search = searchFn;
@@ -168,12 +174,6 @@ function search(data: unknown, expression: string | ExpressionNode, options?: Op
       throw new TypeError('Expression must be a string or AST ExpressionNode');
     }
     nodeTree = expression;
-    if (options) {
-      const fnError = findDisallowedFunction(nodeTree, options);
-      if (fnError) {
-        throw new Error(fnError);
-      }
-    }
   } else if (!options) {
     nodeTree = astCache.get(expression);
     if (!nodeTree) {
@@ -188,6 +188,12 @@ function search(data: unknown, expression: string | ExpressionNode, options?: Op
     }
   } else {
     nodeTree = Parser.parse(expression, options);
+  }
+  if (options) {
+    const fnError = findDisallowedFunction(nodeTree, options);
+    if (fnError) {
+      throw new Error(fnError);
+    }
   }
   return TreeInterpreterInst.search(nodeTree, data as JSONValue, options);
 }
