@@ -13,20 +13,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Shared the `timeoutMs` deadline across nested `evaluateStreamNode` stages and enforced it on stalled `iterator.next()` calls ([`#202`](https://github.com/jmespath-community/typescript-jmespath/pull/202)).
   - Fell back to whole-input evaluation for root-referencing expressions and non-streamable pipe left-hand sides ([`#203`](https://github.com/jmespath-community/typescript-jmespath/pull/203)).
   - Cancelled `getReader()` fallback streams on early exit, flushed trailing incomplete UTF-8 bytes at EOF, validated `limit` as an integer, and preserved `compileQuery.searchStream` options when `undefined` overrides are passed ([`#204`](https://github.com/jmespath-community/typescript-jmespath/pull/204)).
+  - Preserved `let` scopes in stream built-in functions and enforced `maxNodes` / `maxDepth` on pre-parsed ASTs and nested stream stages ([`#206`](https://github.com/jmespath-community/typescript-jmespath/pull/206)).
 - **Lexer, Parser & Interpreter**:
   - Rejected `=` outside `let` bindings ([`#194`](https://github.com/jmespath-community/typescript-jmespath/pull/194)) and trailing commas in function argument lists ([`#200`](https://github.com/jmespath-community/typescript-jmespath/pull/200)) with `ParserError`.
   - Stopped `consumeNumber` from consuming `-` as part of number digits ([`#197`](https://github.com/jmespath-community/typescript-jmespath/pull/197)).
-  - Accepted compiled `ExpressionNode` ASTs in `search()` ([`#201`](https://github.com/jmespath-community/typescript-jmespath/pull/201)).
+  - Gave unary `+` / `-` higher precedence than multiplicative operators ([`#207`](https://github.com/jmespath-community/typescript-jmespath/pull/207)).
+  - Accepted compiled `ExpressionNode` ASTs in `search()` ([`#201`](https://github.com/jmespath-community/typescript-jmespath/pull/201)), isolated re-entrant `search()` state, and enforced `allowedFunctions` / `disallowedFunctions` in `compileQuery()` and string `search()` ([`#208`](https://github.com/jmespath-community/typescript-jmespath/pull/208)).
 - **Runtime & Built-in Functions**:
   - Prevented input `{expref: ...}` objects from being treated as expression references and guarded built-in function lookups against `Object.prototype` keys ([`#193`](https://github.com/jmespath-community/typescript-jmespath/pull/193)).
   - Used deep equality in `contains()` for array elements and replaced spread arguments in `max()` / `min()` with a loop to avoid stack overflows ([`#196`](https://github.com/jmespath-community/typescript-jmespath/pull/196)).
   - Rejected non-finite integers in `ensureInteger()` / `ensurePositiveInteger()` and bounded `pad_left()` / `pad_right()` width before allocation ([`#199`](https://github.com/jmespath-community/typescript-jmespath/pull/199)).
+  - Captured `let` lexical scopes in `ExpressionReference` values and returned `null` for overflowing `to_number()` inputs ([`#210`](https://github.com/jmespath-community/typescript-jmespath/pull/210)).
   - Returned code point offsets from `find_first()` / `find_last()` when `sub` is half of a surrogate pair ([`#184`](https://github.com/jmespath-community/typescript-jmespath/pull/184)).
   - Padded empty subjects in `pad_left()` / `pad_right()` to the requested width per JEP-14 ([`#185`](https://github.com/jmespath-community/typescript-jmespath/pull/185)).
   - Excluded U+FEFF from default `trim()` / `trim_left()` / `trim_right()` whitespace ([`#185`](https://github.com/jmespath-community/typescript-jmespath/pull/185)) and replaced regex-based trimming with a linear code-point scan ([`#191`](https://github.com/jmespath-community/typescript-jmespath/pull/191)).
 - **Packaging, Types & CLI**:
   - Removed `NodeJS.ReadableStream` from public `StreamSource` types so consumers without `@types/node` compile with `skipLibCheck: false` ([`#192`](https://github.com/jmespath-community/typescript-jmespath/pull/192)).
   - Handled CLI errors cleanly on `stderr`, rejected extra positional arguments, and removed the side-effecting `./cli` package export ([`#195`](https://github.com/jmespath-community/typescript-jmespath/pull/195)).
+
+### Performance
+- Reused `Runtime` across `TreeInterpreter.withScope()` calls and skipped redundant per-call signature validation ([`#205`](https://github.com/jmespath-community/typescript-jmespath/pull/205)).
+- Fast-pathed primitive `contains()` lookups and avoided `exprefScopes` writes outside `let` scopes ([`#212`](https://github.com/jmespath-community/typescript-jmespath/pull/212)).
 
 ### Documentation
 - Clarified that `searchStream` `limit` only terminates streamable expressions early ([`#186`](https://github.com/jmespath-community/typescript-jmespath/pull/186)).
