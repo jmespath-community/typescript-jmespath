@@ -60,6 +60,7 @@ const bindingPower: Record<string, number> = {
 };
 
 export const DEFAULT_MAX_DEPTH = 1000;
+const UNARY_ARITHMETIC_BP = 30;
 
 class TokenParser {
   index = 0;
@@ -159,7 +160,7 @@ class TokenParser {
         return { type: 'NotExpression', child };
       }
       case Token.TOK_MINUS: {
-        const child = this.expression(bindingPower.Minus);
+        const child = this.expression(UNARY_ARITHMETIC_BP);
         return {
           type: 'Unary',
           operator: token.type,
@@ -167,7 +168,7 @@ class TokenParser {
         } as UnaryArithmeticNode;
       }
       case Token.TOK_PLUS: {
-        const child = this.expression(bindingPower.Plus);
+        const child = this.expression(UNARY_ARITHMETIC_BP);
         return {
           type: 'Unary',
           operator: token.type,
