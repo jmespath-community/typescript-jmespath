@@ -75,6 +75,18 @@ describe('Searches compiled ast', () => {
     expect(ref.expref).toBe(true);
   });
 
+  it('supports compiled ExpressionNode directly in search()', () => {
+    const ast = compile('foo.bar');
+    expect(jmespath.search({ foo: { bar: 'BAZ' } }, ast)).toBe('BAZ');
+
+    const compiled = jmespath.compileQuery<string>('foo.bar');
+    expect(jmespath.search<string>({ foo: { bar: 'QUX' } }, compiled.ast)).toBe('QUX');
+
+    expect(() => jmespath.search({ a: 1 }, compile('length(@)'), { disallowedFunctions: ['length'] })).toThrow(
+      "Function 'length' is disallowed",
+    );
+  });
+
   it('automatically infers types from literal path expressions', () => {
     interface Account {
       id: number;

@@ -63,6 +63,17 @@ export function countNodes(root: ExpressionNode): number {
   return count;
 }
 
+export function isExpressionNode(val: unknown): val is ExpressionNode {
+  return (
+    typeof val === 'object' &&
+    val !== null &&
+    'type' in val &&
+    typeof (val as { type: unknown }).type === 'string' &&
+    !(Symbol.iterator in val) &&
+    !(Symbol.asyncIterator in val)
+  );
+}
+
 export function findDisallowedFunction(root: ExpressionNode, options: Options): string | null {
   const { allowedFunctions, disallowedFunctions } = options;
   if (!allowedFunctions && !disallowedFunctions) {
