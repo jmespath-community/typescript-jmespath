@@ -13,7 +13,6 @@ import type {
   SliceNode,
   UnaryArithmeticNode,
   UnaryExpressionNode,
-  VariableNode,
 } from './AST.type';
 import Lexer from './Lexer';
 import { LexerToken, Token } from './Lexer.type';
@@ -33,7 +32,7 @@ const bindingPower: Record<string, number> = {
   [Token.TOK_CURRENT]: 0,
   [Token.TOK_EXPREF]: 0,
   [Token.TOK_ROOT]: 0,
-  [Token.TOK_ASSIGN]: 1,
+  [Token.TOK_ASSIGN]: 0,
   [Token.TOK_PIPE]: 1,
   [Token.TOK_QUESTION]: 2,
   [Token.TOK_OR]: 3,
@@ -282,15 +281,6 @@ class TokenParser {
         const right = this.parseProjectionRHS(bindingPower.Flatten);
         return { type: 'Projection', left: leftNode, right };
       }
-      case Token.TOK_ASSIGN: {
-        const leftNode = left as VariableNode;
-        const right = this.expression(0);
-        return {
-          type: 'Binding',
-          variable: leftNode.name,
-          reference: right,
-        };
-      }
       case Token.TOK_EQ:
       case Token.TOK_NE:
       case Token.TOK_GT:
@@ -404,25 +394,37 @@ class TokenParser {
   }
 
   private parseLetExpression(): LetExpressionNode {
-    const separated = this.parseCommaSeparatedExpressionsUntilKeyword('in');
+    const bindings: BindingNode[] = [];
+    while (true) {
+      const varToken = this.lookaheadToken(0);
+      if (varToken.type !== Token.TOK_VARIABLE) {
+        this.errorToken(varToken, `Syntax error: expected variable in let binding, got: ${varToken.type}`);
+      }
+      this.advance();
+      this.match(Token.TOK_ASSIGN);
+      const reference = this.expression(0);
+      bindings.push({
+        type: 'Binding',
+        variable: varToken.value as string,
+        reference,
+      });
+      if (this.lookahead(0) === Token.TOK_COMMA) {
+        this.advance();
+      } else {
+        break;
+      }
+    }
+    const inToken = this.lookaheadToken(0);
+    if (!TokenParser.isKeyword(inToken, 'in')) {
+      this.errorToken(inToken, `Syntax error: expected "in" in let expression, got: ${inToken.type}`);
+    }
+    this.advance();
     const expression = this.expression(0);
-    const bindings = separated.map(binding => binding as BindingNode);
     return {
       type: 'LetExpression',
-      bindings: bindings,
-      expression: expression,
+      bindings,
+      expression,
     };
-  }
-
-  private parseCommaSeparatedExpressionsUntilKeyword(keyword: string): ExpressionNode[] {
-    return this.parseCommaSeparatedExpressionsUntil(
-      () => {
-        return TokenParser.isKeyword(this.lookaheadToken(0), keyword);
-      },
-      () => {
-        this.advance();
-      },
-    );
   }
 
   private parseCommaSeparatedExpressionsUntilToken(token: Token): ExpressionNode[] {
