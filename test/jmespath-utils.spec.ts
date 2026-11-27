@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { divide, strictDeepEqual } from '../src/utils';
+import { add, div, divide, mod, mul, strictDeepEqual, sub } from '../src/utils';
 import { expectError } from './error.utils';
 
 describe('strictDeepEqual', () => {
@@ -78,5 +78,17 @@ describe('should throw a readable error when invalid arguments are provided to a
   });
   it('divide->ensureNumbers', () => {
     expectError(() => divide('zero', 42), 'not-a-number');
+  });
+  it('every operator rejects a non-finite operand on either side', () => {
+    const nonFinite = [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NaN];
+    for (const op of [add, sub, mul, divide, div, mod]) {
+      for (const value of nonFinite) {
+        expectError(() => op(value, 2), 'not-a-number: expecting a finite number');
+        expectError(() => op(2, value), 'not-a-number: expecting a finite number');
+      }
+    }
+  });
+  it('reports a NaN divisor as a non-finite operand rather than a divide by zero', () => {
+    expectError(() => divide(3, Number.NaN), 'not-a-number: expecting a finite number');
   });
 });
