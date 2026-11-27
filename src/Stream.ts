@@ -274,6 +274,20 @@ function ownField(item: unknown, key: string): JSONValue | undefined {
   return val === null ? undefined : (val as JSONValue | undefined);
 }
 
+const timeoutError = (timeoutMs?: number): Error => new Error(`Query execution timed out after ${timeoutMs}ms`);
+
+function checkMaxOutputSize(count: number, maxOutputSize?: number): void {
+  if (maxOutputSize !== undefined && count >= maxOutputSize) {
+    throw new Error(`Output size exceeds maximum allowed size of ${maxOutputSize}`);
+  }
+}
+
+function assertValidTimeout(timeoutMs?: number): void {
+  if (timeoutMs !== undefined && (typeof timeoutMs !== 'number' || Number.isNaN(timeoutMs))) {
+    throw new RangeError('timeoutMs must be a valid number');
+  }
+}
+
 async function drainStream(
   source: AsyncIterable<unknown>,
   checkDeadline: () => void,
@@ -282,10 +296,8 @@ async function drainStream(
   const collected: JSONValue[] = [];
   for await (const item of source) {
     checkDeadline();
+    checkMaxOutputSize(collected.length, maxOutputSize);
     collected.push(item as JSONValue);
-    if (maxOutputSize !== undefined && collected.length > maxOutputSize) {
-      throw new Error(`Output size exceeds maximum allowed size of ${maxOutputSize}`);
-    }
   }
   return collected;
 }
@@ -322,7 +334,7 @@ async function* iterateWithDeadline<T>(
       if (remaining <= 0) {
         timedOut = true;
         Promise.resolve(iterator.return?.()).catch(() => {});
-        throw new Error(`Query execution timed out after ${timeoutMs}ms`);
+        throw timeoutError(timeoutMs);
       }
       let timerId: ReturnType<typeof setTimeout> | undefined;
       const nextPromise = iterator.next();
@@ -330,7 +342,7 @@ async function* iterateWithDeadline<T>(
         timerId = setTimeout(() => {
           timedOut = true;
           Promise.resolve(iterator.return?.()).catch(() => {});
-          reject(new Error(`Query execution timed out after ${timeoutMs}ms`));
+          reject(timeoutError(timeoutMs));
         }, remaining);
       });
       let step: IteratorResult<T>;
@@ -375,15 +387,13 @@ export async function* evaluateStreamNode(
   if (depth >= maxDepth) {
     throw new Error(`Evaluation exceeds maximum allowed depth of ${maxDepth}`);
   }
-  if (options?.timeoutMs !== undefined && (typeof options.timeoutMs !== 'number' || Number.isNaN(options.timeoutMs))) {
-    throw new RangeError('timeoutMs must be a valid number');
-  }
+  assertValidTimeout(options?.timeoutMs);
   const effectiveDeadline =
     deadline !== undefined ? deadline : options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : undefined;
 
   function checkDeadline() {
     if (effectiveDeadline !== undefined && Date.now() >= effectiveDeadline) {
-      throw new Error(`Query execution timed out after ${options?.timeoutMs}ms`);
+      throw timeoutError(options?.timeoutMs);
     }
   }
 
@@ -392,45 +402,24 @@ export async function* evaluateStreamNode(
       ? iterateWithDeadline(source, effectiveDeadline, options?.timeoutMs)
       : source;
 
+  let streamSource: AsyncIterable<unknown> = timedSource;
+  let target: ExpressionNode = node;
+  let condition: ExpressionNode | undefined;
+
   switch (node.type) {
-    case 'Projection': {
+    case 'Projection':
+    case 'FilterProjection': {
       if (!isStreamableNode(node)) {
         yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
         return;
       }
-      const { left, right } = node;
-      let streamSource = timedSource;
-      if (left.type === 'IndexExpression' && left.right.type === 'Slice') {
-        streamSource = evaluateStreamNode(timedSource, left, interpreter, options, effectiveDeadline, depth + 1);
+      if (node.type === 'FilterProjection') {
+        condition = node.condition;
+      } else if (node.left.type === 'IndexExpression' && node.left.right.type === 'Slice') {
+        streamSource = evaluateStreamNode(timedSource, node.left, interpreter, options, effectiveDeadline, depth + 1);
       }
-      if (right.type === 'Identity' || right.type === 'Current') {
-        for await (const item of streamSource) {
-          checkDeadline();
-          if (item !== null && item !== undefined) {
-            yield item as JSONValue;
-          }
-        }
-        return;
-      }
-      if (right.type === 'Field') {
-        const key = right.name;
-        for await (const item of streamSource) {
-          checkDeadline();
-          const val = ownField(item, key);
-          if (val !== undefined) {
-            yield val;
-          }
-        }
-        return;
-      }
-      for await (const item of streamSource) {
-        checkDeadline();
-        const res = interpreter.visit(right, item as JSONValue) as JSONValue;
-        if (res !== null && res !== undefined) {
-          yield res;
-        }
-      }
-      return;
+      target = node.right;
+      break;
     }
 
     case 'IndexExpression': {
@@ -439,14 +428,7 @@ export async function* evaluateStreamNode(
           yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
           return;
         }
-        for await (const item of timedSource) {
-          checkDeadline();
-          const res = interpreter.visit(node, item as JSONValue) as JSONValue;
-          if (res !== null && res !== undefined) {
-            yield res;
-          }
-        }
-        return;
+        break;
       }
 
       const slice = node.right.type === 'Slice' ? node.right : null;
@@ -471,51 +453,6 @@ export async function* evaluateStreamNode(
         index++;
         if (index >= stop) {
           break;
-        }
-      }
-      return;
-    }
-
-    case 'FilterProjection': {
-      if (!isStreamableNode(node)) {
-        yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
-        return;
-      }
-      const { condition, right } = node;
-      if (right.type === 'Identity' || right.type === 'Current') {
-        for await (const item of timedSource) {
-          checkDeadline();
-          if (isFalse(interpreter.visit(condition, item as JSONValue))) {
-            continue;
-          }
-          if (item !== null && item !== undefined) {
-            yield item as JSONValue;
-          }
-        }
-        return;
-      }
-      if (right.type === 'Field') {
-        const key = right.name;
-        for await (const item of timedSource) {
-          checkDeadline();
-          if (isFalse(interpreter.visit(condition, item as JSONValue))) {
-            continue;
-          }
-          const val = ownField(item, key);
-          if (val !== undefined) {
-            yield val;
-          }
-        }
-        return;
-      }
-      for await (const item of timedSource) {
-        checkDeadline();
-        if (isFalse(interpreter.visit(condition, item as JSONValue))) {
-          continue;
-        }
-        const res = interpreter.visit(right, item as JSONValue) as JSONValue;
-        if (res !== null && res !== undefined) {
-          yield res;
         }
       }
       return;
@@ -558,34 +495,30 @@ export async function* evaluateStreamNode(
       return;
     }
 
-    case 'Field': {
-      const key = node.name;
-      for await (const item of timedSource) {
-        checkDeadline();
-        const val = ownField(item, key);
-        if (val !== undefined) {
-          yield val;
-        }
-      }
-      return;
-    }
-
     default: {
-      // General expression on each item
-      if (isStreamableNode(node)) {
-        for await (const item of timedSource) {
-          checkDeadline();
-          const res = interpreter.visit(node, item as JSONValue) as JSONValue;
-          if (res !== null && res !== undefined) {
-            yield res;
-          }
-        }
+      if (!isStreamableNode(node)) {
+        // Non-streamable root: accumulate items and evaluate
+        yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
         return;
       }
+      break;
+    }
+  }
 
-      // Non-streamable root: accumulate items and evaluate
-      yield* drainAndEvaluate(timedSource, node, interpreter, checkDeadline, options);
-      return;
+  const key = target.type === 'Field' ? target.name : null;
+  const passSelf = target.type === 'Identity' || target.type === 'Current';
+  for await (const item of streamSource) {
+    checkDeadline();
+    if (condition && isFalse(interpreter.visit(condition, item as JSONValue))) {
+      continue;
+    }
+    const res = passSelf
+      ? (item as JSONValue)
+      : key !== null
+        ? ownField(item, key)
+        : (interpreter.visit(target, item as JSONValue) as JSONValue);
+    if (res !== null && res !== undefined) {
+      yield res;
     }
   }
 }
@@ -639,9 +572,7 @@ export async function* searchStream<T = JSONValue, D = unknown>(
     }
   }
 
-  if (options?.timeoutMs !== undefined && (typeof options.timeoutMs !== 'number' || Number.isNaN(options.timeoutMs))) {
-    throw new RangeError('timeoutMs must be a valid number');
-  }
+  assertValidTimeout(options?.timeoutMs);
   const deadline = options?.timeoutMs !== undefined ? Date.now() + options.timeoutMs : undefined;
 
   const items = normalizeSource(source, options, deadline);
@@ -659,9 +590,7 @@ export async function* searchStream<T = JSONValue, D = unknown>(
   }
 
   for await (const result of results) {
-    if (maxOutputSize !== undefined && count >= maxOutputSize) {
-      throw new Error(`Output size exceeds maximum allowed size of ${maxOutputSize}`);
-    }
+    checkMaxOutputSize(count, maxOutputSize);
     yield result as T;
     count++;
     if (limit !== undefined && count >= limit) {
