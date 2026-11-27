@@ -3,8 +3,8 @@ import jmespath from '../dist/index.mjs';
 
 const { searchStream, search } = jmespath;
 
-// Shared by the two memory arms so they measure the same work. The throughput tasks above keep
-// their own literals on purpose: their labels are pinned to those expressions.
+// Shared by the two memory arms so they measure the same work, and by the filter throughput task
+// so that its label and the expression it evaluates cannot drift apart.
 const MATCH_EXPR = "[?role == 'admin'].score";
 
 async function runStreamBenchmarks() {
@@ -50,9 +50,9 @@ async function runStreamBenchmarks() {
       }
       return count;
     })
-    .add('Stream#filter [?role == "admin"].score (50k items)', async () => {
+    .add("Stream#filter [?role == 'admin'].score (50k items)", async () => {
       let count = 0;
-      for await (const _ of searchStream(generateItems(), "[?role == 'admin'].score")) {
+      for await (const _ of searchStream(generateItems(), MATCH_EXPR)) {
         count++;
       }
       return count;
@@ -128,4 +128,9 @@ async function runStreamBenchmarks() {
   console.log('retained is the footprint; churn is allocation awaiting collection (relative only).');
 }
 
-runStreamBenchmarks().catch(console.error);
+runStreamBenchmarks().catch(error => {
+  // Print the message rather than a stack, but fail the run: exit 0 is what a script or a CI gate
+  // reads, and a run that threw is not a passing one.
+  console.error(error.message);
+  process.exitCode = 1;
+});
