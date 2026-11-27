@@ -299,6 +299,35 @@ describe('Searches compiled ast', () => {
     expect(() => jmespath.search({ a: [1e308, 1e308, -1e308] }, 'sum(a)')).toThrow('not-a-number: arithmetic overflow');
   });
 
+  it('raises not-a-number when an arithmetic operand is not finite', () => {
+    // A non-finite operand used to yield NaN, which reached JSON.stringify as null - the
+    // same shape a legitimate null result has. `1e400` and a document value are one value:
+    // JSON.parse("{ \"n\": 1e400 }").n === Infinity.
+    const doc = { n: Number.POSITIVE_INFINITY };
+    for (const expr of [
+      '`1e400` % `3`',
+      '`1e400` - `1e400`',
+      '`1e400` / `1e400`',
+      '`1e400` * `0`',
+      '`1e400` + `1`',
+      '`1e400` // `3`',
+      'n % `3`',
+      '-n',
+      '+n',
+    ]) {
+      expect(() => jmespath.search(doc, expr)).toThrow('not-a-number: expecting a finite number');
+    }
+    // A derived NaN is refused as an overflow rather than reported as null.
+    expect(() => jmespath.search({}, 'avg(`[1e400,-1e400]`)')).toThrow('not-a-number: arithmetic overflow');
+    // An array element is a value rather than an operator operand, so sum() / avg() name the
+    // overflowing total, as they already do for 1e308 + 1e308. Unifying the two messages
+    // would be a separate decision, so pin which one a caller gets.
+    expect(() => jmespath.search({ a: [1e400] }, 'sum(a)')).toThrow('not-a-number: arithmetic overflow');
+    // Nothing was summed in an empty avg(), so the empty-input answer stays.
+    expect(jmespath.search(doc, 'avg(`[]`)')).toBeNull();
+    expect(jmespath.search(doc, 'sum(`[]`)')).toBe(0);
+  });
+
   it('leaves large but finite arithmetic and empty aggregations alone', () => {
     expect(jmespath.search({}, '`1e308` * `1.5`')).toBe(1.5e308);
     expect(jmespath.search({}, '`1e308` - `1e307`')).toBe(9e307);

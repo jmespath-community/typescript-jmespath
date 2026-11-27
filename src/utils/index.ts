@@ -71,6 +71,11 @@ export const ensurePositiveInteger = (value: unknown): number => {
   return value;
 };
 
+/**
+ * JMESPath numbers carry neither an infinite value nor a NaN, so a non-finite operand is
+ * refused here, where the fault is still visible. Left to the operators it becomes a NaN,
+ * which JSON.stringify reports as a null indistinguishable from a legitimate result.
+ */
 export const ensureNumbers = (...operands: (JSONValue | undefined)[]): void => {
   for (let i = 0; i < operands.length; i++) {
     if (operands[i] === null || operands[i] === undefined) {
@@ -78,6 +83,9 @@ export const ensureNumbers = (...operands: (JSONValue | undefined)[]): void => {
     }
     if (typeof operands[i] !== 'number') {
       throw new Error('not-a-number');
+    }
+    if (!Number.isFinite(operands[i])) {
+      throw new Error('not-a-number: expecting a finite number');
     }
   }
 };
@@ -94,11 +102,12 @@ const notZero = (n: number): number => {
 /**
  * JMESPath numbers have no infinite value: the grammar raises `not-a-number` when an
  * arithmetic expression overflows. Without this the result reaches JSON.stringify as
- * `null`, indistinguishable from a legitimate null. NaN is left alone, since an empty
- * `avg()` is an empty-input question rather than an overflow.
+ * `null`, indistinguishable from a legitimate null. Every non-finite result is refused,
+ * a derived NaN included, since `Infinity - Infinity` is no more reportable than `Infinity`.
+ * An empty `avg()` never reaches here; it answers null before summing anything.
  */
 export const ensureNoOverflow = (result: number): number => {
-  if (result === Number.POSITIVE_INFINITY || result === Number.NEGATIVE_INFINITY) {
+  if (!Number.isFinite(result)) {
     throw new Error('not-a-number: arithmetic overflow');
   }
   return result;
