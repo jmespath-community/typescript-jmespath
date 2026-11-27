@@ -13,10 +13,14 @@ const codePointWidth = (subject: string, i: number): number =>
 export const countCodePoints = (subject: string, limit = subject.length): number => {
   let count = 0;
   const end = Math.min(limit, subject.length);
+  // Only a low surrogate that follows a high one continues a pair; an unpaired
+  // 0xDC00-0xDFFF unit counts as one code point, exactly as `[...subject]` does.
   for (let i = 0; i < end; i++) {
-    if (!isLowSurrogate(subject.charCodeAt(i))) {
-      count++;
+    const unit = subject.charCodeAt(i);
+    if (isHighSurrogate(unit) && (subject.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+      i++;
     }
+    count++;
   }
   return count;
 };
@@ -47,14 +51,46 @@ const isWellFormed = (subject: string): boolean => {
 export const codePointOffset = (subject: string, index: number): number => {
   let count = 0;
   for (let i = 0; i < subject.length; i++) {
-    if (!isLowSurrogate(subject.charCodeAt(i))) {
-      if (count === index) {
-        return i;
-      }
-      count++;
+    if (count === index) {
+      return i;
     }
+    const unit = subject.charCodeAt(i);
+    if (isHighSurrogate(unit) && (subject.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+      i++;
+    }
+    count++;
   }
   return subject.length;
+};
+
+/**
+ * UTF-16 offsets of the code-point window `[start, stop)` in a single walk.
+ * A `null` stop runs to the end of the string. Both indices are clamped.
+ */
+export const codePointWindow = (subject: string, start: number, stop: number | null): [number, number] => {
+  let from = -1;
+  let count = 0;
+  for (let i = 0; i < subject.length; i++) {
+    const unit = subject.charCodeAt(i);
+    if (count === start) {
+      from = i;
+      if (stop === null) {
+        return [i, subject.length];
+      }
+      if (stop <= start) {
+        return [i, i];
+      }
+    }
+    if (stop !== null && count === stop) {
+      return [from === -1 ? i : from, i];
+    }
+    if (isHighSurrogate(unit) && (subject.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+      i++;
+    }
+    count++;
+  }
+  const end = subject.length;
+  return [from === -1 ? end : from, end];
 };
 
 /**

@@ -347,6 +347,18 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.search({ s: '𐀀𐀀' }, "find_first(s, '𐀀𐀀')")).toBe(0);
   });
 
+  it('lone low surrogates count as one code point', () => {
+    // The string iterator yields an unpaired 0xDC00-0xDFFF unit on its own, so
+    // code-point indexing must count it rather than treat it as a continuation.
+    expect(jmespath.search('\uDC00', 'length(@)')).toBe(1);
+    expect(jmespath.search({ s: '\uDC00a' }, 's[0:1]')).toBe('\uDC00');
+    expect(jmespath.search({ s: 'a\uDC00b' }, 's[::-1]')).toBe('b\uDC00a');
+    expect(jmespath.search({ s: '\uDC00a' }, "find_first(s, 'a')")).toBe(1);
+    expect(jmespath.search({ s: '\uDC00a' }, "find_last(s, '\uDC00')")).toBe(0);
+    expect(jmespath.search({ s: '\uDC00' }, "pad_left(s, `1`, 'x')")).toBe('\uDC00');
+    expect(jmespath.search({ s: '\uDC00ab' }, "find_last(s, 'b')")).toBe(2);
+  });
+
   it('sort() ranks astral code points above U+FFFD and U+FFFF', () => {
     // U+10000 encodes as a leading surrogate 0xD800, so a UTF-16 code-unit comparison
     // (a < b) would rank it below these BMP code points instead of above them.

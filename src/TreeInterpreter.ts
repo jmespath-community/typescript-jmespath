@@ -19,7 +19,7 @@ import {
   strictDeepEqual,
   sub,
 } from './utils';
-import { codePointOffset, countCodePoints, sliceCodePoints } from './utils/strings';
+import { codePointWindow, countCodePoints, sliceCodePoints } from './utils/strings';
 
 const emptyScopeChain = new ScopeChain();
 
@@ -519,8 +519,7 @@ export class TreeInterpreter {
       // `[a:b]` with a positive step only ever touches the requested window, so the
       // code-point total is not needed: walking to the two bounds keeps this O(window).
       if ((step === null || step === 1) && (start === null || start >= 0) && (stop === null || stop >= 0)) {
-        const from = codePointOffset(value, start ?? 0);
-        const to = stop === null ? value.length : codePointOffset(value, stop);
+        const [from, to] = codePointWindow(value, start ?? 0, stop);
         const window = to > from ? value.substring(from, to) : '';
         this.checkOutputSize(window);
         return window;
