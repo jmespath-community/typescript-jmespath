@@ -115,7 +115,27 @@ export const add = binOp((a, b) => a + b);
 export const sub = binOp((a, b) => a - b);
 export const mul = binOp((a, b) => a * b);
 export const divide = binOp((a, b) => a / notZero(b));
+/**
+ * `//` floors, matching the operator glyph JEP-16 borrows from Python. IEEE-754 rounds
+ * the quotient before it is floored, so a quotient above `Number.MAX_SAFE_INTEGER` can
+ * land one step off the true floor (`1e17 // 7` is `14285714285714286`); exact
+ * big-magnitude division is out of scope, doubles are the number model here.
+ */
 export const div = binOp((a, b) => Math.floor(a / notZero(b)));
-export const mod = binOp((a, b) => a % notZero(b));
+/**
+ * `%` follows `//`: the remainder takes the divisor's sign, which is what keeps
+ * `a === (a // b) * b + (a % b)` true when the operands disagree in sign. JS `%` truncates
+ * toward zero instead. Only a remainder of the wrong sign is adjusted — `((a % b) + b) % b`
+ * would round away a dividend already inside a huge divisor's range — and a zero remainder
+ * is reported as `+0`, so `-4 % 2` does not surface a negative zero.
+ */
+export const mod = binOp((a, b) => {
+  const divisor = notZero(b);
+  const remainder = a % divisor;
+  if (remainder === 0) {
+    return 0;
+  }
+  return Math.sign(remainder) !== Math.sign(divisor) ? remainder + divisor : remainder;
+});
 
 export * from './ast';

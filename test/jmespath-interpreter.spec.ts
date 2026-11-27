@@ -233,6 +233,50 @@ describe('Searches compiled ast', () => {
   it('raises not-a-number error on modulo by zero', () => {
     expect(() => jmespath.search({}, '`10` % `0`')).toThrow('not-a-number: divide by zero');
     expect(() => jmespath.search({}, '`10` % `-0`')).toThrow('not-a-number: divide by zero');
+    expect(() => jmespath.search({}, '`-7` % `0`')).toThrow('not-a-number: divide by zero');
+  });
+
+  it('keeps % and // on one sign convention so the division identity holds', () => {
+    // JEP-16 gives both operators only positive examples, so the pinned compliance suite
+    // cannot express this pair. Expected values are floor division and floor modulo.
+    const cases: [number, number, number, number][] = [
+      [-7, 2, -4, 1],
+      [7, -2, -4, -1],
+      [-9, 4, -3, 3],
+      [9, -4, -3, -3],
+      [-1, 2, -1, 1],
+      [-10, -3, 3, -1],
+      [-7.5, 2, -4, 0.5],
+      [7.5, -2, -4, -0.5],
+      [-4, 2, -2, 0],
+      [0, 3, 0, 0],
+      // Positive operands are unchanged by the convention.
+      [10, 3, 3, 1],
+      [10, -3, -4, -2],
+    ];
+    for (const [a, b, quotient, remainder] of cases) {
+      const query = (op: string) => `\`${a}\` ${op} \`${b}\``;
+      expect([jmespath.search({}, query('//')), jmespath.search({}, query('%'))], `${a} // / % ${b}`).toEqual([
+        quotient,
+        remainder,
+      ]);
+      expect(
+        (jmespath.search({}, query('//')) as number) * b + (jmespath.search({}, query('%')) as number),
+        `${a} = (a // b) * b + (a % b)`,
+      ).toBeCloseTo(a, 10);
+    }
+
+    // A zero remainder is reported as +0 even with a negative divisor. JSON has a single
+    // zero, so the signed zero `//` keeps (`0 // -3` is -0, as in Python) stays invisible.
+    expect(Object.is(jmespath.search({}, '`-4` % `2`'), -0)).toBe(false);
+    expect(Object.is(jmespath.search({}, '`0` % `-3`'), -0)).toBe(false);
+    expect(Object.is(jmespath.search({}, '`0` // `-3`'), -0)).toBe(true);
+    // A dividend already inside the divisor's range must survive the sign adjustment.
+    expect(jmespath.search({}, '`5` % `1e308`')).toBe(5);
+    expect(jmespath.search({}, '`1.7e308` % `1.7976931348623157e308`')).toBe(1.7e308);
+    // Documented contract: the quotient is a double, so it is rounded before flooring and
+    // can land one above the true floor. Exact big-magnitude `//` is deliberately not pinned.
+    expect(jmespath.search({}, '`100000000000000000` // `7`')).toBe(14285714285714286);
   });
 
   it('raises not-a-number error when arithmetic overflows', () => {
