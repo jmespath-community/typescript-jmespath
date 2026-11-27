@@ -319,6 +319,30 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.search({}, "replace('😀ab', '', 'x', `1`)")).toEqual('😀xab');
   });
 
+  it('sort() ranks a prefix below the longer string it prefixes', () => {
+    // Code-point comparison must fall back to length when one string is exhausted.
+    // A comparator that stops as soon as both cursors advance equally ties these.
+    const given = { a: ['a𐀀b', 'a', '\\back', '𐀀b̃c'] };
+    expect(jmespath.search(given, 'sort(a)')).toEqual(['\\back', 'a', 'a𐀀b', '𐀀b̃c']);
+    expect(jmespath.search({ a: ['a', 'a𐀀b'] }, 'max(a)')).toBe('a𐀀b');
+    expect(jmespath.search({ a: ['a𐀀b', 'a'] }, 'min(a)')).toBe('a');
+    // U+10000 sorts above 'b' (U+0062): a UTF-16 code-unit comparator would emit the
+    // leading surrogate 0xD800 first and invert this.
+    expect(jmespath.search({ a: ['𐀀', 'b'] }, 'sort(a)')).toEqual(['b', '𐀀']);
+  });
+
+  it('string slices and finds address code points, not UTF-16 units', () => {
+    const given = { s: '😀abc😀' };
+    expect(jmespath.search(given, 's[1:3]')).toBe('ab');
+    expect(jmespath.search(given, 's[0:1]')).toBe('😀');
+    expect(jmespath.search(given, 's[4:]')).toBe('😀');
+    expect(jmespath.search(given, 's[:0]')).toBe('');
+    expect(jmespath.search(given, 's[::-1]')).toBe('😀cba😀');
+    expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_first(s, '𐀀')")).toBe(1);
+    expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_last(s, '𐀀')")).toBe(3);
+    expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_first(s, '𐀀𐀀')")).toBeNull();
+  });
+
   it('find_first() and find_last() handle negative slice bounds and codepoints correctly', () => {
     expect(jmespath.search({ s: 'subject string' }, "find_first(s, 's', `-6`)")).toBe(8);
     expect(jmespath.search({ s: 'subject string' }, "find_first(s, 's', `-3`)")).toBeNull();

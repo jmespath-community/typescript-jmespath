@@ -2,7 +2,18 @@ import type { ExpressionNode } from './AST.type';
 import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
 import { exprefObjects, exprefScopes, strictDeepEqual } from './utils';
-import { findFirst, findLast, padLeft, padRight, replace, split, trim, trimLeft, trimRight } from './utils/strings';
+import {
+  countCodePoints,
+  findFirst,
+  findLast,
+  padLeft,
+  padRight,
+  replace,
+  split,
+  trim,
+  trimLeft,
+  trimRight,
+} from './utils/strings';
 import { Text } from './utils/text';
 
 export enum InputArgument {
@@ -224,7 +235,11 @@ export class Runtime implements FunctionRegistry {
       join: { _func: ([sep, arr]) => (arr as string[]).join(sep as string), _signature: s(STR, ARR_STR) },
       length: {
         _func: ([v]) =>
-          typeof v === 'string' ? [...v].length : Array.isArray(v) ? v.length : Object.keys(v as JSONObject).length,
+          typeof v === 'string'
+            ? countCodePoints(v)
+            : Array.isArray(v)
+              ? v.length
+              : Object.keys(v as JSONObject).length,
         _signature: s([STR, ARR, OBJ]),
       },
       map: { _func: this.functionMap, _signature: s(EXP, ARR) },
