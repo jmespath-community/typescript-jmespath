@@ -6,18 +6,41 @@ const isLowSurrogate = (unit: number): boolean => unit >= 0xdc00 && unit <= 0xdf
 const isHighSurrogate = (unit: number): boolean => unit >= 0xd800 && unit <= 0xdbff;
 
 /** UTF-16 units occupied by the code point starting at `i`. */
-export const codePointWidth = (subject: string, i: number): number =>
+const codePointWidth = (subject: string, i: number): number =>
   isHighSurrogate(subject.charCodeAt(i)) && isLowSurrogate(subject.charCodeAt(i + 1)) ? 2 : 1;
 
 /** Code-point count of `subject`, without materialising an array of code points. */
-export const countCodePoints = (subject: string): number => {
+export const countCodePoints = (subject: string, limit = subject.length): number => {
   let count = 0;
-  for (let i = 0; i < subject.length; i++) {
+  const end = Math.min(limit, subject.length);
+  for (let i = 0; i < end; i++) {
     if (!isLowSurrogate(subject.charCodeAt(i))) {
       count++;
     }
   }
   return count;
+};
+
+/**
+ * True when `subject` holds no unpaired surrogate. Local equivalent of
+ * `String.prototype.isWellFormed`, which the ES2022 lib target does not declare.
+ */
+const isWellFormed = (subject: string): boolean => {
+  for (let i = 0; i < subject.length; i++) {
+    const unit = subject.charCodeAt(i);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      // `next` is NaN at the end of the string, so the range test must be written
+      // positively: `next < 0xdc00 || next > 0xdfff` would accept NaN.
+      const next = subject.charCodeAt(i + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) {
+        return false;
+      }
+      i++;
+    } else if (isLowSurrogate(unit)) {
+      return false;
+    }
+  }
+  return true;
 };
 
 /** UTF-16 offset of the `index`th code point, clamped to `subject.length`. */
@@ -44,10 +67,9 @@ export const sliceCodePoints = (subject: string, total: number, start: number, s
     const to = stop >= total ? subject.length : codePointOffset(subject, stop);
     return to > from ? subject.substring(from, to) : '';
   }
-  const points: string[] = [];
-  for (const point of subject) {
-    points.push(point);
-  }
+  // Non-unit steps need the whole sequence, so let the engine build it: the
+  // iterator spread beats a manual push loop.
+  const points = [...subject];
   const len = Math.max(0, Math.ceil((stop - start) / step));
   const result: string[] = new Array(len);
   let idx = 0;
@@ -80,6 +102,12 @@ const find = (fromEnd: boolean, subject: string, sub: string, start?: number, en
     return null;
   }
   const needle = countCodePoints(sub);
+  // A well-formed needle can never match across a code-point boundary, so the engine's
+  // own search is exact here; only the offset has to move into code-point units.
+  if (start === undefined && end === undefined && isWellFormed(sub)) {
+    const units = fromEnd ? subject.lastIndexOf(sub) : subject.indexOf(sub);
+    return units === -1 ? null : countCodePoints(subject, units);
+  }
   const [s, e] = normalizeBounds(countCodePoints(subject), start, end);
   const last = e - needle;
   if (last < s) {

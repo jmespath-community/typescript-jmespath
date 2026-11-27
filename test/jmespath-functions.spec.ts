@@ -341,6 +341,18 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_first(s, '𐀀')")).toBe(1);
     expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_last(s, '𐀀')")).toBe(3);
     expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_first(s, '𐀀𐀀')")).toBeNull();
+    // Unpaired surrogates keep the code-point view: the first unit alone is one code point.
+    expect(jmespath.search({ s: '\uD800𐀀' }, "find_first(s, '𐀀')")).toBe(1);
+    expect(jmespath.search({ s: '\uD800a' }, "find_first(s, '\uD800')")).toBe(0);
+    expect(jmespath.search({ s: '𐀀𐀀' }, "find_first(s, '𐀀𐀀')")).toBe(0);
+  });
+
+  it('sort() ranks astral code points above U+FFFD and U+FFFF', () => {
+    // U+10000 encodes as a leading surrogate 0xD800, so a UTF-16 code-unit comparison
+    // (a < b) would rank it below these BMP code points instead of above them.
+    expect(jmespath.search({ a: ['𐀀', '\uFFFD'] }, 'sort(a)')).toEqual(['\uFFFD', '𐀀']);
+    expect(jmespath.search({ a: ['\uFFFF', '𐿿'] }, 'sort(a)')).toEqual(['\uFFFF', '𐿿']);
+    expect(jmespath.search({ a: ['𐀀', '￿'] }, 'max(a)')).toBe('𐀀');
   });
 
   it('find_first() and find_last() handle negative slice bounds and codepoints correctly', () => {
