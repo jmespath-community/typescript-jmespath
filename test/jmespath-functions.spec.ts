@@ -151,6 +151,28 @@ describe('Evaluates functions', () => {
     expect(jmespath.search('hello', "pad_right(@, `5`, '-')")).toEqual('hello');
     expect(jmespath.search('hello', "pad_right(@, `3`, '-')")).toEqual('hello');
   });
+  it('reports the pad width ceiling as a resource limit, not a JEP-14 violation', () => {
+    expect(jmespath.search('x', 'pad_left(@, `1000000`)')).toHaveLength(1_000_000);
+    expect(jmespath.search('x', 'pad_right(@, `1000000`)')).toHaveLength(1_000_000);
+    expect(() => jmespath.search('x', 'pad_left(@, `1000001`)')).toThrow(
+      'invalid-value: pad_left() width 1000001 exceeds maximum allowed width of 1000000 (resource limit)',
+    );
+    expect(() => jmespath.search('x', 'pad_right(@, `1000001`)')).toThrow(
+      /pad_right\(\) width 1000001 exceeds maximum allowed width of 1000000 \(resource limit\)$/,
+    );
+    // The guard sits before `padding.repeat()`, so a width that could never be allocated is
+    // refused as the limit rather than dying in allocation.
+    expect(() => jmespath.search('x', 'pad_left(@, `9007199254740991`)')).toThrow(/resource limit/);
+    // JEP-14's own conditions for `width` keep failing with the error they had before.
+    expect(() => jmespath.search('x', 'pad_left(@, `-1`)')).toThrow('invalid-value: expecting a non-negative integer.');
+    expect(() => jmespath.search('x', 'pad_left(@, `2.5`)')).toThrow(
+      'invalid-value: expecting a non-negative integer.',
+    );
+    // A tighter maxOutputSize still wins, with its own message.
+    expect(() => jmespath.search('x', 'pad_left(@, `1000001`)', { maxOutputSize: 10 })).toThrow(
+      'Output size exceeds maximum allowed size of 10',
+    );
+  });
   it('to_number() conforms strictly to JSON number grammar', () => {
     // Non-JSON numbers return null
     expect(jmespath.search('', 'to_number(@)')).toBeNull();

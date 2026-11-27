@@ -166,6 +166,16 @@ search(data, expression, {
 
 `maxDepth`, `maxNodes` and `maxOutputSize` must be non-negative integers. `search()`, `compile()` and `searchStream()` raise a `RangeError` naming the option for any other value, instead of treating it as no limit.
 
+#### Built-in function limits
+
+A few built-ins cap their own arguments. These ceilings are guardrails of this implementation rather than rules of the spec, so they are raised as `invalid-value` with a `resource limit` label:
+
+| Function | Limit | Error above the limit |
+| --- | --- | --- |
+| `pad_left()`, `pad_right()` | `width` up to 1,000,000 code points | `invalid-value: pad_left() width 2000000 exceeds maximum allowed width of 1000000 (resource limit)` |
+
+JEP-14's own rules for `width` — it must be an integer, and not negative — keep failing with `invalid-value: expecting a non-negative integer.` The `maxOutputSize` option applies on top of the ceiling: when it is set and tighter, the padded result fails with the output-size error first.
+
 ### `searchStream<T = JSONValue, D = unknown>(source: StreamSource<D>, expression: string | ExpressionNode, options?: StreamOptions): AsyncGenerator<T, void, unknown>`
 
 Evaluates a JMESPath expression incrementally over an `AsyncIterable`, `ReadableStream`, or Node.js `stream.Readable`, yielding matching results without buffering large datasets in memory:

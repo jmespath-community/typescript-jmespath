@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevented input `{expref: ...}` objects from being treated as expression references and guarded built-in function lookups against `Object.prototype` keys ([`#193`](https://github.com/jmespath-community/typescript-jmespath/pull/193)).
   - Used deep equality in `contains()` for array elements and replaced spread arguments in `max()` / `min()` with a loop to avoid stack overflows ([`#196`](https://github.com/jmespath-community/typescript-jmespath/pull/196)).
   - Rejected non-finite integers in `ensureInteger()` / `ensurePositiveInteger()` and bounded `pad_left()` / `pad_right()` width before allocation ([`#199`](https://github.com/jmespath-community/typescript-jmespath/pull/199)).
+  - Labelled the `pad_left()` / `pad_right()` width ceiling as a `resource limit`, keeping the `invalid-value` name, so an implementation guardrail is distinguishable from a query the spec rejects ([`#231`](https://github.com/jmespath-community/typescript-jmespath/pull/231)).
   - Captured `let` lexical scopes in `ExpressionReference` values and returned `null` for overflowing `to_number()` inputs ([`#210`](https://github.com/jmespath-community/typescript-jmespath/pull/210)).
   - Returned code point offsets from `find_first()` / `find_last()` when `sub` is half of a surrogate pair ([`#184`](https://github.com/jmespath-community/typescript-jmespath/pull/184)).
   - Padded empty subjects in `pad_left()` / `pad_right()` to the requested width per JEP-14 ([`#185`](https://github.com/jmespath-community/typescript-jmespath/pull/185)).
@@ -40,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clarified that `searchStream` `limit` only terminates streamable expressions early ([`#186`](https://github.com/jmespath-community/typescript-jmespath/pull/186)).
 - Corrected the 1.5.0 entry for zero-argument `merge()`, which returns `{}` ([`#186`](https://github.com/jmespath-community/typescript-jmespath/pull/186)).
 - Fixed the README ternary truthiness example (`0` is truthy) and added `{ override: true }` to the second `divide` registration sample ([`#198`](https://github.com/jmespath-community/typescript-jmespath/pull/198)).
+- Documented the `pad_left()` / `pad_right()` 1,000,000 width ceiling and its interaction with `maxOutputSize` in a Built-in function limits table ([`#231`](https://github.com/jmespath-community/typescript-jmespath/pull/231)).
 
 ## [1.5.1] - 2026-11-20
 
