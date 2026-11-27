@@ -19,6 +19,7 @@ import {
   strictDeepEqual,
   sub,
 } from './utils';
+import { codePointWindow, countCodePoints, sliceCodePoints } from './utils/strings';
 
 const emptyScopeChain = new ScopeChain();
 
@@ -256,12 +257,9 @@ export class TreeInterpreter {
         if (!Array.isArray(value) && typeof value !== 'string') {
           return null;
         }
-        const target = typeof value === 'string' ? [...value] : value;
-        const { start, stop, step } = this.computeSliceParams(target.length, node);
-        const sliced = this.slice(target, start, stop, step);
-        const res = typeof value === 'string' ? (sliced as string[]).join('') : sliced;
-        this.checkOutputSize(res);
-        return res;
+        // Kept out of visit() so the recursion frame stays as small as possible:
+        // visit() recurses once per AST level up to maxDepth.
+        return this.sliceValue(value, node);
       }
       case 'Projection': {
         const { left, right } = node;
@@ -513,6 +511,29 @@ export class TreeInterpreter {
       nextActualValue = step < 0 ? arrayLength - 1 : arrayLength;
     }
     return nextActualValue;
+  }
+
+  sliceValue(value: JSONArray | string, node: SliceNode): JSONArray | string {
+    if (typeof value === 'string') {
+      const { start, stop, step } = node;
+      // `[a:b]` with a positive step only ever touches the requested window, so the
+      // code-point total is not needed: walking to the two bounds keeps this O(window).
+      if ((step === null || step === 1) && (start === null || start >= 0) && (stop === null || stop >= 0)) {
+        const [from, to] = codePointWindow(value, start ?? 0, stop);
+        const window = to > from ? value.substring(from, to) : '';
+        this.checkOutputSize(window);
+        return window;
+      }
+      const total = countCodePoints(value);
+      const range = this.computeSliceParams(total, node);
+      const sliced = sliceCodePoints(value, total, range.start, range.stop, range.step);
+      this.checkOutputSize(sliced);
+      return sliced;
+    }
+    const range = this.computeSliceParams(value.length, node);
+    const sliced = this.slice(value, range.start, range.stop, range.step);
+    this.checkOutputSize(sliced);
+    return sliced;
   }
 
   slice(collection: JSONArray, start: number, end: number, step: number): JSONArray {

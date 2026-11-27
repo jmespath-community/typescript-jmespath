@@ -1,5 +1,126 @@
 import { ensureInteger, ensurePositiveInteger } from '.';
 
+/** True when the UTF-16 unit at `i` continues the code point started at `i - 1`. */
+const isLowSurrogate = (unit: number): boolean => unit >= 0xdc00 && unit <= 0xdfff;
+
+const isHighSurrogate = (unit: number): boolean => unit >= 0xd800 && unit <= 0xdbff;
+
+/** UTF-16 units occupied by the code point starting at `i`. */
+const codePointWidth = (subject: string, i: number): number =>
+  isHighSurrogate(subject.charCodeAt(i)) && isLowSurrogate(subject.charCodeAt(i + 1)) ? 2 : 1;
+
+/** Code-point count of `subject`, without materialising an array of code points. */
+export const countCodePoints = (subject: string, limit = subject.length): number => {
+  let count = 0;
+  const end = Math.min(limit, subject.length);
+  // Only a low surrogate that follows a high one continues a pair; an unpaired
+  // 0xDC00-0xDFFF unit counts as one code point, exactly as `[...subject]` does.
+  for (let i = 0; i < end; i++) {
+    const unit = subject.charCodeAt(i);
+    if (isHighSurrogate(unit) && (subject.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+      i++;
+    }
+    count++;
+  }
+  return count;
+};
+
+/**
+ * True when `subject` holds no unpaired surrogate. Local equivalent of
+ * `String.prototype.isWellFormed`, which the ES2022 lib target does not declare.
+ */
+const isWellFormed = (subject: string): boolean => {
+  for (let i = 0; i < subject.length; i++) {
+    const unit = subject.charCodeAt(i);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      // `next` is NaN at the end of the string, so the range test must be written
+      // positively: `next < 0xdc00 || next > 0xdfff` would accept NaN.
+      const next = subject.charCodeAt(i + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) {
+        return false;
+      }
+      i++;
+    } else if (isLowSurrogate(unit)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/** UTF-16 offset of the `index`th code point, clamped to `subject.length`. */
+export const codePointOffset = (subject: string, index: number): number => {
+  let count = 0;
+  for (let i = 0; i < subject.length; i++) {
+    if (count === index) {
+      return i;
+    }
+    const unit = subject.charCodeAt(i);
+    if (isHighSurrogate(unit) && (subject.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+      i++;
+    }
+    count++;
+  }
+  return subject.length;
+};
+
+/**
+ * UTF-16 offsets of the code-point window `[start, stop)` in a single walk.
+ * A `null` stop runs to the end of the string. Both indices are clamped.
+ */
+export const codePointWindow = (subject: string, start: number, stop: number | null): [number, number] => {
+  let from = -1;
+  let count = 0;
+  for (let i = 0; i < subject.length; i++) {
+    const unit = subject.charCodeAt(i);
+    if (count === start) {
+      from = i;
+      if (stop === null) {
+        return [i, subject.length];
+      }
+      if (stop <= start) {
+        return [i, i];
+      }
+    }
+    if (stop !== null && count === stop) {
+      return [from === -1 ? i : from, i];
+    }
+    if (isHighSurrogate(unit) && (subject.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
+      i++;
+    }
+    count++;
+  }
+  const end = subject.length;
+  return [from === -1 ? end : from, end];
+};
+
+/**
+ * Slice `subject` by code-point indices, matching the spec's string-slice semantics
+ * in O(window) rather than O(length) for the usual `step === 1` case.
+ */
+export const sliceCodePoints = (subject: string, total: number, start: number, stop: number, step: number): string => {
+  if (step === 1) {
+    const from = codePointOffset(subject, start);
+    const to = stop >= total ? subject.length : codePointOffset(subject, stop);
+    return to > from ? subject.substring(from, to) : '';
+  }
+  // Non-unit steps need the whole sequence, so let the engine build it: the
+  // iterator spread beats a manual push loop.
+  const points = [...subject];
+  const len = Math.max(0, Math.ceil((stop - start) / step));
+  const result: string[] = new Array(len);
+  let idx = 0;
+  if (step > 0) {
+    for (let i = start; i < stop; i += step) {
+      result[idx++] = points[i];
+    }
+  } else {
+    for (let i = start; i > stop; i += step) {
+      result[idx++] = points[i];
+    }
+  }
+  return result.join('');
+};
+
 const normalizeBounds = (len: number, start?: number, end?: number): [number, number] => {
   let s = ensureInteger(start ?? 0);
   if (s < 0) {
@@ -12,24 +133,48 @@ const normalizeBounds = (len: number, start?: number, end?: number): [number, nu
   return [s, Math.min(len, e)];
 };
 
-const indexOfCodePoints = (haystack: string[], needle: string[], fromEnd: boolean): number => {
-  const last = haystack.length - needle.length;
-  for (let i = fromEnd ? last : 0; fromEnd ? i >= 0 : i <= last; i += fromEnd ? -1 : 1) {
-    if (needle.every((c, j) => haystack[i + j] === c)) {
-      return i;
-    }
-  }
-  return -1;
-};
-
 const find = (fromEnd: boolean, subject: string, sub: string, start?: number, end?: number): number | null => {
   if (!subject || !sub) {
     return null;
   }
-  const chars = [...subject];
-  const [s, e] = normalizeBounds(chars.length, start, end);
-  const idx = indexOfCodePoints(chars.slice(s, e), [...sub], fromEnd);
-  return idx === -1 ? null : idx + s;
+  const needle = countCodePoints(sub);
+  // A well-formed needle can never match across a code-point boundary, so the engine's
+  // own search is exact here; only the offset has to move into code-point units.
+  if (start === undefined && end === undefined && isWellFormed(sub)) {
+    const units = fromEnd ? subject.lastIndexOf(sub) : subject.indexOf(sub);
+    return units === -1 ? null : countCodePoints(subject, units);
+  }
+  const [s, e] = normalizeBounds(countCodePoints(subject), start, end);
+  const last = e - needle;
+  if (last < s) {
+    return null;
+  }
+  // Compare code points through UTF-16 offsets so no code-point array is built.
+  const matchAt = (offset: number): boolean => {
+    let i = offset;
+    let j = 0;
+    while (j < sub.length) {
+      const width = codePointWidth(sub, j);
+      if (subject.codePointAt(i) !== sub.codePointAt(j)) {
+        return false;
+      }
+      i += width;
+      j += width;
+    }
+    return true;
+  };
+  let found = -1;
+  let offset = codePointOffset(subject, s);
+  for (let point = s; point <= last; point++) {
+    if (matchAt(offset)) {
+      if (!fromEnd) {
+        return point;
+      }
+      found = point;
+    }
+    offset += codePointWidth(subject, offset);
+  }
+  return found === -1 ? null : found;
 };
 
 export const findFirst = (subject: string, sub: string, start?: number, end?: number): number | null =>
@@ -43,13 +188,13 @@ const MAX_PAD_WIDTH = 1_000_000;
 const createPad =
   (isLeft: boolean, name: string) =>
   (subject: string, width: number, padding = ' ', maxOutputSize?: number): string => {
-    if ([...padding].length !== 1) {
+    if (countCodePoints(padding) !== 1) {
       throw new Error(
         `invalid value, ${name} expects its 'pad' parameter to be a valid string with a single codepoint`,
       );
     }
     ensurePositiveInteger(width);
-    const padLen = width - [...subject].length;
+    const padLen = width - countCodePoints(subject);
     if (padLen <= 0) {
       return subject;
     }
@@ -100,19 +245,31 @@ export const split = (subject: string, search: string, count?: number): string[]
 
 const isWhiteSpace = (ch: string): boolean => /^\p{White_Space}$/u.test(ch);
 
+/** UTF-16 units occupied by the code point ending at `end`. */
+const codePointWidthBefore = (subject: string, end: number): number =>
+  isLowSurrogate(subject.charCodeAt(end - 1)) && isHighSurrogate(subject.charCodeAt(end - 2)) ? 2 : 1;
+
 const trimImpl = (subject: string, left: boolean, right: boolean, chars?: string): string => {
   const set = chars ? new Set(chars) : null;
   const matches = (ch: string): boolean => (set ? set.has(ch) : isWhiteSpace(ch));
-  const points = [...subject];
+  // Trim by code point over UTF-16 offsets: only the trimmed edges are materialised.
   let start = 0;
-  let end = points.length;
-  while (left && start < end && matches(points[start])) {
-    start++;
+  let end = subject.length;
+  while (left && start < end) {
+    const width = codePointWidth(subject, start);
+    if (!matches(subject.slice(start, start + width))) {
+      break;
+    }
+    start += width;
   }
-  while (right && end > start && matches(points[end - 1])) {
-    end--;
+  while (right && end > start) {
+    const width = codePointWidthBefore(subject, end);
+    if (!matches(subject.slice(end - width, end))) {
+      break;
+    }
+    end -= width;
   }
-  return points.slice(start, end).join('');
+  return start === 0 && end === subject.length ? subject : subject.substring(start, end);
 };
 
 export const trimLeft = (subject: string, chars?: string): string => trimImpl(subject, true, false, chars);

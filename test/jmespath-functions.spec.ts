@@ -319,6 +319,54 @@ describe('Type-checks function arguments', () => {
     expect(jmespath.search({}, "replace('😀ab', '', 'x', `1`)")).toEqual('😀xab');
   });
 
+  it('sort() ranks a prefix below the longer string it prefixes', () => {
+    // Code-point comparison must fall back to length when one string is exhausted.
+    // A comparator that stops as soon as both cursors advance equally ties these.
+    const given = { a: ['a𐀀b', 'a', '\\back', '𐀀b̃c'] };
+    expect(jmespath.search(given, 'sort(a)')).toEqual(['\\back', 'a', 'a𐀀b', '𐀀b̃c']);
+    expect(jmespath.search({ a: ['a', 'a𐀀b'] }, 'max(a)')).toBe('a𐀀b');
+    expect(jmespath.search({ a: ['a𐀀b', 'a'] }, 'min(a)')).toBe('a');
+    // U+10000 sorts above 'b' (U+0062): a UTF-16 code-unit comparator would emit the
+    // leading surrogate 0xD800 first and invert this.
+    expect(jmespath.search({ a: ['𐀀', 'b'] }, 'sort(a)')).toEqual(['b', '𐀀']);
+  });
+
+  it('string slices and finds address code points, not UTF-16 units', () => {
+    const given = { s: '😀abc😀' };
+    expect(jmespath.search(given, 's[1:3]')).toBe('ab');
+    expect(jmespath.search(given, 's[0:1]')).toBe('😀');
+    expect(jmespath.search(given, 's[4:]')).toBe('😀');
+    expect(jmespath.search(given, 's[:0]')).toBe('');
+    expect(jmespath.search(given, 's[::-1]')).toBe('😀cba😀');
+    expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_first(s, '𐀀')")).toBe(1);
+    expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_last(s, '𐀀')")).toBe(3);
+    expect(jmespath.search({ s: 'a𐀀b𐀀' }, "find_first(s, '𐀀𐀀')")).toBeNull();
+    // Unpaired surrogates keep the code-point view: the first unit alone is one code point.
+    expect(jmespath.search({ s: '\uD800𐀀' }, "find_first(s, '𐀀')")).toBe(1);
+    expect(jmespath.search({ s: '\uD800a' }, "find_first(s, '\uD800')")).toBe(0);
+    expect(jmespath.search({ s: '𐀀𐀀' }, "find_first(s, '𐀀𐀀')")).toBe(0);
+  });
+
+  it('lone low surrogates count as one code point', () => {
+    // The string iterator yields an unpaired 0xDC00-0xDFFF unit on its own, so
+    // code-point indexing must count it rather than treat it as a continuation.
+    expect(jmespath.search('\uDC00', 'length(@)')).toBe(1);
+    expect(jmespath.search({ s: '\uDC00a' }, 's[0:1]')).toBe('\uDC00');
+    expect(jmespath.search({ s: 'a\uDC00b' }, 's[::-1]')).toBe('b\uDC00a');
+    expect(jmespath.search({ s: '\uDC00a' }, "find_first(s, 'a')")).toBe(1);
+    expect(jmespath.search({ s: '\uDC00a' }, "find_last(s, '\uDC00')")).toBe(0);
+    expect(jmespath.search({ s: '\uDC00' }, "pad_left(s, `1`, 'x')")).toBe('\uDC00');
+    expect(jmespath.search({ s: '\uDC00ab' }, "find_last(s, 'b')")).toBe(2);
+  });
+
+  it('sort() ranks astral code points above U+FFFD and U+FFFF', () => {
+    // U+10000 encodes as a leading surrogate 0xD800, so a UTF-16 code-unit comparison
+    // (a < b) would rank it below these BMP code points instead of above them.
+    expect(jmespath.search({ a: ['𐀀', '\uFFFD'] }, 'sort(a)')).toEqual(['\uFFFD', '𐀀']);
+    expect(jmespath.search({ a: ['\uFFFF', '𐿿'] }, 'sort(a)')).toEqual(['\uFFFF', '𐿿']);
+    expect(jmespath.search({ a: ['𐀀', '￿'] }, 'max(a)')).toBe('𐀀');
+  });
+
   it('find_first() and find_last() handle negative slice bounds and codepoints correctly', () => {
     expect(jmespath.search({ s: 'subject string' }, "find_first(s, 's', `-6`)")).toBe(8);
     expect(jmespath.search({ s: 'subject string' }, "find_first(s, 's', `-3`)")).toBeNull();
