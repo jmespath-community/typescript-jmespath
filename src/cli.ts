@@ -2,6 +2,7 @@
 
 import * as fs from 'node:fs';
 import { Readable } from 'node:stream';
+import { fileURLToPath } from 'node:url';
 import { ParseArgsConfig, parseArgs } from 'node:util';
 import pkg from '../package.json';
 import jmespath from './index';
@@ -92,7 +93,22 @@ export function runCli(io: CliIO = {}): void {
   }
 }
 
-if (!process.env.VITEST || /cli\.(ts|mjs|cjs)$/.test(process.argv[1] ?? '')) {
+function isMainEntry(): boolean {
+  if (typeof require !== 'undefined' && typeof module !== 'undefined') {
+    return require.main === module;
+  }
+  const entry = process.argv[1];
+  if (!entry) {
+    return false;
+  }
+  try {
+    return fs.realpathSync(entry) === fs.realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isMainEntry()) {
   runCli();
 }
 

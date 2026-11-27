@@ -64,6 +64,20 @@ describe('Packed browser consumers', () => {
     expectSearch(consumerDir, source);
   });
 
+  it('supports importing the ./cli subpath without executing the CLI', () => {
+    const out = execSync(
+      `${JSON.stringify(process.execPath)} -e "import('${packageName}/cli').then((m) => console.log(typeof m.runCli))"`,
+      { cwd: consumerDir, encoding: 'utf8' },
+    );
+    expect(out.trim()).toBe('function');
+
+    const cjsOut = execSync(
+      `${JSON.stringify(process.execPath)} -e "const m = require('${packageName}/cli'); console.log(typeof m.runCli)"`,
+      { cwd: consumerDir, encoding: 'utf8' },
+    );
+    expect(cjsOut.trim()).toBe('function');
+  });
+
   it('supports the legacy browser field', () => {
     const legacyDir = join(tempDir, 'legacy');
     cpSync(consumerDir, legacyDir, { recursive: true });
