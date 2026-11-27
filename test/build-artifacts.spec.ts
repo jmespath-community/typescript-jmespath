@@ -1,5 +1,6 @@
 import { execFileSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'fs';
+import { tmpdir } from 'os';
 import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 
@@ -194,6 +195,31 @@ describe('Build Artifacts', () => {
       expect(result).toContain('jp - jp [<options>] <expression>');
       expect(result).toContain('OPTIONS:');
     });
+
+    it('should execute when invoked through a symlink like bin/jp', () => {
+      const binPath = join(DIST_DIR, 'cli.mjs');
+      const linkDir = mkdtempSync(join(tmpdir(), 'jmespath-cli-link-'));
+      try {
+        const linkPath = join(linkDir, 'jp');
+        symlinkSync(binPath, linkPath);
+        const result = execFileSync(process.execPath, [linkPath, 'foo.bar'], {
+          input: '{"foo":{"bar":"baz"}}',
+          encoding: 'utf-8',
+          cwd: process.cwd(),
+        });
+        expect(result.trim()).toBe('"baz"');
+      } finally {
+        rmSync(linkDir, { recursive: true, force: true });
+      }
+    });
+
+    it('should export runCli without side effects when imported or required', async () => {
+      const esmCli = await import(join(DIST_DIR, 'cli.mjs'));
+      expect(typeof esmCli.runCli).toBe('function');
+
+      const cjsCli = require(join(DIST_DIR, 'cli.cjs'));
+      expect(typeof cjsCli.runCli).toBe('function');
+    });
   });
 
   describe('Package.json Configuration', () => {
@@ -256,8 +282,11 @@ describe('Build Artifacts', () => {
       expect(pkg.exports['./stream'].import).toEqual({ types: './dist/stream.d.ts', default: './dist/stream.mjs' });
       expect(pkg.exports['./stream'].require).toEqual({ types: './dist/stream.d.cts', default: './dist/stream.cjs' });
 
-      // CLI should not be exposed as a subpath export (side-effecting bin entry only)
-      expect(pkg.exports['./cli']).toBeUndefined();
+      // Check CLI export
+      expect(pkg.exports['./cli']).toEqual({
+        import: { types: './dist/cli.d.ts', default: './dist/cli.mjs' },
+        require: { types: './dist/cli.d.cts', default: './dist/cli.cjs' },
+      });
     });
   });
 });
