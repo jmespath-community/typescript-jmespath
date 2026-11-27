@@ -32,7 +32,7 @@ export const countCodePoints = (subject: string, limit = subject.length): number
 const isWellFormed = (subject: string): boolean => {
   for (let i = 0; i < subject.length; i++) {
     const unit = subject.charCodeAt(i);
-    if (unit >= 0xd800 && unit <= 0xdbff) {
+    if (isHighSurrogate(unit)) {
       // `next` is NaN at the end of the string, so the range test must be written
       // positively: `next < 0xdc00 || next > 0xdfff` would accept NaN.
       const next = subject.charCodeAt(i + 1);
@@ -45,22 +45,6 @@ const isWellFormed = (subject: string): boolean => {
     }
   }
   return true;
-};
-
-/** UTF-16 offset of the `index`th code point, clamped to `subject.length`. */
-export const codePointOffset = (subject: string, index: number): number => {
-  let count = 0;
-  for (let i = 0; i < subject.length; i++) {
-    if (count === index) {
-      return i;
-    }
-    const unit = subject.charCodeAt(i);
-    if (isHighSurrogate(unit) && (subject.charCodeAt(i + 1) & 0xfc00) === 0xdc00) {
-      i++;
-    }
-    count++;
-  }
-  return subject.length;
 };
 
 /**
@@ -99,8 +83,7 @@ export const codePointWindow = (subject: string, start: number, stop: number | n
  */
 export const sliceCodePoints = (subject: string, total: number, start: number, stop: number, step: number): string => {
   if (step === 1) {
-    const from = codePointOffset(subject, start);
-    const to = stop >= total ? subject.length : codePointOffset(subject, stop);
+    const [from, to] = codePointWindow(subject, start, stop >= total ? null : stop);
     return to > from ? subject.substring(from, to) : '';
   }
   // Non-unit steps need the whole sequence, so let the engine build it: the
@@ -223,7 +206,7 @@ const find = (fromEnd: boolean, subject: string, sub: string, start?: number, en
     return true;
   };
   let found = -1;
-  let offset = codePointOffset(subject, s);
+  let offset = codePointWindow(subject, s, null)[0];
   for (let point = s; point <= last; point++) {
     if (matchAt(offset)) {
       if (!fromEnd) {
