@@ -785,5 +785,28 @@ describe('searchStream', () => {
         'Evaluation exceeds maximum allowed depth of 5',
       );
     });
+
+    it('rejects guardrail options that are not usable counters', async () => {
+      const ast = jmespath.compile('[*].a');
+      // Infinity switched the output cap off, NaN switched the pre-parsed AST node cap off.
+      for (const options of [{ maxOutputSize: Infinity }, { maxNodes: NaN }] as never[]) {
+        const source = createAsyncGenerator([{ a: 1 }, { a: 2 }, { a: 3 }]);
+        await expect(collectStream(searchStream(source, ast, options))).rejects.toThrow(RangeError);
+        await expect(collectStream(searchStream(source, ast, options))).rejects.toThrow(
+          /^(maxDepth|maxNodes|maxOutputSize) must be a non-negative integer$/,
+        );
+      }
+      await expect(
+        collectStream(searchStream(createAsyncGenerator([{ a: 1 }]), ast, { maxOutputSize: 2 })),
+      ).resolves.toEqual([1]);
+    });
+
+    it('treats a missing options object as unset', async () => {
+      const ast = jmespath.compile('[*].a');
+      for (const options of [undefined, null] as never[]) {
+        const items = await collectStream(searchStream(createAsyncGenerator([{ a: 1 }]), ast, options));
+        expect(items).toEqual([1]);
+      }
+    });
   });
 });

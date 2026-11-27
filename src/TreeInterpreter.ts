@@ -1,6 +1,7 @@
 import type { ExpressionNode, ExpressionReference, SliceNode } from './AST.type';
 import type { JSONArray, JSONObject, JSONValue } from './JSON.type';
 import { Token } from './Lexer.type';
+import { validateGuardrailOptions } from './options';
 import { DEFAULT_MAX_DEPTH } from './Parser';
 import { Options, ScopeEntry } from './Parser.type';
 import { Runtime } from './Runtime';
@@ -46,6 +47,7 @@ export class TreeInterpreter {
   }
 
   constructor(options?: Options) {
+    validateGuardrailOptions(options);
     this.runtime = new Runtime(this);
     this._scope = new ScopeChain();
     this._maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
@@ -68,6 +70,7 @@ export class TreeInterpreter {
   }
 
   search(node: ExpressionNode, value: JSONValue, options?: Options): JSONValue {
+    validateGuardrailOptions(options);
     if (options?.maxNodes !== undefined && countNodes(node) > options.maxNodes) {
       throw new Error(`Expression exceeds maximum allowed node count of ${options.maxNodes}`);
     }

@@ -171,6 +171,52 @@ describe('Searches compiled ast', () => {
     expect(() => jmespath.search('abcdef', '[0:5]', { maxOutputSize: 3 })).toThrow(/output size/i);
   });
 
+  it('rejects guardrail options that are not usable counters', () => {
+    const deep = `[${'['.repeat(2000)}null${']'.repeat(2000)}]`;
+    const wide = Array.from({ length: 60 }, (_, i) => `a.f${i}`).join(' + ');
+    const doc = { a: Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`f${i}`, 1])) };
+    // Each value either switched a guard silently off ('20', NaN, Infinity, {}) or made
+    // it reject every query ([], null, -1, 1.5); both must fail loudly at the boundary.
+    const unusable: unknown[] = ['20', NaN, Infinity, -Infinity, {}, [], null, -1, 1.5, Number.MAX_SAFE_INTEGER + 1];
+
+    for (const value of unusable) {
+      // Both probes are needed: a capped query that must be rejected and a trivial query
+      // that must pass, so 'silently off' is not mistaken for a guard hit.
+      expect(() => jmespath.search(doc, wide, { maxNodes: value as never })).toThrow(RangeError);
+      expect(() => jmespath.search({ a: { f0: 1 } }, 'a.f0', { maxNodes: value as never })).toThrow(
+        /maxNodes must be a non-negative integer/,
+      );
+      expect(() => jmespath.search({}, deep, { maxDepth: value as never })).toThrow(RangeError);
+      expect(() => jmespath.search({ a: 1 }, 'a', { maxDepth: value as never })).toThrow(
+        /maxDepth must be a non-negative integer/,
+      );
+      expect(() => jmespath.search([{ a: 1 }, { a: 2 }], '[*].a', { maxOutputSize: value as never })).toThrow(
+        /maxOutputSize must be a non-negative integer/,
+      );
+    }
+
+    // Usable counters keep the guardrail messages and the defaults unchanged.
+    expect(() => jmespath.search(doc, wide, { maxNodes: 20 })).toThrow(/node count of 20/);
+    expect(() => jmespath.search({}, deep, { maxDepth: 20 })).toThrow(/depth of 20/);
+    expect(() => jmespath.search([{ a: 1 }, { a: 2 }], '[*].a', { maxOutputSize: 1 })).toThrow(/allowed size of 1/);
+    expect(jmespath.search(doc, wide, { maxNodes: 1000 })).toBe(60);
+    expect(() => jmespath.search({ a: 1 }, 'a', { maxDepth: 0 })).toThrow(/depth of 0/);
+    expect(() => jmespath.search({}, deep)).toThrow(/depth of 1000/);
+    expect(jmespath.validate('a.b.c', { maxDepth: NaN as never }).error).toMatch(
+      /maxDepth must be a non-negative integer/,
+    );
+  });
+
+  it('treats a missing options object as unset', () => {
+    // The boundary check must not turn 'no options' into an error for untyped callers.
+    for (const options of [undefined, null] as never[]) {
+      expect(jmespath.search({ a: 1 }, 'a', options)).toEqual(1);
+      expect(jmespath.compile('a.b', options)).toBeTypeOf('object');
+      expect(jmespath.validate('a.b', options).valid).toBe(true);
+    }
+    expect(jmespath.validate('a.b', null as never).error).toBeUndefined();
+  });
+
   it('validates expressions without throwing', () => {
     expect(jmespath.validate('foo.bar').valid).toBe(true);
     expect(jmespath.validate('foo.bar').ast?.type).toBe('Subexpression');

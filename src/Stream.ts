@@ -1,5 +1,6 @@
 import type { ExpressionNode } from './AST.type';
 import type { JSONValue } from './JSON.type';
+import { validateGuardrailOptions } from './options';
 import Parser, { DEFAULT_MAX_DEPTH } from './Parser';
 import type { Options } from './Parser.type';
 import { TreeInterpreter, TreeInterpreterInstance } from './TreeInterpreter';
@@ -612,6 +613,8 @@ export async function* searchStream<T = JSONValue, D = unknown>(
   if (typeof expression !== 'string' && !isExpressionNode(expression)) {
     throw new TypeError('Expression must be a string or AST ExpressionNode');
   }
+
+  validateGuardrailOptions(options);
 
   const ast: ExpressionNode = typeof expression === 'string' ? Parser.parse(expression, options) : expression;
 

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Stopped `consumeNumber` from consuming `-` as part of number digits ([`#197`](https://github.com/jmespath-community/typescript-jmespath/pull/197)).
   - Gave unary `+` / `-` higher precedence than multiplicative operators ([`#207`](https://github.com/jmespath-community/typescript-jmespath/pull/207)).
   - Accepted compiled `ExpressionNode` ASTs in `search()` ([`#201`](https://github.com/jmespath-community/typescript-jmespath/pull/201)), isolated re-entrant `search()` state, and enforced `allowedFunctions` / `disallowedFunctions` in `compileQuery()` and string `search()` ([`#208`](https://github.com/jmespath-community/typescript-jmespath/pull/208)).
+  - Validated `maxDepth` / `maxNodes` / `maxOutputSize` at the option boundary, rejecting values that are not non-negative integers with `RangeError` instead of silently disabling the guard ([`#228`](https://github.com/jmespath-community/typescript-jmespath/pull/228)).
 - **Runtime & Built-in Functions**:
   - Prevented input `{expref: ...}` objects from being treated as expression references and guarded built-in function lookups against `Object.prototype` keys ([`#193`](https://github.com/jmespath-community/typescript-jmespath/pull/193)).
   - Used deep equality in `contains()` for array elements and replaced spread arguments in `max()` / `min()` with a loop to avoid stack overflows ([`#196`](https://github.com/jmespath-community/typescript-jmespath/pull/196)).
