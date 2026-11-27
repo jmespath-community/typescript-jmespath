@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-27
+
 ### Fixed
 - **Streaming**:
   - Honored `parseJson: false` for `Uint8Array` chunks so binary and string chunks with the same payload yield the same raw item ([`#183`](https://github.com/jmespath-community/typescript-jmespath/pull/183)).
@@ -21,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Accepted compiled `ExpressionNode` ASTs in `search()` ([`#201`](https://github.com/jmespath-community/typescript-jmespath/pull/201)), isolated re-entrant `search()` state, and enforced `allowedFunctions` / `disallowedFunctions` in `compileQuery()` and string `search()` ([`#208`](https://github.com/jmespath-community/typescript-jmespath/pull/208)).
   - Validated `maxDepth` / `maxNodes` / `maxOutputSize` at the option boundary, rejecting values that are not non-negative integers with `RangeError` instead of silently disabling the guard ([`#228`](https://github.com/jmespath-community/typescript-jmespath/pull/228)).
   - Raised `not-a-number` for a non-finite arithmetic operand and for any non-finite result, so `Infinity`-tainted arithmetic (`%` / `-` / `/` / `* 0`, unary `+` / `-`, and a derived `NaN` in `sum()` / `avg()`) errors instead of reporting `null` like a legitimate result ([`#232`](https://github.com/jmespath-community/typescript-jmespath/pull/232)).
+  - Raised `not-a-number: arithmetic overflow` when binary arithmetic, `sum()`, or `avg()` overflows finite IEEE-754 range ([`#223`](https://github.com/jmespath-community/typescript-jmespath/pull/223)).
 - **Runtime & Built-in Functions**:
   - Prevented input `{expref: ...}` objects from being treated as expression references and guarded built-in function lookups against `Object.prototype` keys ([`#193`](https://github.com/jmespath-community/typescript-jmespath/pull/193)).
   - Used deep equality in `contains()` for array elements and replaced spread arguments in `max()` / `min()` with a loop to avoid stack overflows ([`#196`](https://github.com/jmespath-community/typescript-jmespath/pull/196)).
@@ -32,11 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Excluded U+FEFF from default `trim()` / `trim_left()` / `trim_right()` whitespace ([`#185`](https://github.com/jmespath-community/typescript-jmespath/pull/185)) and replaced regex-based trimming with a linear code-point scan ([`#191`](https://github.com/jmespath-community/typescript-jmespath/pull/191)).
 - **Packaging, Types & CLI**:
   - Removed `NodeJS.ReadableStream` from public `StreamSource` types so consumers without `@types/node` compile with `skipLibCheck: false` ([`#192`](https://github.com/jmespath-community/typescript-jmespath/pull/192)).
-  - Handled CLI errors cleanly on `stderr`, rejected extra positional arguments, and removed the side-effecting `./cli` package export ([`#195`](https://github.com/jmespath-community/typescript-jmespath/pull/195)).
+  - Handled CLI errors cleanly on `stderr`, rejected extra positional arguments, and kept `./cli` side-effect-free on import while exporting `runCli` ([`#195`](https://github.com/jmespath-community/typescript-jmespath/pull/195), [`#235`](https://github.com/jmespath-community/typescript-jmespath/pull/235)).
 
 ### Performance
 - Reused `Runtime` across `TreeInterpreter.withScope()` calls and skipped redundant per-call signature validation ([`#205`](https://github.com/jmespath-community/typescript-jmespath/pull/205)).
 - Fast-pathed primitive `contains()` lookups and avoided `exprefScopes` writes outside `let` scopes ([`#212`](https://github.com/jmespath-community/typescript-jmespath/pull/212)).
+- Traversed string code points via UTF-16 offsets instead of spreading arrays across `length()`, string slicing, trimming, `find_first()`, `find_last()`, and padding ([`#221`](https://github.com/jmespath-community/typescript-jmespath/pull/221)).
+- Routed bounded `find_first()` and `find_last()` on well-formed needles through native `indexOf()` / `lastIndexOf()` ([`#224`](https://github.com/jmespath-community/typescript-jmespath/pull/224)).
+- Deduplicated code-point offset helpers and consolidated `Stream.ts` item-mapping loops, trimming `~1.06 KB` minified from shipped browser bundles ([`#234`](https://github.com/jmespath-community/typescript-jmespath/pull/234)).
 
 ### Documentation
 - Clarified that `searchStream` `limit` only terminates streamable expressions early ([`#186`](https://github.com/jmespath-community/typescript-jmespath/pull/186)).
@@ -134,6 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Migrated linter and formatter to Biome ([#49](https://github.com/jmespath-community/typescript-jmespath/pull/49)).
 
+[1.6.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/jmespath-community/typescript-jmespath/compare/v1.4.0...v1.4.1
