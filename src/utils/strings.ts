@@ -133,17 +133,76 @@ const normalizeBounds = (len: number, start?: number, end?: number): [number, nu
   return [s, Math.min(len, e)];
 };
 
+/**
+ * Search with the engine's own matcher, converting only the offset a candidate lands
+ * on. A well-formed needle can never match across a code-point boundary, so a unit
+ * level match is a code-point match; only its offset has to move into code-point units.
+ *
+ * The bounds are validated up front but resolved lazily: a code-point index never
+ * exceeds the UTF-16 offset of the same position, so `start` is already a sound
+ * `indexOf` hint and the code-point walk is deferred until a candidate exists. A
+ * candidate outside the window means that hint was too loose — astral characters ahead
+ * of `start`, or a unit offset beyond `end` that is still short of it in code points;
+ * the exact window is then resolved once and the search restarts from its edge.
+ */
+const findByEngine = (
+  fromEnd: boolean,
+  subject: string,
+  sub: string,
+  needle: number,
+  start?: number,
+  end?: number,
+): number | null => {
+  const first = start === undefined ? 0 : ensureInteger(start);
+  const last = end === undefined ? Number.POSITIVE_INFINITY : ensureInteger(end);
+  // Only a negative bound wraps, and wrapping is the only thing that needs the total.
+  const total = first < 0 || last < 0 ? countCodePoints(subject) : 0;
+  const from = first < 0 ? Math.max(0, total + first) : first;
+  // `last` is not clamped to `total`: a candidate always ends at or before the subject,
+  // so a larger bound accepts exactly the same candidates.
+  const to = last < 0 ? Math.max(0, total + last) : last;
+  if (to !== Number.POSITIVE_INFINITY && to - needle < from) {
+    return null;
+  }
+  // Each direction is spelled out rather than wrapped in a closure: the unbounded case
+  // is the hot path and allocates nothing here.
+  let index = fromEnd ? subject.lastIndexOf(sub, subject.length - 1) : subject.indexOf(sub, from);
+  if (index === -1) {
+    return null;
+  }
+  let point = countCodePoints(subject, index);
+  // Only the cheap hint can land outside the window, on the edge this direction cannot
+  // enforce: `from` is a lower bound on the UTF-16 offset of code point `from`, and
+  // nothing past the end is known before `to` is resolved. The window test is monotone
+  // in `point`, so the first candidate that reaches the window decides the answer, and
+  // exact edges bound the search on the missing side — which makes one rescan enough.
+  if (fromEnd ? to !== Number.POSITIVE_INFINITY && point + needle > to : point < from) {
+    // `find_first` reads only the lower edge, so the walk stops at `from` there.
+    const [lo, hi] = codePointWindow(subject, from, fromEnd && to !== Number.POSITIVE_INFINITY ? to : null);
+    // `lastIndexOf` clamps a negative fromIndex to 0, so a tail window shorter than the
+    // needle has to report no match instead of rescanning from the subject start.
+    index = fromEnd ? (hi < sub.length ? -1 : subject.lastIndexOf(sub, hi - sub.length)) : subject.indexOf(sub, lo);
+    if (index === -1) {
+      return null;
+    }
+    point = countCodePoints(subject, index);
+  }
+  if (fromEnd) {
+    return point >= from ? point : null;
+  }
+  return to === Number.POSITIVE_INFINITY || point + needle <= to ? point : null;
+};
+
 const find = (fromEnd: boolean, subject: string, sub: string, start?: number, end?: number): number | null => {
   if (!subject || !sub) {
     return null;
   }
   const needle = countCodePoints(sub);
-  // A well-formed needle can never match across a code-point boundary, so the engine's
-  // own search is exact here; only the offset has to move into code-point units.
-  if (start === undefined && end === undefined && isWellFormed(sub)) {
-    const units = fromEnd ? subject.lastIndexOf(sub) : subject.indexOf(sub);
-    return units === -1 ? null : countCodePoints(subject, units);
+  if (isWellFormed(sub)) {
+    return findByEngine(fromEnd, subject, sub, needle, start, end);
   }
+  // A needle holding an unpaired surrogate has no code-point boundary to anchor the
+  // engine's match on, so the window is walked a code point at a time instead.
   const [s, e] = normalizeBounds(countCodePoints(subject), start, end);
   const last = e - needle;
   if (last < s) {
