@@ -235,6 +235,35 @@ describe('Searches compiled ast', () => {
     expect(() => jmespath.search({}, '`10` % `-0`')).toThrow('not-a-number: divide by zero');
   });
 
+  it('raises not-a-number error when arithmetic overflows', () => {
+    // An infinite result is not representable in JSON, so callers silently received null.
+    for (const expr of [
+      '`1e308` * `10`',
+      '`-1e308` * `10`',
+      '`1e308` + `1e308`',
+      '`1e308` - `-1e308`',
+      '`1e308` / `1e-308`',
+      '`1e308` // `1e-308`',
+    ]) {
+      expect(() => jmespath.search({}, expr)).toThrow('not-a-number: arithmetic overflow');
+    }
+    expect(() => jmespath.search({ a: [1e308, 1e308] }, 'sum(a)')).toThrow('not-a-number: arithmetic overflow');
+    expect(() => jmespath.search({ a: [1e308, 1e308] }, 'avg(a)')).toThrow('not-a-number: arithmetic overflow');
+    // The running total, not the mathematical sum, decides: 1e308 + 1e308 is already infinite.
+    expect(() => jmespath.search({ a: [1e308, 1e308, -1e308] }, 'sum(a)')).toThrow('not-a-number: arithmetic overflow');
+  });
+
+  it('leaves large but finite arithmetic and empty aggregations alone', () => {
+    expect(jmespath.search({}, '`1e308` * `1.5`')).toBe(1.5e308);
+    expect(jmespath.search({}, '`1e308` - `1e307`')).toBe(9e307);
+    expect(jmespath.search({}, '`1e308` % `1e308`')).toBe(0);
+    expect(jmespath.search({ a: [] }, 'sum(a)')).toBe(0);
+    // avg() of an empty array is a null result by signature, not an overflow, and a
+    // large-but-finite average must stay a number.
+    expect(jmespath.search({ a: [] }, 'avg(a)')).toBeNull();
+    expect(jmespath.search({ a: [1e308, 0] }, 'avg(a)')).toBe(5e307);
+  });
+
   it('isolates search() state for re-entrant calls from custom functions', () => {
     jmespath.registerFunction('reentrant', ([d]) => jmespath.search(d, '@') as import('../src').JSONValue, [
       { types: [jmespath.TYPE_ANY] },

@@ -1,7 +1,7 @@
 import type { ExpressionNode } from './AST.type';
 import type { JSONArray, JSONArrayArray, JSONArrayKeyValuePairs, JSONObject, JSONValue } from './JSON.type';
 import type { TreeInterpreter } from './TreeInterpreter';
-import { exprefObjects, exprefScopes, strictDeepEqual } from './utils';
+import { ensureNoOverflow, exprefObjects, exprefScopes, strictDeepEqual } from './utils';
 import {
   countCodePoints,
   findFirst,
@@ -215,7 +215,7 @@ export class Runtime implements FunctionRegistry {
       avg: {
         _func: ([arr]) =>
           arr && (arr as number[]).length
-            ? (arr as number[]).reduce((a, b) => a + b, 0) / (arr as number[]).length
+            ? ensureNoOverflow((arr as number[]).reduce((a, b) => a + b, 0) / (arr as number[]).length)
             : null,
         _signature: s(ARR_NUM),
       },
@@ -290,7 +290,10 @@ export class Runtime implements FunctionRegistry {
         _signature: [...s(STR, STR), ...opt(NUM)],
       },
       starts_with: { _func: ([str, pre]) => (str as string).startsWith(pre as string), _signature: s(STR, STR) },
-      sum: { _func: ([arr]) => (arr as number[]).reduce((x, y) => x + y, 0), _signature: s(ARR_NUM) },
+      sum: {
+        _func: ([arr]) => ensureNoOverflow((arr as number[]).reduce((x, y) => x + y, 0)),
+        _signature: s(ARR_NUM),
+      },
       to_array: { _func: ([v]) => (Array.isArray(v) ? v : [v]), _signature: s(ANY) },
       to_number: { _func: this.functionToNumber, _signature: s(ANY) },
       to_string: {

@@ -91,11 +91,24 @@ const notZero = (n: number): number => {
   return n;
 };
 
+/**
+ * JMESPath numbers have no infinite value: the grammar raises `not-a-number` when an
+ * arithmetic expression overflows. Without this the result reaches JSON.stringify as
+ * `null`, indistinguishable from a legitimate null. NaN is left alone, since an empty
+ * `avg()` is an empty-input question rather than an overflow.
+ */
+export const ensureNoOverflow = (result: number): number => {
+  if (result === Number.POSITIVE_INFINITY || result === Number.NEGATIVE_INFINITY) {
+    throw new Error('not-a-number: arithmetic overflow');
+  }
+  return result;
+};
+
 const binOp =
   (fn: (a: number, b: number) => number) =>
   (left?: JSONValue, right?: JSONValue): number => {
     ensureNumbers(left, right);
-    return fn(left as number, right as number);
+    return ensureNoOverflow(fn(left as number, right as number));
   };
 
 export const add = binOp((a, b) => a + b);
