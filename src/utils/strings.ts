@@ -141,8 +141,9 @@ const normalizeBounds = (len: number, start?: number, end?: number): [number, nu
  * The bounds are validated up front but resolved lazily: a code-point index never
  * exceeds the UTF-16 offset of the same position, so `start` is already a sound
  * `indexOf` hint and the code-point walk is deferred until a candidate exists. A
- * candidate that lands before the window means the hint was too loose (astral characters
- * ahead of it); the exact window is then resolved once and the search restarts there.
+ * candidate outside the window means that hint was too loose — astral characters ahead
+ * of `start`, or a unit offset beyond `end` that is still short of it in code points;
+ * the exact window is then resolved once and the search restarts from its edge.
  */
 const findByEngine = (
   fromEnd: boolean,
@@ -166,30 +167,30 @@ const findByEngine = (
   // Each direction is spelled out rather than wrapped in a closure: the unbounded case
   // is the hot path and allocates nothing here.
   let index = fromEnd ? subject.lastIndexOf(sub, subject.length - 1) : subject.indexOf(sub, from);
-  let exact = false;
-  while (index !== -1) {
-    const point = countCodePoints(subject, index);
-    // The window test is monotone in `point`, so as soon as the edge the search
-    // direction enforces holds, the other edge settles the answer for every remaining
-    // candidate: ahead of it for `find_first`, behind it for `find_last`.
-    if (fromEnd) {
-      if (to === Number.POSITIVE_INFINITY || point + needle <= to) {
-        return point >= from ? point : null;
-      }
-    } else if (point >= from) {
-      return to === Number.POSITIVE_INFINITY || point + needle <= to ? point : null;
-    }
-    if (!exact) {
-      exact = true;
-      const [lo, hi] = codePointWindow(subject, from, to === Number.POSITIVE_INFINITY ? null : to);
-      // `lastIndexOf` clamps a negative fromIndex to 0, so an empty tail window must
-      // report no match instead of rescanning from the start.
-      index = fromEnd ? (hi < sub.length ? -1 : subject.lastIndexOf(sub, hi - sub.length)) : subject.indexOf(sub, lo);
-      continue;
-    }
-    index = fromEnd ? (index === 0 ? -1 : subject.lastIndexOf(sub, index - 1)) : subject.indexOf(sub, index + 1);
+  if (index === -1) {
+    return null;
   }
-  return null;
+  let point = countCodePoints(subject, index);
+  // Only the cheap hint can land outside the window, on the edge this direction cannot
+  // enforce: `from` is a lower bound on the UTF-16 offset of code point `from`, and
+  // nothing past the end is known before `to` is resolved. The window test is monotone
+  // in `point`, so the first candidate that reaches the window decides the answer, and
+  // exact edges bound the search on the missing side — which makes one rescan enough.
+  if (fromEnd ? to !== Number.POSITIVE_INFINITY && point + needle > to : point < from) {
+    // `find_first` reads only the lower edge, so the walk stops at `from` there.
+    const [lo, hi] = codePointWindow(subject, from, fromEnd && to !== Number.POSITIVE_INFINITY ? to : null);
+    // `lastIndexOf` clamps a negative fromIndex to 0, so a tail window shorter than the
+    // needle has to report no match instead of rescanning from the subject start.
+    index = fromEnd ? (hi < sub.length ? -1 : subject.lastIndexOf(sub, hi - sub.length)) : subject.indexOf(sub, lo);
+    if (index === -1) {
+      return null;
+    }
+    point = countCodePoints(subject, index);
+  }
+  if (fromEnd) {
+    return point >= from ? point : null;
+  }
+  return to === Number.POSITIVE_INFINITY || point + needle <= to ? point : null;
 };
 
 const find = (fromEnd: boolean, subject: string, sub: string, start?: number, end?: number): number | null => {
