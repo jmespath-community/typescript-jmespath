@@ -242,6 +242,10 @@ export const findFirst = (subject: string, sub: string, start?: number, end?: nu
 export const findLast = (subject: string, sub: string, start?: number, end?: number): number | null =>
   find(true, subject, sub, start, end);
 
+// JEP-14 forbids only a non-integer or a negative `width`; this ceiling is our own resource
+// guard, so the error keeps the compliance name `invalid-value` and adds a `resource limit`
+// label instead of reading like a spec violation. It is documented under the README's
+// execution limits and checked before anything is allocated.
 const MAX_PAD_WIDTH = 1_000_000;
 
 const createPad =
@@ -262,7 +266,9 @@ const createPad =
       throw new Error(`Output size exceeds maximum allowed size of ${maxOutputSize}`);
     }
     if (width > MAX_PAD_WIDTH) {
-      throw new Error(`invalid-value: ${name}() width ${width} exceeds maximum allowed width of ${MAX_PAD_WIDTH}`);
+      throw new Error(
+        `invalid-value: ${name}() width ${width} exceeds maximum allowed width of ${MAX_PAD_WIDTH} (resource limit)`,
+      );
     }
     const pad = padding.repeat(padLen);
     return isLeft ? pad + subject : subject + pad;
