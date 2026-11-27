@@ -164,6 +164,8 @@ search(data, expression, {
 });
 ```
 
+`maxDepth`, `maxNodes` and `maxOutputSize` must be non-negative integers. `search()`, `compile()` and `searchStream()` raise a `RangeError` naming the option for any other value, instead of treating it as no limit.
+
 ### `searchStream<T = JSONValue, D = unknown>(source: StreamSource<D>, expression: string | ExpressionNode, options?: StreamOptions): AsyncGenerator<T, void, unknown>`
 
 Evaluates a JMESPath expression incrementally over an `AsyncIterable`, `ReadableStream`, or Node.js `stream.Readable`, yielding matching results without buffering large datasets in memory:

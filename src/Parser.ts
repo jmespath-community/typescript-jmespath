@@ -16,6 +16,7 @@ import type {
 } from './AST.type';
 import Lexer from './Lexer';
 import { LexerToken, Token } from './Lexer.type';
+import { validateGuardrailOptions } from './options';
 import { Options } from './Parser.type';
 import { countNodes } from './utils/ast';
 
@@ -71,6 +72,7 @@ class TokenParser {
   private maxNodes?: number;
 
   parse(expression: string, options?: Options): ExpressionNode {
+    validateGuardrailOptions(options);
     this.loadTokens(expression, options || { enable_legacy_literals: false });
     this.index = 0;
     this.depth = 0;
